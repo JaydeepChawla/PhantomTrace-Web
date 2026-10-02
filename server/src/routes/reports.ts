@@ -1,6 +1,6 @@
 import { Router, Response } from "express";
 import { authMiddleware } from "../middleware/auth";
-import { firestoreService } from "../services/firestoreService";
+import { postgresService } from "../services/postgresService";
 import { isValidIdentifier } from "../utils/validation";
 import type { AuthenticatedRequest } from "../types/api";
 
@@ -15,7 +15,7 @@ reportsRouter.use(authMiddleware);
 reportsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const uid = req.ownerUid!;
-    const reports = await firestoreService.getReports(uid);
+    const reports = await postgresService.getReports(uid);
     res.status(200).json({ reports });
   } catch (err) {
     console.error("[Reports Route] Error listing reports:", err);
@@ -47,7 +47,7 @@ reportsRouter.get("/:reportId", async (req: AuthenticatedRequest, res: Response)
       return;
     }
 
-    const report = await firestoreService.getReport(uid, reportId);
+    const report = await postgresService.getReport(uid, reportId);
 
     if (!report) {
       res.status(404).json({
@@ -70,3 +70,4 @@ reportsRouter.get("/:reportId", async (req: AuthenticatedRequest, res: Response)
     });
   }
 });
+

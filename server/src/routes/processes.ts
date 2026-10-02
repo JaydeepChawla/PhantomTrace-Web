@@ -1,6 +1,6 @@
 import { Router, Response } from "express";
 import { authMiddleware } from "../middleware/auth";
-import { firestoreService } from "../services/firestoreService";
+import { postgresService } from "../services/postgresService";
 import { isValidIdentifier } from "../utils/validation";
 import type { AuthenticatedRequest } from "../types/api";
 
@@ -15,7 +15,7 @@ processesRouter.use(authMiddleware);
 processesRouter.get("/", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const uid = req.ownerUid!;
-    const processes = await firestoreService.getProcesses(uid);
+    const processes = await postgresService.getProcesses(uid);
     res.status(200).json({ processes });
   } catch (err) {
     console.error("[Processes Route] Error listing processes:", err);
@@ -48,7 +48,7 @@ processesRouter.get("/:processId", async (req: AuthenticatedRequest, res: Respon
       return;
     }
 
-    const process = await firestoreService.getProcess(uid, processId);
+    const process = await postgresService.getProcess(uid, processId);
 
     if (!process) {
       res.status(404).json({
@@ -71,3 +71,4 @@ processesRouter.get("/:processId", async (req: AuthenticatedRequest, res: Respon
     });
   }
 });
+

@@ -1,6 +1,6 @@
 import { Router, Response } from "express";
 import { authMiddleware } from "../middleware/auth";
-import { firestoreService } from "../services/firestoreService";
+import { postgresService } from "../services/postgresService";
 import { scannerAdapter, ScannerValidationError } from "../services/scannerAdapter";
 import type { AuthenticatedRequest } from "../types/api";
 
@@ -53,7 +53,7 @@ scansRouter.post("/ingest", async (req: AuthenticatedRequest, res: Response): Pr
     );
 
     // Ingest into Firestore & user-scoped persistent stores
-    const ingestResult = await firestoreService.ingestScanBundle(bundle);
+    const ingestResult = await postgresService.ingestScanBundle(bundle);
 
     const statusCode = ingestResult.duplicate ? 200 : 201;
 
@@ -95,7 +95,7 @@ scansRouter.post("/ingest", async (req: AuthenticatedRequest, res: Response): Pr
 scansRouter.get("/", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const uid = req.ownerUid!;
-    const scans = await firestoreService.getScans(uid);
+    const scans = await postgresService.getScans(uid);
     res.status(200).json({ scans });
   } catch (err) {
     console.error("[Scans Route] Error listing scans:", err);
@@ -127,7 +127,7 @@ scansRouter.get("/:scanId", async (req: AuthenticatedRequest, res: Response): Pr
       return;
     }
 
-    const scan = await firestoreService.getScan(uid, scanId);
+    const scan = await postgresService.getScan(uid, scanId);
 
     if (!scan) {
       res.status(404).json({
@@ -148,3 +148,4 @@ scansRouter.get("/:scanId", async (req: AuthenticatedRequest, res: Response): Pr
     });
   }
 });
+

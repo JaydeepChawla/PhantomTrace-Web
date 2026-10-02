@@ -1,6 +1,6 @@
 import { Router, Response } from "express";
 import { authMiddleware } from "../middleware/auth";
-import { firestoreService } from "../services/firestoreService";
+import { postgresService } from "../services/postgresService";
 import type { AuthenticatedRequest } from "../types/api";
 
 export const usersRouter = Router();
@@ -13,7 +13,7 @@ export const usersRouter = Router();
 usersRouter.get("/me", authMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const uid = req.ownerUid!;
-    const user = await firestoreService.getUser(uid);
+    const user = await postgresService.getUser(uid);
 
     if (!user) {
       res.status(404).json({

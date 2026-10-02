@@ -1,6 +1,6 @@
 import { Router, Response } from "express";
 import { authMiddleware } from "../middleware/auth";
-import { firestoreService } from "../services/firestoreService";
+import { postgresService } from "../services/postgresService";
 import { isValidIdentifier } from "../utils/validation";
 import type { AuthenticatedRequest } from "../types/api";
 
@@ -16,7 +16,7 @@ endpointsRouter.use(authMiddleware);
 endpointsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const uid = req.ownerUid!;
-    const endpoints = await firestoreService.getEndpoints(uid);
+    const endpoints = await postgresService.getEndpoints(uid);
     res.status(200).json({ endpoints });
   } catch (err) {
     console.error("[Endpoints Route] Error listing endpoints:", err);
@@ -48,7 +48,7 @@ endpointsRouter.get("/:endpointId", async (req: AuthenticatedRequest, res: Respo
       return;
     }
 
-    const endpoint = await firestoreService.getEndpoint(uid, endpointId);
+    const endpoint = await postgresService.getEndpoint(uid, endpointId);
 
     if (!endpoint) {
       res.status(404).json({
@@ -71,3 +71,4 @@ endpointsRouter.get("/:endpointId", async (req: AuthenticatedRequest, res: Respo
     });
   }
 });
+

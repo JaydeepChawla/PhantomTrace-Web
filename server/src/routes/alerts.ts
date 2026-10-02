@@ -1,6 +1,6 @@
 import { Router, Response } from "express";
 import { authMiddleware } from "../middleware/auth";
-import { firestoreService } from "../services/firestoreService";
+import { postgresService } from "../services/postgresService";
 import { isValidIdentifier } from "../utils/validation";
 import type { AuthenticatedRequest } from "../types/api";
 
@@ -15,7 +15,7 @@ alertsRouter.use(authMiddleware);
 alertsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const uid = req.ownerUid!;
-    const alerts = await firestoreService.getThreatAlerts(uid);
+    const alerts = await postgresService.getThreatAlerts(uid);
     res.status(200).json({ alerts });
   } catch (err) {
     console.error("[Alerts Route] Error listing threat alerts:", err);
@@ -47,7 +47,7 @@ alertsRouter.get("/:alertId", async (req: AuthenticatedRequest, res: Response): 
       return;
     }
 
-    const alert = await firestoreService.getThreatAlert(uid, alertId);
+    const alert = await postgresService.getThreatAlert(uid, alertId);
 
     if (!alert) {
       res.status(404).json({
@@ -70,3 +70,4 @@ alertsRouter.get("/:alertId", async (req: AuthenticatedRequest, res: Response): 
     });
   }
 });
+
