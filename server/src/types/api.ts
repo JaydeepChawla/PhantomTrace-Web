@@ -1,9 +1,5 @@
-import type { Request } from "express";
-import type { DecodedIdToken } from "firebase-admin/auth";
+﻿import type { Request } from "express";
 
-/**
- * Categorical threat severity classification matching Phase 2 models.
- */
 export type ThreatLevel =
   | "NORMAL"
   | "LOW"
@@ -11,9 +7,6 @@ export type ThreatLevel =
   | "HIGH"
   | "CRITICAL";
 
-/**
- * Scoring mode indicating which heuristic detection engines contributed.
- */
 export type ScoreMode =
   | "MEMORY_ONLY"
   | "BEHAVIOR_ONLY"
@@ -21,17 +14,17 @@ export type ScoreMode =
   | "BASELINE_ADJUSTED"
   | "NONE";
 
-/**
- * Express Request augmented with verified Firebase user authentication.
- */
+export interface AuthenticatedUser {
+  uid: string;
+  email?: string;
+  displayName?: string;
+}
+
 export interface AuthenticatedRequest extends Request {
-  user?: DecodedIdToken;
+  user?: AuthenticatedUser;
   ownerUid?: string;
 }
 
-/**
- * Firestore Document Model: users/{uid}
- */
 export interface UserDocument {
   uid: string;
   email: string;
@@ -339,4 +332,5 @@ export interface IngestResponse {
   duplicate?: boolean;
   message?: string;
 }
+
 
