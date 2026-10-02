@@ -1,0 +1,51 @@
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependencies
+node_modules/
+server/node_modules/
+
+# Production Builds
+dist/
+dist-ssr/
+server/dist/
+*.local
+
+# Editor & System Files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Environment Variables & Secrets (CRITICAL: Never commit secrets)
+.env
+.env.*
+!.env.example
+server/.env
+server/.env.*
+!server/.env.example
+
+# Private Keys & Certificates
+*.pem
+*.key
+*.cert
+*.p12
+*.pfx
+
+# Service Account Credentials & Sensitive Forensic Data
+serviceAccountKey.json
+firebase-admin-key.json
+*service-account*.json
+sample_scanner_output/

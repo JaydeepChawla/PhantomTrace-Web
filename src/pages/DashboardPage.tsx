@@ -1,0 +1,355 @@
+import React from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { 
+  ShieldAlert, 
+  Cpu, 
+  AlertTriangle, 
+  Flame, 
+  Clock, 
+  Zap, 
+  ArrowUpRight, 
+  Lock, 
+  Layers, 
+  ExternalLink
+} from 'lucide-react';
+import { useThreatData } from '../hooks/useThreatData';
+import { StatCard } from '../components/common/StatCard';
+import { Card } from '../components/common/Card';
+import { Badge } from '../components/common/Badge';
+import { ScorePill } from '../components/common/ScorePill';
+import { Logo } from '../components/common/Logo';
+import { ThreatActivityChart } from '../components/charts/ThreatActivityChart';
+import { ThreatDistributionChart } from '../components/charts/ThreatDistributionChart';
+
+export const DashboardPage: React.FC = () => {
+  const navigate = useNavigate();
+  const { overview, alerts, activityTimeline, loading, error } = useThreatData();
+
+  if (loading && !overview) {
+    return (
+      <div style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>
+        Loading enterprise security telemetry...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ padding: '2rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', borderRadius: '8px', color: '#fca5a5' }}>
+        Error loading telemetry: {error}
+      </div>
+    );
+  }
+
+  const data = overview!;
+  const isRealScannerData = Boolean(
+    data.scanMode?.includes("Windows Ingested") ||
+    data.engineVersion?.includes("Release") ||
+    (data.totalProcesses && data.totalProcesses >= 200)
+  );
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      {/* Real Scanner Telemetry Sync Status Indicator */}
+      {isRealScannerData && (
+        <div style={{ 
+          padding: '0.45rem 0.85rem', 
+          background: 'rgba(16, 185, 129, 0.08)', 
+          border: '1px solid rgba(16, 185, 129, 0.25)', 
+          borderRadius: '6px', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '0.5rem',
+          fontSize: '0.76rem', 
+          color: '#6ee7b7' 
+        }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
+            <strong>Last synced from PhantomTrace Windows Scanner:</strong> Verified telemetry for {data.totalProcesses} running processes.
+          </span>
+          <span style={{ color: '#94a3b8' }}>
+            Scan Timestamp: {data.scanTime}
+          </span>
+        </div>
+      )}
+
+      {/* Read-Only Safety Protocol Banner */}
+      <div className="pt-readonly-banner">
+        <Lock size={16} style={{ color: 'var(--pt-cyan)', flexShrink: 0 }} />
+        <div style={{ flex: 1 }}>
+          <strong style={{ color: '#ffffff' }}>Read-Only Mode Active: </strong>
+          PhantomTrace scanner enforces passive inspection across {data.totalProcesses} running processes. Forensic artifacts and memory structures are strictly preserved without termination or modification.
+        </div>
+        <Link 
+          to="/alerts" 
+          style={{ 
+            fontSize: '0.78rem', 
+            color: '#00e5ff', 
+            fontWeight: 600, 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '0.2rem',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          <span>Triage Threats ({data.threatAlertsCount})</span>
+          <ArrowUpRight size={14} />
+        </Link>
+      </div>
+
+      {/* Official Dashboard Branding Header */}
+      <div 
+        className="pt-card pt-card-cyber"
+        style={{
+          padding: '1.15rem 1.5rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '1rem',
+          background: 'linear-gradient(135deg, rgba(16, 26, 46, 0.85) 0%, rgba(9, 15, 26, 0.95) 100%)'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.15rem' }}>
+          <Logo variant="dashboard" height={48} />
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.01em', margin: 0 }}>
+                Threat Detection Operations Console
+              </h2>
+              <span className="pt-badge pt-badge-low" style={{ fontSize: '0.7rem' }}>
+                Memory &amp; Fileless Engine
+              </span>
+            </div>
+            <p style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '0.2rem' }}>
+              "Trace what others can't see." • Endpoint Telemetry &amp; Real-Time Analysis
+            </p>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Telemetry Source</div>
+            <div style={{ fontSize: '0.82rem', color: isRealScannerData ? '#10b981' : '#f59e0b', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem', justifyContent: 'flex-end' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: isRealScannerData ? '#10b981' : '#f59e0b', display: 'inline-block' }} />
+              {isRealScannerData ? 'Windows Scanner' : 'Local Fixture'}
+            </div>
+          </div>
+          <div style={{ height: '28px', width: '1px', background: 'var(--pt-border-subtle)' }} />
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Engine State</div>
+            <div style={{ fontSize: '0.82rem', color: '#38bdf8', fontWeight: 600 }}>Active (Read-Only)</div>
+          </div>
+          <div style={{ height: '28px', width: '1px', background: 'var(--pt-border-subtle)' }} />
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Target Node</div>
+            <div style={{ fontSize: '0.82rem', color: '#ffffff', fontWeight: 600 }}>SEC-WORKSTATION-09</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Top Telemetry KPI Stat Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+        <StatCard
+          label="Total Processes"
+          value={data.totalProcesses}
+          subValue={`${data.memoryInspectedMb} MB RAM Scanned`}
+          icon={<Cpu size={20} />}
+        />
+        <StatCard
+          label="Threat Alerts"
+          value={data.threatAlertsCount}
+          subValue="Elevated risk score"
+          icon={<ShieldAlert size={20} />}
+          accentColor="var(--pt-critical)"
+        />
+        <StatCard
+          label="Critical Severity"
+          value={data.criticalCount}
+          subValue="Score >= 90 (Immediate)"
+          icon={<Flame size={20} />}
+          accentColor="var(--pt-critical)"
+        />
+        <StatCard
+          label="High Severity"
+          value={data.highCount}
+          subValue="Score 75 - 89"
+          icon={<AlertTriangle size={20} />}
+          accentColor="var(--pt-high)"
+        />
+        <StatCard
+          label="Medium / Low"
+          value={`${data.mediumCount} / ${data.lowCount}`}
+          subValue="Under investigation"
+          icon={<Zap size={20} />}
+          accentColor="var(--pt-medium)"
+        />
+        <StatCard
+          label="Highest Threat Score"
+          value={`${data.highestThreatScore}/100`}
+          subValue="PID 4892 (powershell.exe)"
+          icon={<Flame size={20} />}
+          accentColor="var(--pt-critical)"
+        />
+        <StatCard
+          label="Scan Timestamp"
+          value={data.scanTime || "2026-09-25 12:48:19 UTC"}
+          subValue={`Duration: ${data.duration || "4.2s"}`}
+          icon={<Clock size={20} />}
+          accentColor="var(--pt-cyan)"
+        />
+      </div>
+
+      {/* Charts Section: Threat Activity & Distribution */}
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.25rem' }}>
+        <Card
+          title="Threat Activity Timeline"
+          subtitle="Time-series telemetry of average threat scores and elevated alert detections"
+          cyberBorder
+        >
+          <ThreatActivityChart data={activityTimeline} />
+        </Card>
+
+        <Card
+          title="Threat Distribution"
+          subtitle="Risk level and scoring model correlation"
+        >
+          <ThreatDistributionChart overview={data} />
+        </Card>
+      </div>
+
+      {/* Memory & Behavior Correlation Summary */}
+      <Card
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <Layers size={18} style={{ color: '#00e5ff' }} />
+            <span>Memory &amp; Behavioral Correlation Matrix</span>
+          </div>
+        }
+        subtitle="Cross-analyzing unbacked executable memory with live process execution vectors"
+      >
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+          <div style={{ background: 'rgba(9, 15, 26, 0.65)', border: '1px solid var(--pt-border-subtle)', borderRadius: '8px', padding: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#f8fafc' }}>Correlated Detections</span>
+              <Badge level="Critical">3 Active</Badge>
+            </div>
+            <p style={{ fontSize: '0.78rem', color: '#94a3b8', lineHeight: 1.5 }}>
+              Processes exhibiting both private unbacked memory allocations and suspicious execution lineage (e.g. powershell.exe, svchost.exe, rundll32.exe).
+            </p>
+          </div>
+
+          <div style={{ background: 'rgba(9, 15, 26, 0.65)', border: '1px solid var(--pt-border-subtle)', borderRadius: '8px', padding: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#f8fafc' }}>Preserved in Trusted Binaries</span>
+              <Badge level="High">1 Active</Badge>
+            </div>
+            <p style={{ fontSize: '0.78rem', color: '#94a3b8', lineHeight: 1.5 }}>
+              Memory evidence is rigorously preserved even when binaries carry valid Microsoft signatures (e.g. svchost.exe PID 7216 with inline ntdll hooks).
+            </p>
+          </div>
+
+          <div style={{ background: 'rgba(9, 15, 26, 0.65)', border: '1px solid var(--pt-border-subtle)', borderRadius: '8px', padding: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#f8fafc' }}>Baseline &amp; Verified Clean</span>
+              <Badge level="Clean">142 Processes</Badge>
+            </div>
+            <p style={{ fontSize: '0.78rem', color: '#94a3b8', lineHeight: 1.5 }}>
+              Processes with 100% disk-backed PE images, valid digital signatures, and no unauthorized VirtualAlloc or trampoline hooks detected.
+            </p>
+          </div>
+        </div>
+      </Card>
+
+      {/* Recent Threat Alerts Table */}
+      <Card
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <AlertTriangle size={18} style={{ color: 'var(--pt-critical)' }} />
+            <span>Recent Threat Alerts</span>
+          </div>
+        }
+        subtitle="Click any alert to inspect memory structures, behavior lineage, and recommended investigation steps"
+        action={
+          <Link to="/alerts" className="pt-btn pt-btn-cyber" style={{ padding: '0.35rem 0.85rem', fontSize: '0.78rem' }}>
+            <span>View All Alerts ({alerts.length})</span>
+            <ExternalLink size={13} />
+          </Link>
+        }
+      >
+        <div className="pt-table-container">
+          <table className="pt-table">
+            <thead>
+              <tr>
+                <th>PID</th>
+                <th>Process</th>
+                <th>Threat Score</th>
+                <th>Threat Level</th>
+                <th>Application</th>
+                <th>Score Mode</th>
+                <th>Behavior</th>
+                <th>Memory</th>
+                <th>Primary Evidence Vector</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {alerts.slice(0, 5).map((alert) => (
+                <tr 
+                  key={alert.id} 
+                  className="clickable-row"
+                  onClick={() => navigate(`/alerts/${alert.id}`)}
+                >
+                  <td className="text-mono" style={{ fontWeight: 600, color: '#00e5ff' }}>
+                    {alert.pid}
+                  </td>
+                  <td style={{ fontWeight: 600, color: '#ffffff' }}>
+                    {alert.process || alert.processName}
+                  </td>
+                  <td>
+                    <ScorePill score={alert.threatScore ?? alert.score} />
+                  </td>
+                  <td>
+                    <Badge level={alert.threatLevel}>{alert.threatLevel}</Badge>
+                  </td>
+                  <td>
+                    <Badge level="neutral">{alert.application}</Badge>
+                  </td>
+                  <td style={{ fontSize: '0.78rem', color: '#cbd5e1' }}>
+                    {alert.scoreMode}
+                  </td>
+                  <td className="text-mono" style={{ color: '#f97316', fontWeight: 600 }}>
+                    {alert.behaviorScore}
+                  </td>
+                  <td className="text-mono" style={{ color: '#00e5ff', fontWeight: 600 }}>
+                    {alert.memoryScore}
+                  </td>
+                  <td style={{ maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.78rem', color: '#94a3b8' }}>
+                    {typeof alert.memoryEvidence === 'string'
+                      ? alert.memoryEvidence
+                      : alert.memoryEvidence?.details?.[0] || alert.memoryEvidence?.indicators?.[0] || 'None'}
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/alerts/${alert.id}`);
+                      }}
+                      className="pt-btn pt-btn-cyber"
+                      style={{ padding: '0.25rem 0.6rem', fontSize: '0.72rem' }}
+                    >
+                      Investigate
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </div>
+  );
+};

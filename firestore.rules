@@ -1,0 +1,55 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+    
+    function isDocumentOwner() {
+      return isAuthenticated() && 
+        (resource == null || resource.data.ownerUid == request.auth.uid) &&
+        (request.resource == null || request.resource.data.ownerUid == request.auth.uid);
+    }
+
+    // 1. Users collection: user can only access their own profile
+    match /users/{uid} {
+      allow read, write: if isOwner(uid);
+    }
+
+    // 2. Endpoints collection: strictly user-isolated
+    match /endpoints/{endpointId} {
+      allow read, write: if isDocumentOwner();
+    }
+
+    // 3. Scans collection: read/write strictly scoped to ownerUid
+    match /scans/{scanId} {
+      allow read, write: if isDocumentOwner();
+    }
+
+    // 4. Processes collection: read/write strictly scoped to ownerUid
+    match /processes/{processId} {
+      allow read, write: if isDocumentOwner();
+    }
+
+    // 5. ThreatAlerts collection: read/write strictly scoped to ownerUid
+    match /threatAlerts/{alertId} {
+      allow read, write: if isDocumentOwner();
+    }
+
+    // 6. Reports collection: read/write strictly scoped to ownerUid
+    match /reports/{reportId} {
+      allow read, write: if isDocumentOwner();
+    }
+
+    // Default deny for all other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
