@@ -8,6 +8,23 @@ import type {
   SystemSettings,
 } from "../types";
 
+export type CloudConnectionStatus = "Cloud Connected" | "Cloud Not Configured" | "API Offline";
+export type TelemetrySource = "Windows Scanner (Cloud)" | "Local Fixture (Demo)";
+
+export interface CloudHealthStatus {
+  status: CloudConnectionStatus;
+  firebaseConfigured: boolean;
+  message: string;
+}
+
+export interface SyncResult {
+  success: boolean;
+  status: CloudConnectionStatus;
+  source: TelemetrySource;
+  message: string;
+  timestamp: string;
+}
+
 /**
  * PhantomTrace Data Service Interface
  *
@@ -93,6 +110,26 @@ export interface PhantomTraceDataService {
    * Run diagnostic ping to verify endpoint connectivity.
    */
   testApiConnection(endpointUrl: string): Promise<{ success: boolean; message: string; latencyMs: number }>;
+
+  /**
+   * Check connection status to PhantomTrace API and Firebase configuration.
+   */
+  checkHealth?(): Promise<CloudHealthStatus>;
+
+  /**
+   * Perform synchronization of live scanner telemetry.
+   */
+  syncTelemetry?(): Promise<SyncResult>;
+
+  /**
+   * Retrieve active telemetry data source.
+   */
+  getTelemetrySource?(): TelemetrySource;
+
+  /**
+   * Retrieve active sync status details.
+   */
+  getSyncStatus?(): { isRealData: boolean; label: string; lastSyncedAt: string | null };
 }
 
 // TODO Phase 3:

@@ -349,4 +349,40 @@ export class LocalDataService implements PhantomTraceDataService {
       }, 300);
     });
   }
+
+  getSyncStatus(): { isRealData: boolean; label: string; lastSyncedAt: string | null } {
+    return {
+      isRealData: false,
+      label: "Local Fixture (Demo)",
+      lastSyncedAt: null,
+    };
+  }
+
+  getTelemetrySource(): "Windows Scanner (Cloud)" | "Local Fixture (Demo)" {
+    return "Local Fixture (Demo)";
+  }
+
+  async checkHealth(): Promise<{ status: "Cloud Not Configured"; firebaseConfigured: false; message: string }> {
+    return {
+      status: "Cloud Not Configured",
+      firebaseConfigured: false,
+      message: "Cloud sync is not configured yet.",
+    };
+  }
+
+  async syncTelemetry(): Promise<{
+    success: false;
+    status: "Cloud Not Configured";
+    source: "Local Fixture (Demo)";
+    message: string;
+    timestamp: string;
+  }> {
+    return {
+      success: false,
+      status: "Cloud Not Configured",
+      source: "Local Fixture (Demo)",
+      message: "Cloud sync is not configured yet.",
+      timestamp: new Date().toLocaleTimeString(),
+    };
+  }
 }

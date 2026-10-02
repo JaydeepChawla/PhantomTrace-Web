@@ -1,4 +1,5 @@
 import { Router, Request, Response } from "express";
+import { isFirebaseConfigured } from "../config/firebaseAdmin";
 
 export const healthRouter = Router();
 
@@ -12,5 +13,6 @@ healthRouter.get("/", (_req: Request, res: Response) => {
     status: "ok",
     service: "PhantomTrace API",
     version: "1.0.0",
+    firebaseConfigured: isFirebaseConfigured,
   });
 });

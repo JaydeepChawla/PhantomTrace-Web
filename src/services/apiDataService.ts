@@ -7,7 +7,12 @@ import type {
   ScanOverview,
   SystemSettings,
 } from "../types";
-import type { PhantomTraceDataService } from "./dataService";
+import type {
+  PhantomTraceDataService,
+  TelemetrySource,
+  CloudHealthStatus,
+  SyncResult
+} from "./dataService";
 import { LocalDataService } from "./localDataService";
 
 /**
@@ -240,10 +245,19 @@ export class ApiDataService implements PhantomTraceDataService {
       isRealData: this.lastSyncSource === "REAL_SCANNER",
       label:
         this.lastSyncSource === "REAL_SCANNER"
-          ? "Real Windows Scanner"
-          : "Local / Demo Telemetry",
+          ? "Windows Scanner (Cloud)"
+          : "Local Fixture (Demo)",
       lastSyncedAt: this.lastSyncTimestamp,
     };
+  }
+
+  /**
+   * Return exact TelemetrySource enum string.
+   */
+  public getTelemetrySource(): TelemetrySource {
+    return this.lastSyncSource === "REAL_SCANNER"
+      ? "Windows Scanner (Cloud)"
+      : "Local Fixture (Demo)";
   }
 
   /**
@@ -367,6 +381,147 @@ export class ApiDataService implements PhantomTraceDataService {
         success: false,
         message: `Unable to reach API server: ${msg}`,
         latencyMs,
+      };
+    }
+  }
+
+  /**
+   * Check connection status to PhantomTrace API and Firebase configuration.
+   * Uses GET /api/health to determine backend availability and Firebase configuration.
+   */
+  async checkHealth(): Promise<CloudHealthStatus> {
+    try {
+      const normalizedBase = this.baseUrl.endsWith("/") ? this.baseUrl.slice(0, -1) : this.baseUrl;
+      const healthUrl = normalizedBase.endsWith("/api")
+        ? `${normalizedBase}/health`
+        : normalizedBase.includes("/api")
+        ? `${normalizedBase.replace(/\/api.*$/, "")}/api/health`
+        : `${normalizedBase}/api/health`;
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 6000);
+
+      const response = await fetch(healthUrl, {
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        return {
+          status: "API Offline",
+          firebaseConfigured: false,
+          message: "Sync unavailable — API connection could not be established.",
+        };
+      }
+
+      const data = await response.json();
+      if (data && data.firebaseConfigured === true) {
+        return {
+          status: "Cloud Connected",
+          firebaseConfigured: true,
+          message: "Cloud Connected",
+        };
+      }
+
+      return {
+        status: "Cloud Not Configured",
+        firebaseConfigured: false,
+        message: "Cloud sync is not configured yet.",
+      };
+    } catch {
+      return {
+        status: "API Offline",
+        firebaseConfigured: false,
+        message: "Sync unavailable — API connection could not be established.",
+      };
+    }
+  }
+
+  /**
+   * Perform real telemetry synchronization.
+   * Sync must never report success unless the backend actually confirms successful synchronization.
+   */
+  async syncTelemetry(): Promise<SyncResult> {
+    const health = await this.checkHealth();
+
+    if (health.status === "API Offline") {
+      this.lastSyncSource = "LOCAL_DEMO";
+      return {
+        success: false,
+        status: "API Offline",
+        source: "Local Fixture (Demo)",
+        message: "Sync unavailable — API connection could not be established.",
+        timestamp: new Date().toLocaleTimeString(),
+      };
+    }
+
+    if (health.status === "Cloud Not Configured") {
+      this.lastSyncSource = "LOCAL_DEMO";
+      return {
+        success: false,
+        status: "Cloud Not Configured",
+        source: "Local Fixture (Demo)",
+        message: "Cloud sync is not configured yet.",
+        timestamp: new Date().toLocaleTimeString(),
+      };
+    }
+
+    // Backend is reachable and Firebase is configured. Query live scan telemetry from Render API.
+    try {
+      const url = `${this.baseUrl}/scans`;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+      const response = await fetch(url, {
+        headers: this.getHeaders(),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        this.lastSyncSource = "LOCAL_DEMO";
+        return {
+          success: false,
+          status: "Cloud Connected",
+          source: "Local Fixture (Demo)",
+          message: `Backend sync error: HTTP ${response.status}`,
+          timestamp: new Date().toLocaleTimeString(),
+        };
+      }
+
+      const json = await response.json();
+      const scans = json.scans;
+
+      if (Array.isArray(scans) && scans.length > 0) {
+        this.lastSyncSource = "REAL_SCANNER";
+        this.lastSyncTimestamp = new Date().toLocaleString();
+        return {
+          success: true,
+          status: "Cloud Connected",
+          source: "Windows Scanner (Cloud)",
+          message: `Synchronized ${scans.length} scan cycle(s) from Windows Scanner (Cloud).`,
+          timestamp: new Date().toLocaleTimeString(),
+        };
+      }
+
+      // Backend confirmed request, but no scanner telemetry uploaded yet
+      this.lastSyncSource = "LOCAL_DEMO";
+      return {
+        success: false,
+        status: "Cloud Connected",
+        source: "Local Fixture (Demo)",
+        message: "Cloud sync connected, but no Windows scanner telemetry has been ingested yet.",
+        timestamp: new Date().toLocaleTimeString(),
+      };
+    } catch (err: unknown) {
+      this.lastSyncSource = "LOCAL_DEMO";
+      const msg = err instanceof Error ? err.message : "Sync request failed";
+      return {
+        success: false,
+        status: "Cloud Connected",
+        source: "Local Fixture (Demo)",
+        message: `Sync failed: ${msg}`,
+        timestamp: new Date().toLocaleTimeString(),
       };
     }
   }
