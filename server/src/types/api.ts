@@ -1,4 +1,4 @@
-﻿import type { Request } from "express";
+import type { Request } from "express";
 
 export type ThreatLevel =
   | "NORMAL"
@@ -251,6 +251,17 @@ export interface RawScannerProcess {
   pid: number;
   name: string;
   executable?: string;
+  exe?: string;
+  executable_path?: string;
+  path?: string;
+  image_path?: string;
+  cmdline?: string[] | string;
+  commandLine?: string;
+  command_line?: string;
+  username?: string;
+  userContext?: string;
+  parent_pid?: number | null;
+  parent_name?: string | null;
   parent?: {
     pid: number | null;
     name: string | null;
@@ -269,18 +280,39 @@ export interface RawScannerProcess {
   memory_only?: boolean;
   score_mode?: string;
   raw_score?: number;
-  score: number;
-  level: string;
+  score?: number;
+  threat_score?: number;
+  risk_score?: number;
+  level?: string;
+  threat_level?: string;
+  severity?: string;
   indicators?: string[];
+  evidence?: string[] | Record<string, unknown>;
   has_behavior_evidence?: boolean;
   has_memory_evidence?: boolean;
+  memory_rss?: number;
+  memory_vms?: number;
+  cpu_percent?: number;
+  created?: string;
+  [key: string]: unknown;
 }
 
 export interface RawScannerAlert {
-  pid: number;
-  name: string;
-  score: number;
-  level: string;
+  id?: string;
+  alert_id?: string;
+  pid?: number;
+  name?: string;
+  process_name?: string;
+  process?: {
+    pid?: number;
+    name?: string;
+    executable?: string;
+  };
+  score?: number;
+  threat_score?: number;
+  level?: string;
+  threat_level?: string;
+  severity?: string;
   application_context?: string;
   score_mode?: string;
   behavior_score?: number;
@@ -289,28 +321,51 @@ export interface RawScannerAlert {
   correlation_bonus?: number;
   memory_evidence_strength?: string;
   indicators?: string[];
+  evidence?: string[];
+  evidence_count?: number;
+  title?: string;
+  description?: string;
+  status?: string;
+  recommended_action?: string;
+  recommended_actions?: string[];
+  hostname?: string;
+  timestamp?: string;
+  memory_evidence?: MemoryEvidencePayload;
+  behavior_evidence?: BehaviorEvidencePayload;
+  correlation_evidence?: CorrelationEvidencePayload;
+  [key: string]: unknown;
 }
 
 export interface RawScannerSummary {
-  total_processes: number;
-  normal: number;
-  low: number;
-  medium: number;
-  high: number;
-  critical: number;
+  total_processes?: number;
+  normal?: number;
+  low?: number;
+  medium?: number;
+  high?: number;
+  critical?: number;
   threat_alerts?: RawScannerAlert[];
-  highest_score: number;
+  total_alerts?: number;
+  highest_score?: number;
 }
 
 export interface RawScannerResult {
   phantomtrace_version?: string;
+  scanner?: string;
+  version?: string;
   platform?: string;
   scan_time_seconds?: number;
+  scan_time?: string;
+  scan_timestamp?: string;
   timestamp?: string;
+  process_count?: number;
   endpoint_id?: string;
   machine_id?: string;
-  summary: RawScannerSummary;
-  results: RawScannerProcess[];
+  summary?: RawScannerSummary;
+  results?: RawScannerProcess[];
+  processes?: RawScannerProcess[];
+  alerts?: RawScannerAlert[];
+  scan?: Record<string, unknown>;
+  [key: string]: unknown;
 }
 
 export interface IngestedScanBundle {

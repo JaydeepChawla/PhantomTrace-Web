@@ -37,6 +37,20 @@ export class ScannerValidationError extends Error {
  */
 export class ScannerAdapter {
   /**
+   * Extract raw process collection, prioritizing the real scanner's 'processes' key
+   * while maintaining backward compatibility with 'results'.
+   */
+  public extractRawProcesses(raw: RawScannerResult): RawScannerProcess[] {
+    if (Array.isArray(raw.processes)) {
+      return raw.processes;
+    }
+    if (Array.isArray(raw.results)) {
+      return raw.results;
+    }
+    return [];
+  }
+
+  /**
    * Validate and parse raw scanner JSON payload into an IngestedScanBundle.
    */
   public parseScanResult(
@@ -48,7 +62,33 @@ export class ScannerAdapter {
     this.validateRawPayload(rawPayload);
 
     const raw = rawPayload as RawScannerResult;
-    const scanTimestamp = customTimestamp || raw.timestamp || new Date().toISOString();
+    const scanObj = raw.scan && typeof raw.scan === "object" ? (raw.scan as Record<string, unknown>) : undefined;
+
+    const scanTimestamp =
+      customTimestamp ||
+      raw.timestamp ||
+      raw.scan_time ||
+      raw.scan_timestamp ||
+      (typeof scanObj?.timestamp === "string" ? (scanObj.timestamp as string) : undefined) ||
+      new Date().toISOString();
+
+    const platform =
+      (typeof raw.platform === "string" && raw.platform.trim().length > 0
+        ? raw.platform.trim()
+        : undefined) ||
+      (typeof scanObj?.platform === "string" && (scanObj.platform as string).trim().length > 0
+        ? (scanObj.platform as string).trim()
+        : undefined) ||
+      "Windows";
+
+    const scannerVersion =
+      raw.phantomtrace_version ||
+      raw.scanner ||
+      raw.version ||
+      (typeof scanObj?.scanner_version === "string"
+        ? (scanObj.scanner_version as string).trim()
+        : undefined) ||
+      "PhantomTrace 1.0";
 
     // 1. Establish stable, deterministic identifiers
     const scanId = this.deriveScanId(raw);
@@ -58,15 +98,16 @@ export class ScannerAdapter {
     const endpoint: EndpointDocument = {
       endpointId,
       ownerUid,
-      name: `${(raw.platform || "Windows").toUpperCase()}-ENDPOINT-${endpointId.slice(-6).toUpperCase()}`,
-      platform: raw.platform || "Windows",
-      scannerVersion: raw.phantomtrace_version || "PhantomTrace 1.0",
+      name: `${platform.toUpperCase()}-ENDPOINT-${endpointId.slice(-6).toUpperCase()}`,
+      platform,
+      scannerVersion,
       lastSeenAt: scanTimestamp,
       createdAt: scanTimestamp,
     };
 
     // 3. Map Inspected Processes
-    const processes: ProcessDocument[] = raw.results.map((proc) =>
+    const rawProcesses = this.extractRawProcesses(raw);
+    const processes: ProcessDocument[] = rawProcesses.map((proc) =>
       this.mapProcess(proc, scanId, endpointId, ownerUid, scanTimestamp)
     );
 
@@ -90,18 +131,61 @@ export class ScannerAdapter {
     let totalMemoryScannedBytes = 0;
     let accessDeniedCount = 0;
 
-    for (const p of raw.results) {
-      if (p.memory?.status === "access_denied") {
+    for (const p of rawProcesses) {
+      if (
+        p.memory?.status === "access_denied" ||
+        (typeof p.exe === "string" && p.exe.toLowerCase().includes("access denied"))
+      ) {
         accessDeniedCount++;
       }
       if (p.memory?.regions) {
         for (const r of p.memory.regions) {
           totalMemoryScannedBytes += r.region_size || 0;
         }
+      } else if (p.memory_rss || p.memory_vms) {
+        totalMemoryScannedBytes += (p.memory_rss || 0) + (p.memory_vms || 0);
       }
     }
 
     const memoryScannedMb = Math.round((totalMemoryScannedBytes / (1024 * 1024)) * 10) / 10;
+
+    // Derive summary metrics if missing or incomplete
+    const summaryNormal =
+      raw.summary?.normal ??
+      processes.filter((p) => p.threatLevel === "NORMAL").length;
+    const summaryLow =
+      raw.summary?.low ??
+      processes.filter((p) => p.threatLevel === "LOW").length;
+    const summaryMedium =
+      raw.summary?.medium ??
+      processes.filter((p) => p.threatLevel === "MEDIUM").length;
+    const summaryHigh =
+      raw.summary?.high ??
+      processes.filter((p) => p.threatLevel === "HIGH").length;
+    const summaryCritical =
+      raw.summary?.critical ??
+      processes.filter((p) => p.threatLevel === "CRITICAL").length;
+
+    let computedHighestScore = 0;
+    for (const p of processes) {
+      if (p.threatScore > computedHighestScore) computedHighestScore = p.threatScore;
+    }
+    for (const a of threatAlerts) {
+      if (a.score > computedHighestScore) computedHighestScore = a.score;
+    }
+
+    const highestScore = raw.summary?.highest_score ?? computedHighestScore;
+    const totalProcesses =
+      raw.summary?.total_processes ?? raw.process_count ?? processes.length;
+
+    let durationMs = 4000;
+    if (typeof raw.scan_time_seconds === "number") {
+      durationMs = Math.round(raw.scan_time_seconds * 1000);
+    } else if (typeof scanObj?.duration_ms === "number") {
+      durationMs = Math.round(scanObj.duration_ms as number);
+    } else if (typeof scanObj?.scan_time_seconds === "number") {
+      durationMs = Math.round((scanObj.scan_time_seconds as number) * 1000);
+    }
 
     // 6. Map Scan Document
     const scan: ScanDocument = {
@@ -109,19 +193,19 @@ export class ScannerAdapter {
       endpointId,
       ownerUid,
       timestamp: scanTimestamp,
-      durationMs: raw.scan_time_seconds ? Math.round(raw.scan_time_seconds * 1000) : 4000,
-      scannerVersion: raw.phantomtrace_version || "PhantomTrace 1.0",
-      platform: raw.platform || "Windows",
-      totalProcesses: raw.summary.total_processes || processes.length,
+      durationMs,
+      scannerVersion,
+      platform,
+      totalProcesses,
       memoryScanned: memoryScannedMb,
       memoryAccessDenied: accessDeniedCount,
-      highestScore: raw.summary.highest_score || 0,
+      highestScore,
       counts: {
-        normal: raw.summary.normal || 0,
-        low: raw.summary.low || 0,
-        medium: raw.summary.medium || 0,
-        high: raw.summary.high || 0,
-        critical: raw.summary.critical || 0,
+        normal: summaryNormal,
+        low: summaryLow,
+        medium: summaryMedium,
+        high: summaryHigh,
+        critical: summaryCritical,
       },
     };
 
@@ -168,7 +252,8 @@ export class ScannerAdapter {
   }
 
   /**
-   * Validate raw scanner JSON structure.
+   * Validate raw scanner JSON structure. Accepts real scanner payloads with
+   * top-level 'processes' array, as well as legacy 'results' payloads.
    */
   public validateRawPayload(raw: unknown): asserts raw is RawScannerResult {
     if (!raw || typeof raw !== "object") {
@@ -177,17 +262,22 @@ export class ScannerAdapter {
 
     const candidate = raw as Record<string, unknown>;
 
-    if (!Array.isArray(candidate.results)) {
-      throw new ScannerValidationError("Malformed scan data: missing or non-array 'results' collection.");
+    // Real scanner uses 'processes', legacy/sample uses 'results'
+    const processes = candidate.processes ?? candidate.results;
+    if (!Array.isArray(processes)) {
+      throw new ScannerValidationError("Malformed scan data: missing or non-array 'processes' collection.");
     }
 
-    if (!candidate.summary || typeof candidate.summary !== "object") {
-      throw new ScannerValidationError("Malformed scan data: missing 'summary' metadata object.");
+    if (candidate.summary !== undefined && (typeof candidate.summary !== "object" || candidate.summary === null)) {
+      throw new ScannerValidationError("Malformed scan data: 'summary' must be a valid metadata object.");
     }
 
-    const summary = candidate.summary as Record<string, unknown>;
-    if (typeof summary.total_processes !== "number" || typeof summary.highest_score !== "number") {
-      throw new ScannerValidationError("Malformed scan summary: missing numeric process or score metrics.");
+    if (candidate.alerts !== undefined && !Array.isArray(candidate.alerts)) {
+      throw new ScannerValidationError("Malformed scan data: 'alerts' must be a valid collection.");
+    }
+
+    if (candidate.scan !== undefined && (typeof candidate.scan !== "object" || candidate.scan === null)) {
+      throw new ScannerValidationError("Malformed scan data: 'scan' must be a valid metadata object.");
     }
   }
 
@@ -202,19 +292,35 @@ export class ScannerAdapter {
     if (typeof rawRecord.scanId === "string" && rawRecord.scanId.trim().length > 0) {
       return rawRecord.scanId.trim();
     }
+    const scanObj = raw.scan && typeof raw.scan === "object" ? (raw.scan as Record<string, unknown>) : undefined;
+    if (scanObj) {
+      if (typeof scanObj.scan_id === "string" && scanObj.scan_id.trim().length > 0) {
+        return scanObj.scan_id.trim();
+      }
+      if (typeof scanObj.scanId === "string" && scanObj.scanId.trim().length > 0) {
+        return scanObj.scanId.trim();
+      }
+    }
 
-    // Deterministic hash based on version, platform, duration, and summary counts
+    const procs = this.extractRawProcesses(raw);
+    const version = raw.phantomtrace_version || raw.scanner || raw.version || "pt-1.0";
+    const platform = raw.platform || (scanObj?.platform as string) || "Windows";
+    const scanTime = raw.scan_time || raw.scan_timestamp || raw.timestamp || "";
+    const duration = raw.scan_time_seconds ?? (scanObj?.scan_time_seconds as number) ?? 0;
+    const procCount = raw.summary?.total_processes ?? raw.process_count ?? procs.length;
+    const highestScore = raw.summary?.highest_score ?? 0;
+
+    // Deterministic hash based on version, platform, duration, process count, and sample processes
     const hashBasis = [
-      raw.phantomtrace_version || "pt-1.0",
-      raw.platform || "Windows",
-      raw.scan_time_seconds ?? 0,
-      raw.summary.total_processes,
-      raw.summary.highest_score,
-      raw.summary.critical,
-      raw.summary.high,
-      raw.results.length,
+      version,
+      platform,
+      scanTime,
+      duration,
+      procCount,
+      highestScore,
+      procs.length,
       // Sample first 3 PIDs for uniqueness
-      raw.results.slice(0, 3).map((p) => `${p.pid}:${p.score}`).join(";"),
+      procs.slice(0, 3).map((p) => `${p.pid}:${p.score ?? p.threat_score ?? 0}`).join(";"),
     ].join("|");
 
     const hash = crypto.createHash("sha256").update(hashBasis).digest("hex").slice(0, 16);
@@ -241,10 +347,21 @@ export class ScannerAdapter {
       return raw.machine_id.trim();
     }
 
+    const scanObj = raw.scan && typeof raw.scan === "object" ? (raw.scan as Record<string, unknown>) : undefined;
+    if (scanObj) {
+      if (typeof scanObj.endpoint_id === "string" && (scanObj.endpoint_id as string).trim().length > 0) {
+        return (scanObj.endpoint_id as string).trim();
+      }
+      if (typeof scanObj.machine_id === "string" && (scanObj.machine_id as string).trim().length > 0) {
+        return (scanObj.machine_id as string).trim();
+      }
+    }
+
     // Stable endpoint hash per user and host platform
+    const platform = raw.platform || (scanObj?.platform as string) || "Windows";
     const endpointHash = crypto
       .createHash("sha256")
-      .update(`${raw.platform || "Windows"}-${ownerUid}`)
+      .update(`${platform}-${ownerUid}`)
       .digest("hex")
       .slice(0, 10);
 
@@ -252,7 +369,8 @@ export class ScannerAdapter {
   }
 
   /**
-   * Map raw process item to ProcessDocument.
+   * Map raw process item to ProcessDocument, extracting fields from both real scanner
+   * telemetry ('exe', 'cmdline', 'parent_pid', etc.) and legacy models.
    */
   public mapProcess(
     p: RawScannerProcess,
@@ -261,14 +379,65 @@ export class ScannerAdapter {
     ownerUid: string,
     timestamp: string
   ): ProcessDocument {
-    const threatScore = Math.min(100, Math.max(0, Math.round(p.score || 0)));
-    const threatLevel = this.mapThreatLevel(p.level);
+    const rawScore = p.score ?? p.threat_score ?? (typeof p.risk_score === "number" ? p.risk_score : undefined);
+    const threatScore = Math.min(100, Math.max(0, Math.round(typeof rawScore === "number" ? rawScore : 0)));
+
+    const rawLevel = p.level ?? p.threat_level ?? p.severity ?? p.risk_level;
+
+    const threatLevel = this.mapThreatLevel(
+      typeof rawLevel === "string"
+        ? rawLevel
+        : threatScore >= 90
+        ? "CRITICAL"
+        : threatScore >= 75
+        ? "HIGH"
+        : threatScore >= 40
+        ? "MEDIUM"
+        : threatScore >= 20
+        ? "LOW"
+        : "NORMAL"
+    );
+
     const scoreMode = this.mapScoreMode(p.score_mode);
     const applicationName = this.mapApplicationContext(p.application_context);
 
     const memoryEvidence = this.mapMemoryEvidence(p, timestamp);
     const behaviorEvidence = this.mapBehaviorEvidence(p, timestamp);
     const correlationEvidence = this.mapCorrelationEvidence(p, timestamp);
+
+    const executablePath =
+      p.executable ||
+      p.exe ||
+      (typeof p.executable_path === "string" ? p.executable_path : undefined) ||
+      (typeof p.path === "string" ? p.path : undefined) ||
+      (typeof p.image_path === "string" ? p.image_path : undefined) ||
+      undefined;
+
+    const parentPid =
+      p.parent?.pid ??
+      p.parent_pid ??
+      (typeof p.parentPid === "number" ? (p.parentPid as number) : undefined) ??
+      undefined;
+
+    const parentName =
+      p.parent?.name ??
+      p.parent_name ??
+      (typeof p.parentName === "string" ? (p.parentName as string) : undefined) ??
+      undefined;
+
+    const rawCmd = p.commandLine ?? p.command_line ?? p.cmdline;
+    const commandLine =
+      typeof rawCmd === "string" && rawCmd.trim().length > 0
+        ? rawCmd.trim()
+        : Array.isArray(rawCmd) && rawCmd.length > 0
+        ? rawCmd.join(" ")
+        : undefined;
+
+    const userContext =
+      p.userContext ??
+      p.username ??
+      (typeof p.user_context === "string" ? (p.user_context as string) : undefined) ??
+      undefined;
 
     const processDoc: ProcessDocument = {
       processId: `proc-${scanId.slice(0, 10)}-${p.pid}`,
@@ -277,10 +446,10 @@ export class ScannerAdapter {
       ownerUid,
       pid: p.pid,
       name: p.name || "Unknown Process",
-      executablePath: p.executable || undefined,
+      executablePath: executablePath || undefined,
       applicationName,
-      parentPid: p.parent?.pid ?? undefined,
-      parentName: p.parent?.name ?? undefined,
+      parentPid,
+      parentName,
       threatScore,
       threatLevel,
       scoreMode,
@@ -291,8 +460,8 @@ export class ScannerAdapter {
       behaviorEvidence,
       correlationEvidence,
       timestamp,
-      commandLine: undefined,
-      userContext: undefined,
+      commandLine,
+      userContext,
       integrityLevel: undefined,
     };
 
@@ -308,9 +477,10 @@ export class ScannerAdapter {
    */
   public mapMemoryEvidence(p: RawScannerProcess, timestamp: string): MemoryEvidencePayload {
     const mem = p.memory;
-    const indicators = mem?.indicators || [];
-    const hasIndicators = indicators.length > 0;
-    const isAccessDenied = mem?.status === "access_denied";
+    const indicators = [...(mem?.indicators || [])];
+    const isAccessDenied =
+      mem?.status === "access_denied" ||
+      (typeof p.exe === "string" && p.exe.toLowerCase().includes("access denied"));
 
     let scanStatus: "SCANNED" | "ACCESS_DENIED" | "NOT_SCANNED" = "NOT_SCANNED";
     if (isAccessDenied) {
@@ -324,8 +494,18 @@ export class ScannerAdapter {
     if (mem?.total_regions) details.push(`Inspected ${mem.total_regions} virtual memory regions.`);
     if (mem?.suspicious_regions) details.push(`Identified ${mem.suspicious_regions} anomalous regions.`);
 
+    // Real scanner process memory info
+    if (p.memory_rss !== undefined || p.memory_vms !== undefined) {
+      const rssKb = p.memory_rss ? Math.round(p.memory_rss / 1024) : 0;
+      const vmsKb = p.memory_vms ? Math.round(p.memory_vms / 1024) : 0;
+      details.push(`Memory RSS: ${rssKb} KB, VMS: ${vmsKb} KB.`);
+    }
+
+    const hasIndicators = indicators.length > 0;
+    const present = Boolean(p.has_memory_evidence || hasIndicators || (mem?.suspicious_regions && mem.suspicious_regions > 0));
+
     return {
-      present: p.has_memory_evidence || hasIndicators,
+      present,
       strength: this.mapStrength(p.memory_evidence_strength || mem?.evidence_strength),
       indicators,
       suspiciousRegions: mem?.suspicious_regions || 0,
@@ -344,21 +524,36 @@ export class ScannerAdapter {
    */
   public mapBehaviorEvidence(p: RawScannerProcess, timestamp: string): BehaviorEvidencePayload {
     const beh = p.behavior;
-    const indicators = beh?.indicators || [];
+    const indicators = [...(beh?.indicators || [])];
+    if (Array.isArray(p.indicators)) {
+      for (const ind of p.indicators) {
+        if (!indicators.includes(ind)) indicators.push(ind);
+      }
+    }
     const hasIndicators = indicators.length > 0;
 
     const details = beh?.raw_indicators
       ? beh.raw_indicators.map((r) => r.description).filter((d): d is string => typeof d === "string")
       : [];
 
+    const parentProcess = p.parent?.name ?? p.parent_name ?? undefined;
+
+    const rawCmd = p.commandLine ?? p.command_line ?? p.cmdline;
+    const commandLine =
+      typeof rawCmd === "string" && rawCmd.trim().length > 0
+        ? rawCmd.trim()
+        : Array.isArray(rawCmd) && rawCmd.length > 0
+        ? rawCmd.join(" ")
+        : undefined;
+
     return {
-      present: p.has_behavior_evidence || hasIndicators,
+      present: Boolean(p.has_behavior_evidence || hasIndicators),
       score: p.behavior_score ?? beh?.score ?? 0,
       indicators,
       suspiciousCommandLine: indicators.some((i) => i.toLowerCase().includes("command")),
       suspiciousParent: indicators.some((i) => i.toLowerCase().includes("parent")),
-      commandLine: undefined,
-      parentProcess: p.parent?.name || undefined,
+      commandLine,
+      parentProcess,
       details: details.length > 0 ? details : undefined,
       timestamp,
     };
@@ -386,7 +581,8 @@ export class ScannerAdapter {
   }
 
   /**
-   * Map threat alerts from raw summary alerts and elevated processes.
+   * Map threat alerts from raw summary alerts, top-level alerts collection,
+   * and elevated processes.
    */
   public mapThreatAlerts(
     raw: RawScannerResult,
@@ -400,16 +596,29 @@ export class ScannerAdapter {
     const alerts: ThreatAlertDocument[] = [];
     const seenPids = new Set<number>();
 
-    // 1. Process explicit summary alerts
-    if (raw.summary.threat_alerts && Array.isArray(raw.summary.threat_alerts)) {
-      for (const alert of raw.summary.threat_alerts) {
-        seenPids.add(alert.pid);
-        const matched = processMap.get(alert.pid);
+    // 1. Process explicit top-level alerts (real scanner format)
+    if (Array.isArray(raw.alerts)) {
+      for (const alert of raw.alerts) {
+        const alertPid = alert.pid ?? alert.process?.pid ?? 0;
+        seenPids.add(alertPid);
+        const matched = processMap.get(alertPid);
         alerts.push(this.mapSingleThreatAlert(alert, matched, scanId, endpointId, ownerUid, timestamp));
       }
     }
 
-    // 2. Also promote any process with CRITICAL or HIGH score not already in summary alerts
+    // 2. Process explicit summary alerts (legacy format)
+    if (raw.summary?.threat_alerts && Array.isArray(raw.summary.threat_alerts)) {
+      for (const alert of raw.summary.threat_alerts) {
+        const alertPid = alert.pid ?? alert.process?.pid ?? 0;
+        if (!seenPids.has(alertPid)) {
+          seenPids.add(alertPid);
+          const matched = processMap.get(alertPid);
+          alerts.push(this.mapSingleThreatAlert(alert, matched, scanId, endpointId, ownerUid, timestamp));
+        }
+      }
+    }
+
+    // 3. Also promote any process with CRITICAL or HIGH score not already in summary alerts
     for (const proc of processes) {
       if (!seenPids.has(proc.pid) && (proc.threatLevel === "CRITICAL" || proc.threatLevel === "HIGH" || proc.threatScore >= 75)) {
         seenPids.add(proc.pid);
@@ -450,35 +659,77 @@ export class ScannerAdapter {
     ownerUid: string,
     timestamp: string
   ): ThreatAlertDocument {
-    const score = Math.round(alert.score || matched?.threatScore || 0);
-    const level = this.mapThreatLevel(alert.level || matched?.threatLevel);
-    const scoreMode = this.mapScoreMode(alert.score_mode || matched?.scoreMode);
+    const alertPid = alert.pid ?? alert.process?.pid ?? matched?.pid ?? 0;
+    const processName =
+      alert.name ??
+      alert.process_name ??
+      alert.process?.name ??
+      matched?.name ??
+      "Unknown Process";
+
+    const score = Math.round(
+      alert.score ?? alert.threat_score ?? matched?.threatScore ?? 0
+    );
+    const level = this.mapThreatLevel(
+      alert.level ?? alert.threat_level ?? alert.severity ?? matched?.threatLevel
+    );
+    const scoreMode = this.mapScoreMode(alert.score_mode ?? matched?.scoreMode);
+
+    const alertId =
+      alert.id ||
+      alert.alert_id ||
+      `alert-pt-${scanId.slice(-8)}-${alertPid}`;
+
+    const recommendedActions =
+      alert.recommended_actions ??
+      (alert.recommended_action
+        ? [alert.recommended_action]
+        : [
+            `Review process lineage and execution context for PID ${alertPid} (${processName})`,
+            "Inspect memory region allocations for unbacked executable pages or RWX sections",
+            "Correlate with Windows Event Log (Sysmon / PowerShell ScriptBlock)",
+            "Enforce read-only containment protocols; do not alter endpoint state",
+          ]);
+
+    let behaviorEvidence = alert.behavior_evidence || matched?.behaviorEvidence;
+    let memoryEvidence = alert.memory_evidence || matched?.memoryEvidence;
+    const correlationEvidence = alert.correlation_evidence || matched?.correlationEvidence;
+
+    if (alert.evidence && Array.isArray(alert.evidence) && alert.evidence.length > 0) {
+      if (!behaviorEvidence) {
+        behaviorEvidence = {
+          present: true,
+          indicators: alert.evidence,
+          timestamp,
+        };
+      } else {
+        const combined = Array.from(new Set([...behaviorEvidence.indicators, ...alert.evidence]));
+        behaviorEvidence = { ...behaviorEvidence, indicators: combined, present: true };
+      }
+    }
 
     return {
-      id: `alert-pt-${scanId.slice(-8)}-${alert.pid}`,
+      id: alertId,
       scanId,
       endpointId,
       ownerUid,
-      pid: alert.pid,
-      processName: alert.name || matched?.name || "Unknown Process",
+      pid: alertPid,
+      processName,
       score,
       level,
       scoreMode,
-      title: `${level} Threat Finding: ${alert.name} (Score: ${score}/100)`,
-      description: `Elevated risk detected on ${alert.name} (PID ${alert.pid}) using ${scoreMode} analysis. Strength: ${
-        alert.memory_evidence_strength || matched?.memoryEvidence?.strength || "MODERATE"
-      }.`,
-      memoryEvidence: matched?.memoryEvidence,
-      behaviorEvidence: matched?.behaviorEvidence,
-      correlationEvidence: matched?.correlationEvidence,
-      detectedAt: timestamp,
-      status: "NEW",
-      recommendedActions: [
-        `Review process lineage and execution context for PID ${alert.pid} (${alert.name})`,
-        "Inspect memory region allocations for unbacked executable pages or RWX sections",
-        "Correlate with Windows Event Log (Sysmon / PowerShell ScriptBlock)",
-        "Enforce read-only containment protocols; do not alter endpoint state",
-      ],
+      title: alert.title || `${level} Threat Finding: ${processName} (Score: ${score}/100)`,
+      description:
+        alert.description ||
+        `Elevated risk detected on ${processName} (PID ${alertPid}) using ${scoreMode} analysis. Strength: ${
+          alert.memory_evidence_strength || matched?.memoryEvidence?.strength || "MODERATE"
+        }.`,
+      memoryEvidence,
+      behaviorEvidence,
+      correlationEvidence,
+      detectedAt: alert.timestamp || timestamp,
+      status: (alert.status as ThreatAlertDocument["status"]) || "NEW",
+      recommendedActions,
     };
   }
 
