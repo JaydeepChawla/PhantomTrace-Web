@@ -93,13 +93,17 @@ export const ThreatAlertsPage: React.FC = () => {
   };
 
   if (loading && alerts.length === 0) {
-    return <div style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>Loading Threat Alerts...</div>;
+    return (
+      <div style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>
+        Loading PhantomTrace data...
+      </div>
+    );
   }
 
   if (error && alerts.length === 0) {
     return (
-      <div style={{ padding: '2rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', borderRadius: '8px', color: '#fca5a5' }}>
-        {error}
+      <div style={{ padding: '2rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', borderRadius: '8px', color: '#fca5a5', textAlign: 'center' }}>
+        Unable to load PhantomTrace data.
       </div>
     );
   }

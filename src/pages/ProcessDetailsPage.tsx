@@ -64,13 +64,13 @@ export const ProcessDetailsPage: React.FC = () => {
   }, [numericPid]);
 
   if (loading && !currentProcess) {
-    return <div style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>Loading process telemetry...</div>;
+    return <div style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>Loading PhantomTrace data...</div>;
   }
 
   if (error) {
     return (
       <div style={{ padding: '3rem', textAlign: 'center' }}>
-        <h3 style={{ color: '#ef4444', marginBottom: '1rem' }}>Telemetry Error</h3>
+        <h3 style={{ color: '#ef4444', marginBottom: '1rem' }}>Unable to load PhantomTrace data.</h3>
         <p style={{ color: '#94a3b8', marginBottom: '1.5rem' }}>{error}</p>
         <Link to="/processes" className="pt-btn pt-btn-secondary">
           <ArrowLeft size={16} />

@@ -15,6 +15,7 @@ export const ProcessesPage: React.FC = () => {
   const navigate = useNavigate();
   const [processes, setProcesses] = useState<Process[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -22,12 +23,15 @@ export const ProcessesPage: React.FC = () => {
     async function loadProcesses() {
       try {
         setLoading(true);
+        setError(null);
         const result = await dataService.getProcesses();
         if (!cancelled) {
           setProcesses(result);
         }
       } catch (err) {
-        console.error("Unable to load process telemetry:", err);
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Unable to load PhantomTrace data.");
+        }
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -83,7 +87,27 @@ export const ProcessesPage: React.FC = () => {
   };
 
   if (loading && processes.length === 0) {
-    return <div style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>Loading process telemetry...</div>;
+    return (
+      <div style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>
+        Loading PhantomTrace data...
+      </div>
+    );
+  }
+
+  if (error && processes.length === 0) {
+    return (
+      <div style={{ padding: '2rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', borderRadius: '8px', color: '#fca5a5', textAlign: 'center' }}>
+        Unable to load PhantomTrace data.
+      </div>
+    );
+  }
+
+  if (!loading && !error && processes.length === 0) {
+    return (
+      <div style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>
+        No scan data available.
+      </div>
+    );
   }
 
   return (

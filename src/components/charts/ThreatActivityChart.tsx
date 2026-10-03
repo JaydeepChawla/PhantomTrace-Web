@@ -29,6 +29,7 @@ export const ThreatActivityChart: React.FC<ThreatActivityChartProps> = ({ data }
 
   // Compute SVG Points
   const getX = (index: number) => {
+    if (data.length <= 1) return width / 2;
     return paddingX + (index / (data.length - 1)) * (width - 2 * paddingX);
   };
 
@@ -38,8 +39,12 @@ export const ThreatActivityChart: React.FC<ThreatActivityChartProps> = ({ data }
 
   // Build path strings
   const scorePoints = data.map((d, i) => `${getX(i)},${getYScore(d.avgScore)}`);
-  const scorePath = `M ${scorePoints.join(' L ')}`;
-  const scoreAreaPath = `${scorePath} L ${getX(data.length - 1)},${height - paddingY} L ${getX(0)},${height - paddingY} Z`;
+  const scorePath = data.length === 1
+    ? `M ${getX(0) - 20},${getYScore(data[0].avgScore)} L ${getX(0) + 20},${getYScore(data[0].avgScore)}`
+    : `M ${scorePoints.join(' L ')}`;
+  const scoreAreaPath = data.length === 1
+    ? `M ${getX(0) - 20},${getYScore(data[0].avgScore)} L ${getX(0) + 20},${getYScore(data[0].avgScore)} L ${getX(0) + 20},${height - paddingY} L ${getX(0) - 20},${height - paddingY} Z`
+    : `${scorePath} L ${getX(data.length - 1)},${height - paddingY} L ${getX(0)},${height - paddingY} Z`;
 
   return (
     <div style={{ width: '100%', position: 'relative' }}>

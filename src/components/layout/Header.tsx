@@ -45,7 +45,9 @@ export const Header: React.FC<HeaderProps> = ({ onRefresh, isRefreshing = false 
     return () => window.clearInterval(timer);
   }, []);
 
-  // Initial backend health & Firebase configuration verification (Requirement 3)
+  const [nodeName, setNodeName] = useState<string>("WINDOWS-ENDPOINT-3E7489");
+
+  // Initial backend health & cloud verification
   useEffect(() => {
     let active = true;
 
@@ -58,6 +60,12 @@ export const Header: React.FC<HeaderProps> = ({ onRefresh, isRefreshing = false 
             if (dataService.getTelemetrySource) {
               setTelemetrySource(dataService.getTelemetrySource());
             }
+          }
+        }
+        if (dataService.getScanOverview) {
+          const overview = await dataService.getScanOverview();
+          if (active && overview && 'endpointName' in overview && overview.endpointName) {
+            setNodeName(overview.endpointName);
           }
         }
       } catch {
@@ -148,7 +156,7 @@ export const Header: React.FC<HeaderProps> = ({ onRefresh, isRefreshing = false 
           </h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(255, 255, 255, 0.04)', padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.74rem', color: '#94a3b8' }}>
             <Server size={12} style={{ color: '#00e5ff' }} />
-            <span>SEC-WORKSTATION-09</span>
+            <span>{nodeName}</span>
           </div>
         </div>
 

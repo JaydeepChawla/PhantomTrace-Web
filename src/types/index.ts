@@ -78,6 +78,7 @@ export interface ScanOverview {
   highCount: number;
   mediumCount: number;
   lowCount: number;
+  normalCount?: number;
   highestThreatScore: number;
   scanTime: string;
   duration: string;
@@ -85,6 +86,9 @@ export interface ScanOverview {
   engineVersion: string;
   scanMode: string;
   readOnlyEngineEnforced: boolean;
+  scanId?: string;
+  endpointId?: string;
+  endpointName?: string;
 }
 
 export interface ScanHistoryItem {
