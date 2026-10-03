@@ -44,12 +44,20 @@ def upload_scan(api_url: str, auth_token: str, file_path: str) -> bool:
 
         # Validate that it is valid JSON with results array
         parsed = json.loads(payload.decode("utf-8"))
-        if "results" not in parsed or not isinstance(parsed["results"], list):
-            print("[ERROR] Invalid scan payload: missing 'results' collection.")
+        if not isinstance(parsed, dict):
+            print("[ERROR] Invalid scan payload: root must be a JSON object.")
             return False
 
-        process_count = len(parsed["results"])
-        print(f"[+] Validated scan format. Processes to transmit: {process_count}")
+        if "processes" not in parsed:
+            print("[ERROR] Invalid scan payload: missing 'processes' collection.")
+            return False
+
+        if not isinstance(parsed["processes"], list):
+            print("[ERROR] Invalid scan payload: 'processes' must be a list.")
+            return False
+
+        process_count = len(parsed["processes"])
+        print(f"[+] Validated PhantomTrace scanner format. Processes to transmit: {process_count}")
 
         endpoint = f"{api_url.rstrip('/')}/api/scans/ingest"
         headers = {
