@@ -139,7 +139,7 @@ export const LandingPage: React.FC = () => {
             marginBottom: '2.5rem' 
           }}
         >
-          PhantomTrace inspects live process address spaces for stealth shellcode injection, unbacked RWX segments, and reflective memory tampering without disruptive endpoint modifications.
+          PhantomTrace analyzes running processes and memory to detect suspicious fileless threats and hidden malicious activity — without modifying your files or system.
         </p>
 
         {/* CTA Buttons */}
