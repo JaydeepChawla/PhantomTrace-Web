@@ -1,14 +1,14 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  Shield, 
-  Cpu, 
-  Activity, 
-  Layers, 
-  Lock, 
-  ArrowRight, 
-  Eye, 
-  FileCheck2, 
+import {
+  Shield,
+  Cpu,
+  Activity,
+  Layers,
+  Lock,
+  ArrowRight,
+  Eye,
+  FileCheck2,
   Database,
   Server,
   Download
@@ -43,10 +43,10 @@ export const LandingPage: React.FC = () => {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--pt-bg-base)', color: '#f8fafc', display: 'flex', flexDirection: 'column' }}>
       {/* Top Navigation with Official Navbar Logo */}
-      <header 
-        style={{ 
-          borderBottom: '1px solid var(--pt-border-subtle)', 
-          background: 'rgba(9, 15, 26, 0.85)', 
+      <header
+        style={{
+          borderBottom: '1px solid var(--pt-border-subtle)',
+          background: 'rgba(9, 15, 26, 0.85)',
           backdropFilter: 'blur(12px)',
           position: 'sticky',
           top: 0,
@@ -75,9 +75,9 @@ export const LandingPage: React.FC = () => {
           <Link to="/reports" style={{ fontSize: '0.86rem', color: '#94a3b8', fontWeight: 500 }}>
             Reports
           </Link>
-          <Link 
-            to="/dashboard" 
-            className="pt-btn pt-btn-primary" 
+          <Link
+            to="/dashboard"
+            className="pt-btn pt-btn-primary"
             style={{ padding: '0.45rem 1rem', fontSize: '0.84rem' }}
           >
             <span>Enter Console</span>
@@ -87,11 +87,11 @@ export const LandingPage: React.FC = () => {
       </header>
 
       {/* Hero Section with Official Full Logo */}
-      <section 
-        style={{ 
-          padding: '4.5rem 2rem 3.5rem 2rem', 
-          maxWidth: '1200px', 
-          margin: '0 auto', 
+      <section
+        style={{
+          padding: '4.5rem 2rem 3.5rem 2rem',
+          maxWidth: '1200px',
+          margin: '0 auto',
           textAlign: 'center',
           display: 'flex',
           flexDirection: 'column',
@@ -103,12 +103,12 @@ export const LandingPage: React.FC = () => {
           <Logo variant="full" height={88} style={{ filter: 'drop-shadow(0 4px 20px rgba(0, 229, 255, 0.25))' }} />
         </div>
 
-        <h1 
-          style={{ 
-            fontSize: '2.5rem', 
-            fontWeight: 800, 
-            letterSpacing: '-0.02em', 
-            color: '#ffffff', 
+        <h1
+          style={{
+            fontSize: '2.5rem',
+            fontWeight: 800,
+            letterSpacing: '-0.02em',
+            color: '#ffffff',
             maxWidth: '850px',
             lineHeight: 1.2,
             marginBottom: '0.85rem'
@@ -117,11 +117,11 @@ export const LandingPage: React.FC = () => {
           Memory &amp; Fileless Threat Detection
         </h1>
 
-        <p 
-          style={{ 
-            fontSize: '1.35rem', 
-            color: '#00e5ff', 
-            fontStyle: 'italic', 
+        <p
+          style={{
+            fontSize: '1.35rem',
+            color: '#00e5ff',
+            fontStyle: 'italic',
             fontWeight: 500,
             marginBottom: '1.25rem',
             letterSpacing: '0.02em'
@@ -130,13 +130,13 @@ export const LandingPage: React.FC = () => {
           "Trace what others can't see."
         </p>
 
-        <p 
-          style={{ 
-            fontSize: '1.05rem', 
-            color: '#94a3b8', 
-            maxWidth: '720px', 
-            lineHeight: 1.6, 
-            marginBottom: '2.5rem' 
+        <p
+          style={{
+            fontSize: '1.05rem',
+            color: '#94a3b8',
+            maxWidth: '720px',
+            lineHeight: 1.6,
+            marginBottom: '2.5rem'
           }}
         >
           PhantomTrace analyzes running processes and memory to detect suspicious fileless threats and hidden malicious activity — without modifying your files or system.
@@ -144,9 +144,9 @@ export const LandingPage: React.FC = () => {
 
         {/* CTA Buttons */}
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
-          <Link 
-            to="/dashboard" 
-            className="pt-btn pt-btn-primary" 
+          <Link
+            to="/dashboard"
+            className="pt-btn pt-btn-primary"
             style={{ padding: '0.75rem 1.75rem', fontSize: '0.95rem' }}
           >
             <span>Launch Operations Dashboard</span>
@@ -167,9 +167,9 @@ export const LandingPage: React.FC = () => {
             <Download size={17} style={{ color: '#00e5ff' }} />
             <span>Download for Windows</span>
           </a>
-          <Link 
-            to="/alerts" 
-            className="pt-btn pt-btn-secondary" 
+          <Link
+            to="/alerts"
+            className="pt-btn pt-btn-secondary"
             style={{ padding: '0.75rem 1.25rem', fontSize: '0.95rem' }}
           >
             <Eye size={17} style={{ color: '#38bdf8' }} />
@@ -191,21 +191,21 @@ export const LandingPage: React.FC = () => {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.25rem' }}>
           {features.map((feat) => (
-            <div 
+            <div
               key={feat.title}
               className="pt-card pt-card-cyber"
               style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}
             >
-              <div 
-                style={{ 
-                  width: '44px', 
-                  height: '44px', 
-                  borderRadius: '8px', 
-                  background: 'rgba(0, 229, 255, 0.08)', 
-                  display: 'flex', 
-                  alignItems: 'center', 
+              <div
+                style={{
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '8px',
+                  background: 'rgba(0, 229, 255, 0.08)',
+                  display: 'flex',
+                  alignItems: 'center',
                   justifyContent: 'center',
-                  border: '1px solid rgba(0, 229, 255, 0.2)' 
+                  border: '1px solid rgba(0, 229, 255, 0.2)'
                 }}
               >
                 {feat.icon}
@@ -225,9 +225,9 @@ export const LandingPage: React.FC = () => {
       <WindowsDownloadSection />
 
       {/* Architecture Flow Diagram with Windows Icon */}
-      <section 
-        style={{ 
-          background: 'rgba(9, 15, 26, 0.65)', 
+      <section
+        style={{
+          background: 'rgba(9, 15, 26, 0.65)',
           borderTop: '1px solid var(--pt-border-subtle)',
           borderBottom: '1px solid var(--pt-border-subtle)',
           padding: '3.5rem 2rem'
@@ -241,13 +241,13 @@ export const LandingPage: React.FC = () => {
             Structured pipeline bridging Windows memory inspection to cloud-based triage
           </p>
 
-          <div 
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              gap: '1rem', 
-              flexWrap: 'wrap' 
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '1rem',
+              flexWrap: 'wrap'
             }}
           >
             {/* Windows Application Branding Node */}
@@ -293,11 +293,11 @@ export const LandingPage: React.FC = () => {
       </section>
 
       {/* Footer */}
-      <footer 
-        style={{ 
-          marginTop: 'auto', 
-          padding: '1.75rem 2rem', 
-          borderTop: '1px solid var(--pt-border-subtle)', 
+      <footer
+        style={{
+          marginTop: 'auto',
+          padding: '1.75rem 2rem',
+          borderTop: '1px solid var(--pt-border-subtle)',
           background: 'rgba(5, 9, 17, 0.95)',
           display: 'flex',
           alignItems: 'center',

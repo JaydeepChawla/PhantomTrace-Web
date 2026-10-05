@@ -9,7 +9,7 @@ import type {
 } from "../types";
 
 export type CloudConnectionStatus = "Cloud Connected" | "Cloud Not Configured" | "API Offline";
-export type TelemetrySource = "Windows Scanner (Cloud)" | "Local Fixture (Demo)";
+export type TelemetrySource = "Windows Scanner (Cloud)" | "Cloud Connected" | "Local Fixture (Demo)";
 
 export interface CloudHealthStatus {
   status: CloudConnectionStatus;
@@ -130,6 +130,14 @@ export interface PhantomTraceDataService {
    * Retrieve active sync status details.
    */
   getSyncStatus?(): { isRealData: boolean; label: string; lastSyncedAt: string | null };
+
+  /**
+   * Device pairing & enrollment operations
+   */
+  getDevices?(): Promise<Array<{ deviceId: string; deviceName: string; createdAt: string; lastSeenAt: string; isRevoked: boolean }>>;
+  revokeDevice?(deviceId: string): Promise<boolean>;
+  startDevicePairing?(): Promise<{ pairingId: string; pairingCode: string; expiresAt: string }>;
+  checkDevicePairingStatus?(pairingId: string): Promise<{ status: "PENDING" | "PAIRED" | "EXPIRED"; deviceId?: string }>;
 }
 
 // TODO Phase 3:

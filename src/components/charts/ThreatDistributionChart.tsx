@@ -29,14 +29,14 @@ export const ThreatDistributionChart: React.FC<ThreatDistributionChartProps> = (
         </div>
 
         {/* Multi-segment stacked bar */}
-        <div 
-          style={{ 
-            height: '10px', 
-            borderRadius: '5px', 
+        <div
+          style={{
+            height: '10px',
+            borderRadius: '5px',
             background: totalAlerts === 0 ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255, 255, 255, 0.05)',
-            overflow: 'hidden', 
+            overflow: 'hidden',
             display: 'flex',
-            marginBottom: '1rem' 
+            marginBottom: '1rem'
           }}
         >
           {totalAlerts === 0 ? (
@@ -66,7 +66,7 @@ export const ThreatDistributionChart: React.FC<ThreatDistributionChartProps> = (
         {/* Legend Grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.65rem' }}>
           {levels.map((lvl) => (
-            <div 
+            <div
               key={lvl.label}
               style={{
                 background: 'rgba(255, 255, 255, 0.02)',
@@ -92,12 +92,12 @@ export const ThreatDistributionChart: React.FC<ThreatDistributionChartProps> = (
       </div>
 
       {/* Detection Correlation Summary */}
-      <div 
-        style={{ 
-          background: 'rgba(9, 15, 26, 0.6)', 
-          border: '1px solid var(--pt-border-subtle)', 
-          borderRadius: '8px', 
-          padding: '0.85rem' 
+      <div
+        style={{
+          background: 'rgba(9, 15, 26, 0.6)',
+          border: '1px solid var(--pt-border-subtle)',
+          borderRadius: '8px',
+          padding: '0.85rem'
         }}
       >
         <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginBottom: '0.65rem', fontWeight: 600 }}>

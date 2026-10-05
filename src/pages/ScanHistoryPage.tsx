@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Search, 
-  Calendar, 
+import {
+  Search,
+  Calendar,
   Lock
 } from 'lucide-react';
 import { dataService } from '../services';
@@ -49,7 +49,7 @@ export const ScanHistoryPage: React.FC = () => {
   const filteredHistory = history.filter((item) => {
     const dateStr = item.scanDate || item.startedAt || '';
     const idStr = item.id || '';
-    const matchesSearch = 
+    const matchesSearch =
       dateStr.toLowerCase().includes(searchTerm.toLowerCase()) ||
       idStr.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'ALL' || item.status === statusFilter;
@@ -111,13 +111,13 @@ export const ScanHistoryPage: React.FC = () => {
       </div>
 
       {/* Filter Bar */}
-      <div 
+      <div
         className="pt-card"
-        style={{ 
-          padding: '1rem 1.25rem', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'space-between', 
+        style={{
+          padding: '1rem 1.25rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
           gap: '1rem',
           flexWrap: 'wrap'
         }}
@@ -136,8 +136,8 @@ export const ScanHistoryPage: React.FC = () => {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <span style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: 600 }}>Status:</span>
-          <select 
-            value={statusFilter} 
+          <select
+            value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="pt-select"
           >
@@ -180,11 +180,11 @@ export const ScanHistoryPage: React.FC = () => {
                     {item.processes}
                   </td>
                   <td>
-                    <span 
-                      style={{ 
-                        fontFamily: 'var(--font-mono)', 
-                        fontWeight: 700, 
-                        color: (item.alerts ?? item.totalAlerts ?? 0) > 0 ? '#ef4444' : '#10b981' 
+                    <span
+                      style={{
+                        fontFamily: 'var(--font-mono)',
+                        fontWeight: 700,
+                        color: (item.alerts ?? item.totalAlerts ?? 0) > 0 ? '#ef4444' : '#10b981'
                       }}
                     >
                       {item.alerts ?? item.totalAlerts ?? 0}

@@ -1,10 +1,10 @@
-import type { 
-  ProcessItem, 
-  ThreatAlert, 
-  ScanOverview, 
-  ScanHistoryItem, 
-  ReportItem, 
-  SystemSettings 
+import type {
+  ProcessItem,
+  ThreatAlert,
+  ScanOverview,
+  ScanHistoryItem,
+  ReportItem,
+  SystemSettings
 } from '../types';
 
 export const mockOverview: ScanOverview = {

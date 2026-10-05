@@ -15,7 +15,7 @@ export const AppLayout: React.FC = () => {
       {/* Main Content Area */}
       <div className="pt-main-content-wrapper">
         <Header onRefresh={refreshData} isRefreshing={loading} />
-        
+
         <main className="pt-page-body">
           <Outlet />
         </main>

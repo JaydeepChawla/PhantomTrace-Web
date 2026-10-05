@@ -87,7 +87,7 @@ export function useProcessData(selectedPid?: number) {
     return processes.filter(p => {
       const pPath = p.path || p.executablePath || '';
       const pUser = p.userContext || '';
-      const matchesSearch = 
+      const matchesSearch =
         p.name.toLowerCase().includes(search.toLowerCase()) ||
         p.pid.toString().includes(search) ||
         pPath.toLowerCase().includes(search.toLowerCase()) ||

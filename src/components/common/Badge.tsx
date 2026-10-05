@@ -38,8 +38,8 @@ export const Badge: React.FC<BadgeProps> = ({
     }
   };
 
-  const sizeStyle = size === 'sm' 
-    ? { fontSize: '0.68rem', padding: '0.15rem 0.45rem' } 
+  const sizeStyle = size === 'sm'
+    ? { fontSize: '0.68rem', padding: '0.15rem 0.45rem' }
     : {};
 
   return (

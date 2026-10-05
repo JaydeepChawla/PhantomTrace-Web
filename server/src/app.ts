@@ -1,6 +1,8 @@
 import express from "express";
 import cors from "cors";
 import { healthRouter } from "./routes/health";
+import { authRouter } from "./routes/auth";
+import { devicesRouter } from "./routes/devices";
 import { usersRouter } from "./routes/users";
 import { endpointsRouter } from "./routes/endpoints";
 import { scansRouter } from "./routes/scans";
@@ -65,6 +67,8 @@ app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
 // API Routes
 app.use("/api/health", healthRouter);
+app.use("/api/auth", authRouter);
+app.use("/api/devices", devicesRouter);
 app.use("/api/users", usersRouter);
 app.use("/api/endpoints", endpointsRouter);
 app.use("/api/scans", scansRouter);

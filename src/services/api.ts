@@ -1,19 +1,19 @@
-import type { 
-  ProcessItem, 
-  ThreatAlert, 
-  ScanOverview, 
-  ScanHistoryItem, 
-  ReportItem, 
-  SystemSettings 
+import type {
+  ProcessItem,
+  ThreatAlert,
+  ScanOverview,
+  ScanHistoryItem,
+  ReportItem,
+  SystemSettings
 } from '../types';
-import { 
-  mockOverview, 
-  mockProcesses, 
-  mockThreatAlerts, 
-  mockScanHistory, 
-  mockReports, 
-  mockSettings, 
-  mockThreatActivityTimeline 
+import {
+  mockOverview,
+  mockProcesses,
+  mockThreatAlerts,
+  mockScanHistory,
+  mockReports,
+  mockSettings,
+  mockThreatActivityTimeline
 } from '../data/mockData';
 
 /**
@@ -22,7 +22,7 @@ import {
  * =====================================================================
  * This service layer serves as the single source of truth for the
  * React frontend.
- * 
+ *
  * Target Telemetry Pipeline:
  *   PhantomTrace Windows EXE
  *           ↓
@@ -33,8 +33,8 @@ import {
  *   Firebase Cloud Firestore / Realtime Store
  *           ↓
  *   PhantomTrace Web Platform (api.ts / firebase.ts)
- * 
- * TODO: Replace internal development provider with live fetch calls to 
+ *
+ * TODO: Replace internal development provider with live fetch calls to
  * PhantomTrace REST API when backend service is deployed.
  * =====================================================================
  */

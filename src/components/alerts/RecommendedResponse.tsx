@@ -1,11 +1,11 @@
 import React from 'react';
-import { 
-  ShieldCheck, 
-  Search, 
-  Terminal, 
-  Layers, 
-  FileCheck2, 
-  Lock, 
+import {
+  ShieldCheck,
+  Search,
+  Terminal,
+  Layers,
+  FileCheck2,
+  Lock,
   AlertTriangle,
   ArrowRight
 } from 'lucide-react';
@@ -18,28 +18,28 @@ interface RecommendedResponseProps {
 
 export const RecommendedResponse: React.FC<RecommendedResponseProps> = ({ alert }) => {
   const hasMemory = Boolean(
-    alert.memoryEvidence && 
+    alert.memoryEvidence &&
     (alert.memoryEvidence.present || (alert.memoryEvidence.indicators && alert.memoryEvidence.indicators.length > 0))
   );
 
   const hasBehavior = Boolean(
-    alert.behaviorEvidence && 
+    alert.behaviorEvidence &&
     (alert.behaviorEvidence.present || (alert.behaviorEvidence.indicators && alert.behaviorEvidence.indicators.length > 0))
   );
 
   const hasCorrelation = Boolean(
-    alert.correlationEvidence && 
+    alert.correlationEvidence &&
     (alert.correlationEvidence.present || alert.correlationEvidence.explanation)
   );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       {/* 1. Strict Read-Only Protocol Assurance */}
-      <div 
-        style={{ 
-          background: 'rgba(2, 132, 199, 0.08)', 
-          border: '1px solid rgba(0, 229, 255, 0.25)', 
-          borderRadius: '8px', 
+      <div
+        style={{
+          background: 'rgba(2, 132, 199, 0.08)',
+          border: '1px solid rgba(0, 229, 255, 0.25)',
+          borderRadius: '8px',
           padding: '1rem 1.25rem',
           display: 'flex',
           gap: '1rem',
@@ -65,12 +65,12 @@ export const RecommendedResponse: React.FC<RecommendedResponseProps> = ({ alert 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {/* A. If Correlated Evidence Exists */}
           {hasCorrelation && (
-            <div 
-              style={{ 
-                background: 'rgba(0, 229, 255, 0.04)', 
-                borderLeft: '4px solid var(--pt-cyan)', 
-                borderRadius: '0 6px 6px 0', 
-                padding: '0.85rem 1rem' 
+            <div
+              style={{
+                background: 'rgba(0, 229, 255, 0.04)',
+                borderLeft: '4px solid var(--pt-cyan)',
+                borderRadius: '0 6px 6px 0',
+                padding: '0.85rem 1rem'
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
@@ -90,12 +90,12 @@ export const RecommendedResponse: React.FC<RecommendedResponseProps> = ({ alert 
 
           {/* B. If Memory Evidence Exists */}
           {hasMemory && (
-            <div 
-              style={{ 
-                background: 'rgba(239, 68, 68, 0.04)', 
-                borderLeft: '4px solid #ef4444', 
-                borderRadius: '0 6px 6px 0', 
-                padding: '0.85rem 1rem' 
+            <div
+              style={{
+                background: 'rgba(239, 68, 68, 0.04)',
+                borderLeft: '4px solid #ef4444',
+                borderRadius: '0 6px 6px 0',
+                padding: '0.85rem 1rem'
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
@@ -116,12 +116,12 @@ export const RecommendedResponse: React.FC<RecommendedResponseProps> = ({ alert 
 
           {/* C. If Behavior Evidence Exists */}
           {hasBehavior && (
-            <div 
-              style={{ 
-                background: 'rgba(249, 115, 22, 0.04)', 
-                borderLeft: '4px solid #f97316', 
-                borderRadius: '0 6px 6px 0', 
-                padding: '0.85rem 1rem' 
+            <div
+              style={{
+                background: 'rgba(249, 115, 22, 0.04)',
+                borderLeft: '4px solid #f97316',
+                borderRadius: '0 6px 6px 0',
+                padding: '0.85rem 1rem'
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
@@ -141,12 +141,12 @@ export const RecommendedResponse: React.FC<RecommendedResponseProps> = ({ alert 
 
           {/* Baseline if neither is heavily flagged */}
           {!hasMemory && !hasBehavior && (
-            <div 
-              style={{ 
-                background: 'rgba(16, 185, 129, 0.04)', 
-                borderLeft: '4px solid #10b981', 
-                borderRadius: '0 6px 6px 0', 
-                padding: '0.85rem 1rem' 
+            <div
+              style={{
+                background: 'rgba(16, 185, 129, 0.04)',
+                borderLeft: '4px solid #10b981',
+                borderRadius: '0 6px 6px 0',
+                padding: '0.85rem 1rem'
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
@@ -203,29 +203,29 @@ export const RecommendedResponse: React.FC<RecommendedResponseProps> = ({ alert 
               desc: 'If the telemetry cannot be definitively attributed to authorized system operations, escalate the incident to Tier 2/3 for detailed memory dump triage.',
             },
           ].map((item) => (
-            <div 
+            <div
               key={item.step}
-              style={{ 
-                display: 'flex', 
-                gap: '1rem', 
-                alignItems: 'flex-start', 
+              style={{
+                display: 'flex',
+                gap: '1rem',
+                alignItems: 'flex-start',
                 padding: '0.85rem 1rem',
                 background: 'rgba(9, 15, 26, 0.65)',
                 border: '1px solid var(--pt-border-subtle)',
                 borderRadius: '6px'
               }}
             >
-              <div 
-                style={{ 
-                  width: '26px', 
-                  height: '26px', 
-                  borderRadius: '50%', 
-                  background: 'rgba(0, 229, 255, 0.12)', 
-                  border: '1px solid rgba(0, 229, 255, 0.35)', 
-                  color: '#00e5ff', 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
+              <div
+                style={{
+                  width: '26px',
+                  height: '26px',
+                  borderRadius: '50%',
+                  background: 'rgba(0, 229, 255, 0.12)',
+                  border: '1px solid rgba(0, 229, 255, 0.35)',
+                  color: '#00e5ff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                   fontSize: '0.78rem',
                   fontWeight: 700,
                   flexShrink: 0

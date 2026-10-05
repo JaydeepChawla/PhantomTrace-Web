@@ -13,7 +13,7 @@ export * from './phantomtrace';
 // Retained to support existing dashboard views until Phase 2.2 adapter integration.
 // =====================================================================
 
-export type ApplicationTrust = 
+export type ApplicationTrust =
   | 'Trusted System'
   | 'Verified Third-Party'
   | 'Unverified Binary'

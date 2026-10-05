@@ -49,3 +49,11 @@ serviceAccountKey.json
 firebase-admin-key.json
 *service-account*.json
 sample_scanner_output/
+cloud_auth.json
+**/cloud_auth.json
+
+# Python bytecode & caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/

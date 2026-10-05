@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Search, 
-  ExternalLink, 
+import {
+  Search,
+  ExternalLink,
   ArrowUpDown,
   Lock
 } from 'lucide-react';
@@ -62,7 +62,7 @@ export const ThreatAlertsPage: React.FC = () => {
           : alert.memoryEvidence?.details?.join(' ') || alert.memoryEvidence?.indicators?.join(' ') || '';
         const correlationStr = alert.correlation || '';
 
-        const matchesSearch = 
+        const matchesSearch =
           procName.toLowerCase().includes(searchTerm.toLowerCase()) ||
           alert.pid.toString().includes(searchTerm) ||
           memStr.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -129,13 +129,13 @@ export const ThreatAlertsPage: React.FC = () => {
       </div>
 
       {/* Filter and Search Bar */}
-      <div 
+      <div
         className="pt-card"
-        style={{ 
-          padding: '1rem 1.25rem', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'space-between', 
+        style={{
+          padding: '1rem 1.25rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
           gap: '1rem',
           flexWrap: 'wrap'
         }}
@@ -156,8 +156,8 @@ export const ThreatAlertsPage: React.FC = () => {
         {/* Level Filter */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <span style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: 600 }}>Severity:</span>
-          <select 
-            value={levelFilter} 
+          <select
+            value={levelFilter}
             onChange={(e) => setLevelFilter(e.target.value as ThreatLevel | 'ALL')}
             className="pt-select"
           >
@@ -172,8 +172,8 @@ export const ThreatAlertsPage: React.FC = () => {
         {/* Score Mode Filter */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <span style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: 600 }}>Score Mode:</span>
-          <select 
-            value={modeFilter} 
+          <select
+            value={modeFilter}
             onChange={(e) => setModeFilter(e.target.value as ScoreMode | 'ALL')}
             className="pt-select"
           >

@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Search, 
-  ArrowUpDown, 
+import {
+  Search,
+  ArrowUpDown,
   Lock
 } from 'lucide-react';
 import { dataService } from '../services';
@@ -57,7 +57,7 @@ export const ProcessesPage: React.FC = () => {
         const pPath = p.path || p.executablePath || '';
         const pUser = p.userContext || '';
         const pCmd = p.commandLine || '';
-        const matchesSearch = 
+        const matchesSearch =
           p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
           p.pid.toString().includes(searchTerm) ||
           pPath.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -148,8 +148,8 @@ export const ProcessesPage: React.FC = () => {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <span style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: 600 }}>Severity:</span>
-          <select 
-            value={levelFilter} 
+          <select
+            value={levelFilter}
             onChange={(e) => setLevelFilter(e.target.value)}
             className="pt-select"
           >
@@ -245,10 +245,10 @@ export const ProcessesPage: React.FC = () => {
                     {proc.parentPid} ({proc.parentName})
                   </td>
                   <td style={{ textAlign: 'center' }}>
-                    <span 
-                      style={{ 
-                        fontFamily: 'var(--font-mono)', 
-                        fontSize: '0.78rem', 
+                    <span
+                      style={{
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: '0.78rem',
                         color: (proc.memoryEvidenceCount ?? 0) > 0 ? '#00e5ff' : '#64748b',
                         fontWeight: (proc.memoryEvidenceCount ?? 0) > 0 ? 700 : 400
                       }}
@@ -257,10 +257,10 @@ export const ProcessesPage: React.FC = () => {
                     </span>
                   </td>
                   <td style={{ textAlign: 'center' }}>
-                    <span 
-                      style={{ 
-                        fontFamily: 'var(--font-mono)', 
-                        fontSize: '0.78rem', 
+                    <span
+                      style={{
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: '0.78rem',
                         color: (proc.behaviorEvidenceCount ?? 0) > 0 ? '#f97316' : '#64748b',
                         fontWeight: (proc.behaviorEvidenceCount ?? 0) > 0 ? 700 : 400
                       }}

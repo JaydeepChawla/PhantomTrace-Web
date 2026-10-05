@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  ShieldAlert, 
-  Cpu, 
-  Clock, 
-  Lock, 
-  CheckCircle2, 
-  HelpCircle, 
-  Layers, 
-  ArrowUpRight 
+import {
+  ArrowLeft,
+  ShieldAlert,
+  Cpu,
+  Clock,
+  Lock,
+  CheckCircle2,
+  HelpCircle,
+  Layers,
+  ArrowUpRight
 } from 'lucide-react';
 import { Badge } from '../common/Badge';
 import { Card } from '../common/Card';
@@ -117,23 +117,23 @@ export const AlertInvestigation: React.FC<AlertInvestigationProps> = ({
       </div>
 
       {/* Main Alert Identity Card (Alert Overview) */}
-      <div 
+      <div
         className="pt-card pt-card-cyber"
         style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}
       >
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1.25rem' }}>
           {/* Identity Group */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '1.15rem' }}>
-            <div 
-              style={{ 
-                width: '56px', 
-                height: '56px', 
-                borderRadius: '12px', 
-                background: 'rgba(239, 68, 68, 0.12)', 
-                border: '1px solid rgba(239, 68, 68, 0.35)', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center' 
+            <div
+              style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: '12px',
+                background: 'rgba(239, 68, 68, 0.12)',
+                border: '1px solid rgba(239, 68, 68, 0.35)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
               }}
             >
               <ShieldAlert size={30} style={{ color: '#ef4444' }} />
@@ -203,12 +203,12 @@ export const AlertInvestigation: React.FC<AlertInvestigationProps> = ({
         </div>
 
         {/* Status Lifecycle Controls & Process Drilldown Link */}
-        <div 
-          style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'space-between', 
-            paddingTop: '1rem', 
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingTop: '1rem',
             borderTop: '1px solid var(--pt-border-subtle)',
             flexWrap: 'wrap',
             gap: '1rem'
@@ -283,12 +283,12 @@ export const AlertInvestigation: React.FC<AlertInvestigationProps> = ({
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {/* Evidence-Based Primary Explanation */}
-          <div 
-            style={{ 
-              background: 'rgba(0, 229, 255, 0.05)', 
-              borderLeft: '4px solid var(--pt-cyan)', 
-              borderRadius: '0 6px 6px 0', 
-              padding: '1rem 1.25rem' 
+          <div
+            style={{
+              background: 'rgba(0, 229, 255, 0.05)',
+              borderLeft: '4px solid var(--pt-cyan)',
+              borderRadius: '0 6px 6px 0',
+              padding: '1rem 1.25rem'
             }}
           >
             <strong style={{ fontSize: '0.76rem', color: '#00e5ff', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.3rem' }}>

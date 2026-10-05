@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import { 
-  Download, 
-  ShieldCheck, 
-  Terminal, 
-  Cpu, 
-  UploadCloud, 
-  CheckCircle2, 
-  ExternalLink, 
-  Lock, 
+import {
+  Download,
+  ShieldCheck,
+  Terminal,
+  Cpu,
+  UploadCloud,
+  CheckCircle2,
+  ExternalLink,
+  Lock,
   Info,
   Copy,
   Check
@@ -18,7 +18,7 @@ export const WindowsDownloadSection: React.FC = () => {
   const [copiedCmd, setCopiedCmd] = useState<boolean>(false);
 
   // Configurable download asset URL via environment variable
-  const configuredDownloadUrl = 
+  const configuredDownloadUrl =
     typeof import.meta !== 'undefined' && import.meta.env?.VITE_WINDOWS_SCANNER_DOWNLOAD_URL
       ? import.meta.env.VITE_WINDOWS_SCANNER_DOWNLOAD_URL
       : null;
@@ -38,55 +38,61 @@ export const WindowsDownloadSection: React.FC = () => {
     {
       step: '01',
       title: 'Download',
-      desc: 'Obtain PhantomTrace_Windows_Release_1.0.exe. Standalone portable executable with zero installation needed.',
+      desc: 'Download PhantomTrace Windows Release 1.0 ZIP from the official release page.',
       icon: <Download size={20} style={{ color: '#00e5ff' }} />
     },
     {
       step: '02',
-      title: 'Run',
-      desc: 'Launch the scanner on your Windows PC via PowerShell, Command Prompt, or direct execution.',
-      icon: <Terminal size={20} style={{ color: '#38bdf8' }} />
+      title: 'Extract',
+      desc: 'Extract the PhantomTrace_Windows_Release_1.0.zip archive onto your Windows PC.',
+      icon: <CheckCircle2 size={20} style={{ color: '#38bdf8' }} />
     },
     {
       step: '03',
-      title: 'Scan',
-      desc: 'Performs passive read-only analysis across running processes and outputs scan_results.json.',
-      icon: <Cpu size={20} style={{ color: '#818cf8' }} />
+      title: 'Run',
+      desc: 'Run PhantomTrace_Windows_Release_1.0.exe locally in a PowerShell or Command Prompt terminal.',
+      icon: <Terminal size={20} style={{ color: '#818cf8' }} />
     },
     {
       step: '04',
-      title: 'Sync',
-      desc: 'Synchronize scan_results.json with the PhantomTrace dashboard using the authenticated upload integration.',
-      icon: <UploadCloud size={20} style={{ color: '#a78bfa' }} />
+      title: 'Scan',
+      desc: 'Wait for the read-only scan to finish. Generates scan_results.json in your local directory.',
+      icon: <Cpu size={20} style={{ color: '#a78bfa' }} />
     },
     {
       step: '05',
+      title: 'Sync',
+      desc: 'Synchronize the generated scan_results.json via the authenticated cloud upload integration.',
+      icon: <UploadCloud size={20} style={{ color: '#f43f5e' }} />
+    },
+    {
+      step: '06',
       title: 'Review',
-      desc: 'Triage volatile memory artifacts, behavioral anomalies, and threat scores on the web console.',
+      desc: 'Open the dashboard to view real telemetry, process inspections, and threat alerts.',
       icon: <CheckCircle2 size={20} style={{ color: '#34d399' }} />
     }
   ];
 
   return (
-    <section 
+    <section
       id="download"
-      style={{ 
-        maxWidth: '1200px', 
-        margin: '0 auto', 
-        padding: '3.5rem 2rem 4.5rem 2rem', 
-        width: '100%' 
+      style={{
+        maxWidth: '1200px',
+        margin: '0 auto',
+        padding: '3.5rem 2rem 4.5rem 2rem',
+        width: '100%'
       }}
     >
       {/* Section Header */}
       <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-        <div 
-          style={{ 
-            display: 'inline-flex', 
-            alignItems: 'center', 
-            gap: '0.45rem', 
-            padding: '0.3rem 0.85rem', 
-            borderRadius: '20px', 
-            background: 'rgba(0, 229, 255, 0.08)', 
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.45rem',
+            padding: '0.3rem 0.85rem',
+            borderRadius: '20px',
+            background: 'rgba(0, 229, 255, 0.08)',
             border: '1px solid rgba(0, 229, 255, 0.25)',
             fontSize: '0.75rem',
             fontWeight: 700,
@@ -112,11 +118,11 @@ export const WindowsDownloadSection: React.FC = () => {
       </div>
 
       {/* Main Download Hero Card */}
-      <div 
+      <div
         className="pt-card pt-card-cyber"
-        style={{ 
-          padding: '2.5rem', 
-          marginBottom: '3rem', 
+        style={{
+          padding: '2.5rem',
+          marginBottom: '3rem',
           background: 'linear-gradient(135deg, rgba(16, 26, 46, 0.95) 0%, rgba(9, 15, 26, 0.98) 100%)',
           border: '1px solid rgba(0, 229, 255, 0.25)',
           boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 229, 255, 0.08)',
@@ -124,12 +130,12 @@ export const WindowsDownloadSection: React.FC = () => {
           overflow: 'hidden'
         }}
       >
-        <div 
-          style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
-            gap: '2.5rem', 
-            alignItems: 'center' 
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+            gap: '2.5rem',
+            alignItems: 'center'
           }}
         >
           {/* Left Column: Product Information & Specs */}
@@ -177,11 +183,11 @@ export const WindowsDownloadSection: React.FC = () => {
           </div>
 
           {/* Right Column: Download Actions & CLI Quickstart */}
-          <div 
-            style={{ 
-              background: 'rgba(9, 15, 26, 0.75)', 
-              border: '1px solid rgba(0, 229, 255, 0.2)', 
-              borderRadius: '10px', 
+          <div
+            style={{
+              background: 'rgba(9, 15, 26, 0.75)',
+              border: '1px solid rgba(0, 229, 255, 0.2)',
+              borderRadius: '10px',
               padding: '1.75rem',
               display: 'flex',
               flexDirection: 'column',
@@ -198,17 +204,17 @@ export const WindowsDownloadSection: React.FC = () => {
             </div>
 
             {/* Download CTA Button */}
-            <a 
+            <a
               href={downloadUrl}
               target={isDirectBinary ? '_self' : '_blank'}
               rel="noopener noreferrer"
               className="pt-btn pt-btn-primary"
-              style={{ 
-                padding: '0.9rem 1.5rem', 
-                fontSize: '1rem', 
-                fontWeight: 700, 
-                display: 'flex', 
-                alignItems: 'center', 
+              style={{
+                padding: '0.9rem 1.5rem',
+                fontSize: '1rem',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
                 justifyContent: 'center',
                 gap: '0.65rem',
                 textDecoration: 'none',
@@ -221,13 +227,13 @@ export const WindowsDownloadSection: React.FC = () => {
             </a>
 
             {!isDirectBinary && (
-              <div 
-                style={{ 
-                  fontSize: '0.75rem', 
-                  color: '#94a3b8', 
-                  background: 'rgba(16, 26, 46, 0.8)', 
-                  border: '1px solid var(--pt-border-subtle)', 
-                  padding: '0.65rem 0.85rem', 
+              <div
+                style={{
+                  fontSize: '0.75rem',
+                  color: '#94a3b8',
+                  background: 'rgba(16, 26, 46, 0.8)',
+                  border: '1px solid var(--pt-border-subtle)',
+                  padding: '0.65rem 0.85rem',
                   borderRadius: '6px',
                   display: 'flex',
                   alignItems: 'flex-start',
@@ -266,15 +272,15 @@ export const WindowsDownloadSection: React.FC = () => {
                   <span>{copiedCmd ? 'Copied' : 'Copy'}</span>
                 </button>
               </div>
-              <pre 
-                style={{ 
-                  margin: 0, 
-                  background: '#040711', 
-                  border: '1px solid var(--pt-border-subtle)', 
-                  borderRadius: '6px', 
-                  padding: '0.65rem 0.85rem', 
-                  color: '#38bdf8', 
-                  fontFamily: 'var(--font-mono)', 
+              <pre
+                style={{
+                  margin: 0,
+                  background: '#040711',
+                  border: '1px solid var(--pt-border-subtle)',
+                  borderRadius: '6px',
+                  padding: '0.65rem 0.85rem',
+                  color: '#38bdf8',
+                  fontFamily: 'var(--font-mono)',
                   fontSize: '0.78rem',
                   overflowX: 'auto'
                 }}
@@ -297,46 +303,46 @@ export const WindowsDownloadSection: React.FC = () => {
           </p>
         </div>
 
-        <div 
-          style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-            gap: '1rem' 
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: '1rem'
           }}
         >
           {steps.map((s) => (
-            <div 
+            <div
               key={s.step}
               className="pt-card pt-card-cyber"
-              style={{ 
-                padding: '1.25rem', 
-                display: 'flex', 
-                flexDirection: 'column', 
+              style={{
+                padding: '1.25rem',
+                display: 'flex',
+                flexDirection: 'column',
                 gap: '0.65rem',
                 position: 'relative'
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div 
-                  style={{ 
-                    width: '36px', 
-                    height: '36px', 
-                    borderRadius: '6px', 
-                    background: 'rgba(0, 229, 255, 0.08)', 
-                    display: 'flex', 
-                    alignItems: 'center', 
+                <div
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '6px',
+                    background: 'rgba(0, 229, 255, 0.08)',
+                    display: 'flex',
+                    alignItems: 'center',
                     justifyContent: 'center',
-                    border: '1px solid rgba(0, 229, 255, 0.2)' 
+                    border: '1px solid rgba(0, 229, 255, 0.2)'
                   }}
                 >
                   {s.icon}
                 </div>
-                <span 
-                  style={{ 
-                    fontSize: '0.75rem', 
-                    fontFamily: 'var(--font-mono)', 
-                    color: '#64748b', 
-                    fontWeight: 700 
+                <span
+                  style={{
+                    fontSize: '0.75rem',
+                    fontFamily: 'var(--font-mono)',
+                    color: '#64748b',
+                    fontWeight: 700
                   }}
                 >
                   STEP {s.step}
@@ -354,12 +360,12 @@ export const WindowsDownloadSection: React.FC = () => {
       </div>
 
       {/* Safety & Architecture Guarantees Section */}
-      <div 
-        style={{ 
-          background: 'rgba(9, 15, 26, 0.65)', 
-          border: '1px solid var(--pt-border-subtle)', 
-          borderRadius: '10px', 
-          padding: '1.75rem 2rem' 
+      <div
+        style={{
+          background: 'rgba(9, 15, 26, 0.65)',
+          border: '1px solid var(--pt-border-subtle)',
+          borderRadius: '10px',
+          padding: '1.75rem 2rem'
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '1rem' }}>

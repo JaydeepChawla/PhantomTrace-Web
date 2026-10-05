@@ -1,12 +1,12 @@
 import React from 'react';
-import { 
-  ShieldCheck, 
-  AlertCircle, 
-  FileCheck2, 
-  Terminal, 
-  Network, 
-  KeyRound, 
-  Layers, 
+import {
+  ShieldCheck,
+  AlertCircle,
+  FileCheck2,
+  Terminal,
+  Network,
+  KeyRound,
+  Layers,
   Lock
 } from 'lucide-react';
 import type { Process, ProcessItem } from '../../types';
@@ -41,11 +41,11 @@ export const RecommendedResponseGuide: React.FC<RecommendedResponseGuideProps> =
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       {/* Read-Only Safety Protocol Box (Crucial for PhantomTrace) */}
-      <div 
-        style={{ 
-          background: 'rgba(2, 132, 199, 0.08)', 
-          border: '1px solid rgba(0, 229, 255, 0.25)', 
-          borderRadius: '8px', 
+      <div
+        style={{
+          background: 'rgba(2, 132, 199, 0.08)',
+          border: '1px solid rgba(0, 229, 255, 0.25)',
+          borderRadius: '8px',
           padding: '1rem 1.25rem',
           display: 'flex',
           gap: '1rem',
@@ -64,12 +64,12 @@ export const RecommendedResponseGuide: React.FC<RecommendedResponseGuideProps> =
       </div>
 
       {/* Why This Was Flagged */}
-      <div 
-        style={{ 
-          background: 'rgba(16, 26, 46, 0.65)', 
-          border: '1px solid var(--pt-border-subtle)', 
-          borderRadius: '8px', 
-          padding: '1.25rem' 
+      <div
+        style={{
+          background: 'rgba(16, 26, 46, 0.65)',
+          border: '1px solid var(--pt-border-subtle)',
+          borderRadius: '8px',
+          padding: '1.25rem'
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
@@ -83,12 +83,12 @@ export const RecommendedResponseGuide: React.FC<RecommendedResponseGuideProps> =
         </p>
 
         {process.correlationSummary && (
-          <div 
-            style={{ 
-              marginTop: '0.75rem', 
-              padding: '0.65rem 0.85rem', 
-              background: 'rgba(0, 229, 255, 0.04)', 
-              borderLeft: '3px solid var(--pt-cyan)', 
+          <div
+            style={{
+              marginTop: '0.75rem',
+              padding: '0.65rem 0.85rem',
+              background: 'rgba(0, 229, 255, 0.04)',
+              borderLeft: '3px solid var(--pt-cyan)',
               borderRadius: '0 4px 4px 0',
               fontSize: '0.8rem',
               color: '#94a3b8'
@@ -101,12 +101,12 @@ export const RecommendedResponseGuide: React.FC<RecommendedResponseGuideProps> =
       </div>
 
       {/* Recommended Investigation Steps */}
-      <div 
-        style={{ 
-          background: 'rgba(16, 26, 46, 0.65)', 
-          border: '1px solid var(--pt-border-subtle)', 
-          borderRadius: '8px', 
-          padding: '1.25rem' 
+      <div
+        style={{
+          background: 'rgba(16, 26, 46, 0.65)',
+          border: '1px solid var(--pt-border-subtle)',
+          borderRadius: '8px',
+          padding: '1.25rem'
         }}
       >
         <h4 style={{ fontSize: '0.92rem', fontWeight: 600, color: '#ffffff', marginBottom: '0.85rem' }}>
@@ -115,7 +115,7 @@ export const RecommendedResponseGuide: React.FC<RecommendedResponseGuideProps> =
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
           {responseRecommendation.investigationSteps.map((step, idx) => (
-            <div 
+            <div
               key={idx}
               style={{
                 display: 'flex',
@@ -127,15 +127,15 @@ export const RecommendedResponseGuide: React.FC<RecommendedResponseGuideProps> =
                 borderRadius: '6px'
               }}
             >
-              <div 
-                style={{ 
-                  width: '24px', 
-                  height: '24px', 
-                  borderRadius: '4px', 
-                  background: 'rgba(0, 229, 255, 0.1)', 
+              <div
+                style={{
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '4px',
+                  background: 'rgba(0, 229, 255, 0.1)',
                   border: '1px solid rgba(0, 229, 255, 0.2)',
-                  display: 'flex', 
-                  alignItems: 'center', 
+                  display: 'flex',
+                  alignItems: 'center',
                   justifyContent: 'center',
                   flexShrink: 0,
                   fontSize: '0.75rem',
@@ -160,12 +160,12 @@ export const RecommendedResponseGuide: React.FC<RecommendedResponseGuideProps> =
       </div>
 
       {/* Containment Guidance (Non-Destructive) */}
-      <div 
-        style={{ 
-          background: 'rgba(16, 26, 46, 0.65)', 
-          border: '1px solid var(--pt-border-subtle)', 
-          borderRadius: '8px', 
-          padding: '1rem 1.25rem' 
+      <div
+        style={{
+          background: 'rgba(16, 26, 46, 0.65)',
+          border: '1px solid var(--pt-border-subtle)',
+          borderRadius: '8px',
+          padding: '1rem 1.25rem'
         }}
       >
         <h4 style={{ fontSize: '0.86rem', fontWeight: 600, color: '#cbd5e1', marginBottom: '0.35rem' }}>
@@ -179,16 +179,16 @@ export const RecommendedResponseGuide: React.FC<RecommendedResponseGuideProps> =
           <div style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
             <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>MITRE ATT&CK:</span>
             {responseRecommendation.mitreReferences.map((ref) => (
-              <span 
+              <span
                 key={ref}
-                style={{ 
-                  background: 'rgba(255, 255, 255, 0.05)', 
-                  border: '1px solid rgba(255, 255, 255, 0.1)', 
-                  padding: '0.15rem 0.45rem', 
-                  borderRadius: '4px', 
-                  fontSize: '0.72rem', 
-                  fontFamily: 'var(--font-mono)', 
-                  color: '#38bdf8' 
+                style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  padding: '0.15rem 0.45rem',
+                  borderRadius: '4px',
+                  fontSize: '0.72rem',
+                  fontFamily: 'var(--font-mono)',
+                  color: '#38bdf8'
                 }}
               >
                 {ref}

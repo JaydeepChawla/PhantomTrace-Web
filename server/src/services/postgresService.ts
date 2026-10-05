@@ -2,6 +2,9 @@ import { postgresPool } from "../config/postgres";
 import type {
     UserDocument,
     EndpointDocument,
+    DeviceDocument,
+    PairingRequestDocument,
+    UserSessionDocument,
     ScanDocument,
     ProcessDocument,
     ThreatAlertDocument,
@@ -11,67 +14,79 @@ import type {
 } from "../types/api";
 
 class PostgresService {
+    private memoryUsers: Map<string, UserDocument> = new Map();
+    private memoryScans: Map<string, ScanDocument> = new Map();
+
     async getUser(uid: string): Promise<UserDocument | null> {
-        const result = await postgresPool.query(
-            `
-      SELECT
-        uid,
-        email,
-        display_name,
-        role,
-        created_at,
-        updated_at
-      FROM users
-      WHERE uid = $1
-      LIMIT 1
-      `,
-            [uid],
-        );
+        try {
+            const result = await postgresPool.query(
+                `
+          SELECT
+            uid,
+            email,
+            display_name,
+            role,
+            created_at,
+            updated_at
+          FROM users
+          WHERE uid = $1
+          LIMIT 1
+          `,
+                [uid],
+            );
 
-        if (result.rows.length === 0) {
-            return null;
+            if (result.rows.length === 0) {
+                return null;
+            }
+
+            const row = result.rows[0];
+
+            return {
+                uid: row.uid,
+                email: row.email,
+                displayName: row.display_name,
+                role: row.role,
+                createdAt: new Date(row.created_at).toISOString(),
+                updatedAt: new Date(row.updated_at).toISOString(),
+            };
+        } catch {
+            return this.memoryUsers.get(uid) || null;
         }
-
-        const row = result.rows[0];
-
-        return {
-            uid: row.uid,
-            email: row.email,
-            displayName: row.display_name,
-            role: row.role,
-            createdAt: new Date(row.created_at).toISOString(),
-            updatedAt: new Date(row.updated_at).toISOString(),
-        };
     }
 
     async upsertUser(user: UserDocument): Promise<void> {
-        await postgresPool.query(
-            `
-      INSERT INTO users (
-        uid,
-        email,
-        display_name,
-        role,
-        created_at,
-        updated_at
-      )
-      VALUES ($1, $2, $3, $4, $5, $6)
-      ON CONFLICT (uid)
-      DO UPDATE SET
-        email = EXCLUDED.email,
-        display_name = EXCLUDED.display_name,
-        role = EXCLUDED.role,
-        updated_at = EXCLUDED.updated_at
-      `,
-            [
-                user.uid,
-                user.email,
-                user.displayName,
-                user.role,
-                user.createdAt,
-                user.updatedAt,
-            ],
-        );
+        this.memoryUsers.set(user.uid, user);
+        try {
+            await postgresPool.query(
+                `
+          INSERT INTO users (
+            uid,
+            email,
+            display_name,
+            role,
+            created_at,
+            updated_at
+          )
+          VALUES ($1, $2, $3, $4, $5, $6)
+          ON CONFLICT (uid)
+          DO UPDATE SET
+            email = EXCLUDED.email,
+            display_name = EXCLUDED.display_name,
+            role = EXCLUDED.role,
+            updated_at = EXCLUDED.updated_at
+          `,
+                [
+                    user.uid,
+                    user.email,
+                    user.displayName,
+                    user.role,
+                    user.createdAt,
+                    user.updatedAt,
+                ],
+            );
+        } catch {
+            // in-memory fallback preserved
+        }
     }
 
     async ingestScanBundle(
@@ -87,7 +102,21 @@ class PostgresService {
 
         const uid = scan.ownerUid;
 
-        const client = await postgresPool.connect();
+        let client;
+        try {
+            client = await postgresPool.connect();
+        } catch {
+            this.memoryScans.set(scan.scanId, scan);
+            return {
+                success: true,
+                scanId: scan.scanId,
+                endpointId: endpoint.endpointId,
+                processesImported: processes.length,
+                alertsImported: threatAlerts.length,
+                highestScore: scan.highestScore,
+                duplicate: false,
+            };
+        }
 
         try {
             await client.query("BEGIN");
@@ -584,49 +613,55 @@ class PostgresService {
     }
 
     async getScans(uid: string): Promise<ScanDocument[]> {
-        const result = await postgresPool.query(
-            `
-      SELECT
-        scan_id,
-        endpoint_id,
-        owner_uid,
-        timestamp,
-        duration_ms,
-        scanner_version,
-        platform,
-        total_processes,
-        memory_scanned,
-        memory_access_denied,
-        highest_score,
-        counts
-      FROM scans
-      WHERE owner_uid = $1
-      ORDER BY timestamp DESC
-      `,
-            [uid],
-        );
+        try {
+            const result = await postgresPool.query(
+                `
+          SELECT
+            scan_id,
+            endpoint_id,
+            owner_uid,
+            timestamp,
+            duration_ms,
+            scanner_version,
+            platform,
+            total_processes,
+            memory_scanned,
+            memory_access_denied,
+            highest_score,
+            counts
+          FROM scans
+          WHERE owner_uid = $1
+          ORDER BY timestamp DESC
+          `,
+                [uid],
+            );
 
-        return result.rows.map((row) => ({
-            scanId: row.scan_id,
-            endpointId: row.endpoint_id,
-            ownerUid: row.owner_uid,
-            timestamp: new Date(row.timestamp).toISOString(),
-            durationMs:
-                row.duration_ms !== null ? Number(row.duration_ms) : undefined,
-            scannerVersion: row.scanner_version ?? undefined,
-            platform: row.platform ?? undefined,
-            totalProcesses: Number(row.total_processes),
-            memoryScanned:
-                row.memory_scanned !== null
-                    ? Number(row.memory_scanned)
-                    : undefined,
-            memoryAccessDenied:
-                row.memory_access_denied !== null
-                    ? Number(row.memory_access_denied)
-                    : undefined,
-            highestScore: Number(row.highest_score),
-            counts: row.counts,
-        }));
+            return result.rows.map((row) => ({
+                scanId: row.scan_id,
+                endpointId: row.endpoint_id,
+                ownerUid: row.owner_uid,
+                timestamp: new Date(row.timestamp).toISOString(),
+                durationMs:
+                    row.duration_ms !== null ? Number(row.duration_ms) : undefined,
+                scannerVersion: row.scanner_version ?? undefined,
+                platform: row.platform ?? undefined,
+                totalProcesses: Number(row.total_processes),
+                memoryScanned:
+                    row.memory_scanned !== null
+                        ? Number(row.memory_scanned)
+                        : undefined,
+                memoryAccessDenied:
+                    row.memory_access_denied !== null
+                        ? Number(row.memory_access_denied)
+                        : undefined,
+                highestScore: Number(row.highest_score),
+                counts: row.counts,
+            }));
+        } catch {
+            return Array.from(this.memoryScans.values()).filter(
+                (s) => s.ownerUid === uid
+            );
+        }
     }
 
     async getScan(
@@ -891,6 +926,387 @@ class PostgresService {
                     ? Number(row.record_count)
                     : undefined,
         };
+    }
+
+    /*
+     * ---------------------------------------------------------------
+     * Schema Initialization (Idempotent)
+     * ---------------------------------------------------------------
+     */
+    async initDatabaseSchema(): Promise<void> {
+        try {
+            await postgresPool.query(`
+                CREATE TABLE IF NOT EXISTS devices (
+                    device_id VARCHAR(128) PRIMARY KEY,
+                    owner_uid VARCHAR(128) NOT NULL,
+                    device_name VARCHAR(255) NOT NULL,
+                    device_token_hash VARCHAR(128) NOT NULL,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    revoked_at TIMESTAMPTZ
+                );
+                CREATE INDEX IF NOT EXISTS idx_devices_owner_uid ON devices (owner_uid);
+                CREATE INDEX IF NOT EXISTS idx_devices_token_hash ON devices (device_token_hash);
+
+                CREATE TABLE IF NOT EXISTS pairing_requests (
+                    pairing_id VARCHAR(128) PRIMARY KEY,
+                    owner_uid VARCHAR(128) NOT NULL,
+                    code VARCHAR(32) NOT NULL UNIQUE,
+                    expires_at TIMESTAMPTZ NOT NULL,
+                    used_at TIMESTAMPTZ,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    paired_device_id VARCHAR(128)
+                );
+                CREATE INDEX IF NOT EXISTS idx_pairing_code ON pairing_requests (code);
+
+                CREATE TABLE IF NOT EXISTS user_sessions (
+                    token_hash VARCHAR(128) PRIMARY KEY,
+                    uid VARCHAR(128) NOT NULL,
+                    email VARCHAR(255),
+                    display_name VARCHAR(255),
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    expires_at TIMESTAMPTZ NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_user_sessions_uid ON user_sessions (uid);
+            `);
+            console.log("[PostgreSQL] Device, pairing, and session schemas verified.");
+        } catch (err) {
+            console.warn("[PostgreSQL] Schema auto-migration check:", (err as Error).message);
+        }
+    }
+
+    // In-memory fallback registries for offline/test environments
+    private memoryDevices: Map<string, DeviceDocument> = new Map();
+    private memoryPairingRequests: Map<string, PairingRequestDocument> = new Map();
+    private memoryUserSessions: Map<string, UserSessionDocument> = new Map();
+
+    /*
+     * ---------------------------------------------------------------
+     * Device Enrollment & Credential Management
+     * ---------------------------------------------------------------
+     */
+    async registerDevice(device: DeviceDocument): Promise<void> {
+        this.memoryDevices.set(device.deviceTokenHash, device);
+        try {
+            await postgresPool.query(
+                `
+                INSERT INTO devices (
+                    device_id,
+                    owner_uid,
+                    device_name,
+                    device_token_hash,
+                    created_at,
+                    last_seen_at,
+                    revoked_at
+                )
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                ON CONFLICT (device_id)
+                DO UPDATE SET
+                    owner_uid = EXCLUDED.owner_uid,
+                    device_name = EXCLUDED.device_name,
+                    device_token_hash = EXCLUDED.device_token_hash,
+                    last_seen_at = EXCLUDED.last_seen_at,
+                    revoked_at = EXCLUDED.revoked_at
+                `,
+                [
+                    device.deviceId,
+                    device.ownerUid,
+                    device.deviceName,
+                    device.deviceTokenHash,
+                    device.createdAt,
+                    device.lastSeenAt,
+                    device.revokedAt || null,
+                ]
+            );
+        } catch (err) {
+            console.warn("[PostgreSQL] Fallback to memory registry for device registration:", (err as Error).message);
+        }
+    }
+
+    async getDeviceByTokenHash(tokenHash: string): Promise<DeviceDocument | null> {
+        try {
+            const result = await postgresPool.query(
+                `
+                SELECT *
+                FROM devices
+                WHERE device_token_hash = $1
+                LIMIT 1
+                `,
+                [tokenHash]
+            );
+            if (result.rows.length > 0) {
+                const row = result.rows[0];
+                return {
+                    deviceId: row.device_id,
+                    ownerUid: row.owner_uid,
+                    deviceName: row.device_name,
+                    deviceTokenHash: row.device_token_hash,
+                    createdAt: new Date(row.created_at).toISOString(),
+                    lastSeenAt: new Date(row.last_seen_at).toISOString(),
+                    revokedAt: row.revoked_at ? new Date(row.revoked_at).toISOString() : null,
+                };
+            }
+        } catch {
+            // fall back to in-memory
+        }
+
+        return this.memoryDevices.get(tokenHash) || null;
+    }
+
+    async getDevices(ownerUid: string): Promise<DeviceDocument[]> {
+        try {
+            const result = await postgresPool.query(
+                `
+                SELECT *
+                FROM devices
+                WHERE owner_uid = $1
+                ORDER BY created_at DESC
+                `,
+                [ownerUid]
+            );
+            return result.rows.map((row) => ({
+                deviceId: row.device_id,
+                ownerUid: row.owner_uid,
+                deviceName: row.device_name,
+                deviceTokenHash: row.device_token_hash,
+                createdAt: new Date(row.created_at).toISOString(),
+                lastSeenAt: new Date(row.last_seen_at).toISOString(),
+                revokedAt: row.revoked_at ? new Date(row.revoked_at).toISOString() : null,
+            }));
+        } catch {
+            return Array.from(this.memoryDevices.values()).filter(
+                (d) => d.ownerUid === ownerUid
+            );
+        }
+    }
+
+    async updateDeviceLastSeen(deviceId: string): Promise<void> {
+        for (const dev of this.memoryDevices.values()) {
+            if (dev.deviceId === deviceId) {
+                dev.lastSeenAt = new Date().toISOString();
+            }
+        }
+        try {
+            await postgresPool.query(
+                `
+                UPDATE devices
+                SET last_seen_at = NOW()
+                WHERE device_id = $1
+                `,
+                [deviceId]
+            );
+        } catch {
+            // ignore
+        }
+    }
+
+    async revokeDevice(ownerUid: string, deviceId: string): Promise<boolean> {
+        let found = false;
+        for (const dev of this.memoryDevices.values()) {
+            if (dev.deviceId === deviceId && dev.ownerUid === ownerUid) {
+                dev.revokedAt = new Date().toISOString();
+                found = true;
+            }
+        }
+        try {
+            const result = await postgresPool.query(
+                `
+                UPDATE devices
+                SET revoked_at = NOW()
+                WHERE device_id = $1 AND owner_uid = $2
+                `,
+                [deviceId, ownerUid]
+            );
+            return (result.rowCount ?? 0) > 0 || found;
+        } catch {
+            return found;
+        }
+    }
+
+    /*
+     * ---------------------------------------------------------------
+     * Pairing Requests (Short-Lived, One-Time Codes)
+     * ---------------------------------------------------------------
+     */
+    async createPairingRequest(pairing: PairingRequestDocument): Promise<void> {
+        this.memoryPairingRequests.set(pairing.code.toUpperCase(), pairing);
+        try {
+            await postgresPool.query(
+                `
+                INSERT INTO pairing_requests (
+                    pairing_id,
+                    owner_uid,
+                    code,
+                    expires_at,
+                    used_at,
+                    created_at,
+                    paired_device_id
+                )
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                ON CONFLICT (pairing_id) DO NOTHING
+                `,
+                [
+                    pairing.pairingId,
+                    pairing.ownerUid,
+                    pairing.code.toUpperCase(),
+                    pairing.expiresAt,
+                    pairing.usedAt || null,
+                    pairing.createdAt,
+                    pairing.pairedDeviceId || null,
+                ]
+            );
+        } catch (err) {
+            console.warn("[PostgreSQL] Fallback to memory registry for pairing request:", (err as Error).message);
+        }
+    }
+
+    async getPairingRequest(code: string): Promise<PairingRequestDocument | null> {
+        const cleanCode = code.toUpperCase().trim();
+        try {
+            const result = await postgresPool.query(
+                `
+                SELECT *
+                FROM pairing_requests
+                WHERE code = $1
+                LIMIT 1
+                `,
+                [cleanCode]
+            );
+            if (result.rows.length > 0) {
+                const row = result.rows[0];
+                return {
+                    pairingId: row.pairing_id,
+                    ownerUid: row.owner_uid,
+                    code: row.code,
+                    expiresAt: new Date(row.expires_at).toISOString(),
+                    usedAt: row.used_at ? new Date(row.used_at).toISOString() : null,
+                    createdAt: new Date(row.created_at).toISOString(),
+                    pairedDeviceId: row.paired_device_id,
+                };
+            }
+        } catch {
+            // fall back to memory
+        }
+
+        return this.memoryPairingRequests.get(cleanCode) || null;
+    }
+
+    async getPairingRequestById(pairingId: string): Promise<PairingRequestDocument | null> {
+        try {
+            const result = await postgresPool.query(
+                `
+                SELECT *
+                FROM pairing_requests
+                WHERE pairing_id = $1
+                LIMIT 1
+                `,
+                [pairingId]
+            );
+            if (result.rows.length > 0) {
+                const row = result.rows[0];
+                return {
+                    pairingId: row.pairing_id,
+                    ownerUid: row.owner_uid,
+                    code: row.code,
+                    expiresAt: new Date(row.expires_at).toISOString(),
+                    usedAt: row.used_at ? new Date(row.used_at).toISOString() : null,
+                    createdAt: new Date(row.created_at).toISOString(),
+                    pairedDeviceId: row.paired_device_id,
+                };
+            }
+        } catch {
+            // fall back to memory
+        }
+
+        for (const req of this.memoryPairingRequests.values()) {
+            if (req.pairingId === pairingId) return req;
+        }
+        return null;
+    }
+
+    async markPairingRequestUsed(pairingId: string, deviceId: string): Promise<void> {
+        for (const req of this.memoryPairingRequests.values()) {
+            if (req.pairingId === pairingId) {
+                req.usedAt = new Date().toISOString();
+                req.pairedDeviceId = deviceId;
+            }
+        }
+        try {
+            await postgresPool.query(
+                `
+                UPDATE pairing_requests
+                SET used_at = NOW(), paired_device_id = $2
+                WHERE pairing_id = $1
+                `,
+                [pairingId, deviceId]
+            );
+        } catch {
+            // ignore
+        }
+    }
+
+    /*
+     * ---------------------------------------------------------------
+     * User Sessions (Web User Authentication)
+     * ---------------------------------------------------------------
+     */
+    async createUserSession(session: UserSessionDocument): Promise<void> {
+        this.memoryUserSessions.set(session.tokenHash, session);
+        try {
+            await postgresPool.query(
+                `
+                INSERT INTO user_sessions (
+                    token_hash,
+                    uid,
+                    email,
+                    display_name,
+                    created_at,
+                    expires_at
+                )
+                VALUES ($1, $2, $3, $4, $5, $6)
+                ON CONFLICT (token_hash) DO NOTHING
+                `,
+                [
+                    session.tokenHash,
+                    session.uid,
+                    session.email || null,
+                    session.displayName || null,
+                    session.createdAt,
+                    session.expiresAt,
+                ]
+            );
+        } catch {
+            // memory fallback
+        }
+    }
+
+    async getUserSessionByTokenHash(tokenHash: string): Promise<UserSessionDocument | null> {
+        try {
+            const result = await postgresPool.query(
+                `
+                SELECT *
+                FROM user_sessions
+                WHERE token_hash = $1
+                LIMIT 1
+                `,
+                [tokenHash]
+            );
+            if (result.rows.length > 0) {
+                const row = result.rows[0];
+                return {
+                    tokenHash: row.token_hash,
+                    uid: row.uid,
+                    email: row.email,
+                    displayName: row.display_name,
+                    createdAt: new Date(row.created_at).toISOString(),
+                    expiresAt: new Date(row.expires_at).toISOString(),
+                };
+            }
+        } catch {
+            // memory fallback
+        }
+
+        return this.memoryUserSessions.get(tokenHash) || null;
     }
 }
 

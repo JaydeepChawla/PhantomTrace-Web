@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  FileText, 
-  Download, 
-  Copy, 
-  Check, 
-  FileCode, 
-  Layers, 
-  Lock 
+import {
+  FileText,
+  Download,
+  Copy,
+  Check,
+  FileCode,
+  Layers,
+  Lock
 } from 'lucide-react';
 import { dataService } from '../services';
 import type { Report } from '../types';
@@ -205,22 +205,22 @@ export const ReportsPage: React.FC = () => {
             <span>Architecture Readiness: This report UI is designed to stream production JSON/TXT artifacts directly from the PhantomTrace API or Firebase Storage bucket.</span>
           </div>
 
-          <div 
-            style={{ 
-              background: '#04070e', 
-              border: '1px solid var(--pt-border-subtle)', 
-              borderRadius: '8px', 
+          <div
+            style={{
+              background: '#04070e',
+              border: '1px solid var(--pt-border-subtle)',
+              borderRadius: '8px',
               padding: '1.25rem',
               maxHeight: '520px',
               overflowY: 'auto'
             }}
           >
-            <pre 
-              style={{ 
-                margin: 0, 
-                fontSize: '0.8rem', 
-                color: '#e2e8f0', 
-                fontFamily: 'var(--font-mono)', 
+            <pre
+              style={{
+                margin: 0,
+                fontSize: '0.8rem',
+                color: '#e2e8f0',
+                fontFamily: 'var(--font-mono)',
                 lineHeight: 1.55,
                 whiteSpace: 'pre-wrap',
                 wordBreak: 'break-word'

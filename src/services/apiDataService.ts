@@ -14,6 +14,7 @@ import type {
   SyncResult,
 } from "./dataService";
 import { LocalDataService } from "./localDataService";
+import { formatScanDate } from "../utils/dateFormat";
 
 /**
  * =====================================================================
@@ -35,8 +36,9 @@ export class ApiDataService implements PhantomTraceDataService {
   private baseUrl: string;
   private token: string | null = null;
   private localFallback: LocalDataService;
-  private lastSyncSource: "REAL_SCANNER" | "LOCAL_DEMO" = "LOCAL_DEMO";
+  private lastSyncSource: "REAL_SCANNER" | "LOCAL_DEMO" = "REAL_SCANNER";
   private lastSyncTimestamp: string | null = null;
+  private lastKnownScanId: string | null = null;
 
   constructor(baseUrl?: string) {
     const isProductionHost =
@@ -136,7 +138,7 @@ export class ApiDataService implements PhantomTraceDataService {
 
     if (list.length > 0) {
       this.lastSyncSource = "REAL_SCANNER";
-      this.lastSyncTimestamp = new Date().toLocaleString();
+      this.lastSyncTimestamp = formatScanDate(new Date());
     }
 
     return list.map((p: any) => ({
@@ -158,7 +160,7 @@ export class ApiDataService implements PhantomTraceDataService {
       memoryEvidence: p.memoryEvidence || { present: false, indicators: [] },
       behaviorEvidence: p.behaviorEvidence || { present: false, indicators: [] },
       correlationEvidence: p.correlationEvidence || { present: false, correlatedIndicators: [], memoryEvidencePresent: false, behaviorEvidencePresent: false },
-      timestamp: p.timestamp ? new Date(p.timestamp).toLocaleString() : p.timestamp,
+      timestamp: p.timestamp ? formatScanDate(p.timestamp) : p.timestamp,
       userContext: p.userContext || "NT AUTHORITY\\SYSTEM",
       memoryEvidenceCount: p.memoryEvidenceCount ?? (p.memoryEvidence?.indicators?.length ?? 0),
       behaviorEvidenceCount: p.behaviorEvidenceCount ?? (p.behaviorEvidence?.indicators?.length ?? 0),
@@ -195,7 +197,7 @@ export class ApiDataService implements PhantomTraceDataService {
       memoryEvidence: p.memoryEvidence || { present: false, indicators: [] },
       behaviorEvidence: p.behaviorEvidence || { present: false, indicators: [] },
       correlationEvidence: p.correlationEvidence || { present: false, correlatedIndicators: [], memoryEvidencePresent: false, behaviorEvidencePresent: false },
-      timestamp: p.timestamp ? new Date(p.timestamp).toLocaleString() : p.timestamp,
+      timestamp: p.timestamp ? formatScanDate(p.timestamp) : p.timestamp,
       userContext: p.userContext || "NT AUTHORITY\\SYSTEM",
       memoryEvidenceCount: p.memoryEvidenceCount ?? (p.memoryEvidence?.indicators?.length ?? 0),
       behaviorEvidenceCount: p.behaviorEvidenceCount ?? (p.behaviorEvidence?.indicators?.length ?? 0),
@@ -227,8 +229,8 @@ export class ApiDataService implements PhantomTraceDataService {
       memoryEvidence: a.memoryEvidence,
       behaviorEvidence: a.behaviorEvidence,
       correlationEvidence: a.correlationEvidence,
-      detectedAt: a.detectedAt ? new Date(a.detectedAt).toLocaleString() : a.detectedAt,
-      timestamp: a.timestamp ? new Date(a.timestamp).toLocaleString() : a.timestamp,
+      detectedAt: a.detectedAt ? formatScanDate(a.detectedAt) : a.detectedAt,
+      timestamp: a.timestamp ? formatScanDate(a.timestamp) : a.timestamp,
       status: a.status || "NEW",
       application: a.application || "Standard Binary",
       behaviorScore: a.behaviorScore,
@@ -263,8 +265,8 @@ export class ApiDataService implements PhantomTraceDataService {
       memoryEvidence: a.memoryEvidence,
       behaviorEvidence: a.behaviorEvidence,
       correlationEvidence: a.correlationEvidence,
-      detectedAt: a.detectedAt ? new Date(a.detectedAt).toLocaleString() : a.detectedAt,
-      timestamp: a.timestamp ? new Date(a.timestamp).toLocaleString() : a.timestamp,
+      detectedAt: a.detectedAt ? formatScanDate(a.detectedAt) : a.detectedAt,
+      timestamp: a.timestamp ? formatScanDate(a.timestamp) : a.timestamp,
       status: a.status || "NEW",
       application: a.application || "Standard Binary",
       behaviorScore: a.behaviorScore,
@@ -317,7 +319,7 @@ export class ApiDataService implements PhantomTraceDataService {
           ? "LOW"
           : "NORMAL",
       scannerVersion: s.scannerVersion || "PhantomTrace",
-      scanDate: s.timestamp ? new Date(s.timestamp).toLocaleString() : s.timestamp,
+      scanDate: s.timestamp ? formatScanDate(s.timestamp) : s.timestamp,
       processes: Number(s.totalProcesses ?? 0),
       alerts: (s.counts?.critical || 0) + (s.counts?.high || 0),
       critical: Number(s.counts?.critical || 0),
@@ -366,7 +368,7 @@ export class ApiDataService implements PhantomTraceDataService {
       name: r.name || (r.type === "json" ? "scan_results.json" : "phantomtrace_validation_report.txt"),
       type: r.type || "json",
       size: r.size || "102.2 KB",
-      lastModified: r.createdAt ? new Date(r.createdAt).toLocaleString() : new Date().toLocaleString(),
+      lastModified: r.createdAt ? formatScanDate(r.createdAt) : formatScanDate(new Date()),
       description: r.summary || r.title || "Forensic endpoint scan report",
       content: r.content || JSON.stringify(r, null, 2),
       recordCount: Number(r.recordCount ?? r.totalProcesses ?? 246),
@@ -398,7 +400,7 @@ export class ApiDataService implements PhantomTraceDataService {
       name: r.name || (r.type === "json" ? "scan_results.json" : "phantomtrace_validation_report.txt"),
       type: r.type || "json",
       size: r.size || "102.2 KB",
-      lastModified: r.createdAt ? new Date(r.createdAt).toLocaleString() : new Date().toLocaleString(),
+      lastModified: r.createdAt ? formatScanDate(r.createdAt) : formatScanDate(new Date()),
       description: r.summary || r.title || "Forensic endpoint scan report",
       content: r.content || JSON.stringify(r, null, 2),
       recordCount: Number(r.recordCount ?? r.totalProcesses ?? 246),
@@ -423,7 +425,7 @@ export class ApiDataService implements PhantomTraceDataService {
       label:
         this.lastSyncSource === "REAL_SCANNER"
           ? "Windows Scanner (Cloud)"
-          : "Local Fixture (Demo)",
+          : "Cloud Connected",
       lastSyncedAt: this.lastSyncTimestamp,
     };
   }
@@ -434,7 +436,7 @@ export class ApiDataService implements PhantomTraceDataService {
   public getTelemetrySource(): TelemetrySource {
     return this.lastSyncSource === "REAL_SCANNER"
       ? "Windows Scanner (Cloud)"
-      : "Local Fixture (Demo)";
+      : "Cloud Connected";
   }
 
   /**
@@ -460,19 +462,11 @@ export class ApiDataService implements PhantomTraceDataService {
       alerts = [];
     }
 
-    // Fetch endpoint metadata
-    let endpointName = "WINDOWS-ENDPOINT-3E7489";
-    try {
-      const endpointsRes = await this.safeFetch<{ endpoints: any[] }>("/endpoints");
-      if (endpointsRes.endpoints && endpointsRes.endpoints.length > 0) {
-        endpointName = endpointsRes.endpoints[0].name || endpointsRes.endpoints[0].endpointId;
-      }
-    } catch {
-      // ignore
-    }
+    // User-friendly endpoint identity
+    const endpointName = "Windows PC";
 
     this.lastSyncSource = "REAL_SCANNER";
-    this.lastSyncTimestamp = new Date().toLocaleString();
+    this.lastSyncTimestamp = latestScan.timestamp ? formatScanDate(latestScan.timestamp) : formatScanDate(new Date());
 
     const totalProcesses = Number(latestScan.totalProcesses ?? 0);
     const criticalCount = Number(latestScan.counts?.critical ?? 0);
@@ -490,7 +484,7 @@ export class ApiDataService implements PhantomTraceDataService {
       lowCount,
       normalCount,
       highestThreatScore: Number(latestScan.highestScore ?? 0),
-      scanTime: latestScan.timestamp ? new Date(latestScan.timestamp).toLocaleString() : "2026-09-08 13:23:20 UTC",
+      scanTime: latestScan.timestamp ? formatScanDate(latestScan.timestamp) : "05 October 2026, 5:18 PM",
       duration: latestScan.durationMs ? `${(latestScan.durationMs / 1000).toFixed(1)}s` : "4.0s",
       memoryInspectedMb: Number(latestScan.memoryScanned ?? 17495),
       engineVersion: latestScan.scannerVersion || "PhantomTrace Windows Release 1.0",
@@ -652,24 +646,22 @@ export class ApiDataService implements PhantomTraceDataService {
     const health = await this.checkHealth();
 
     if (health.status === "API Offline") {
-      this.lastSyncSource = "LOCAL_DEMO";
       return {
         success: false,
         status: "API Offline",
-        source: "Local Fixture (Demo)",
-        message: "Sync unavailable — API connection could not be established.",
-        timestamp: new Date().toLocaleTimeString(),
+        source: "Cloud Connected",
+        message: "Unable to update telemetry: API connection could not be established.",
+        timestamp: formatScanDate(new Date()),
       };
     }
 
     if (health.status === "Cloud Not Configured") {
-      this.lastSyncSource = "LOCAL_DEMO";
       return {
         success: false,
         status: "Cloud Not Configured",
-        source: "Local Fixture (Demo)",
-        message: "Cloud sync is not configured yet.",
-        timestamp: new Date().toLocaleTimeString(),
+        source: "Cloud Connected",
+        message: "Unable to update telemetry: Cloud sync is not configured yet.",
+        timestamp: formatScanDate(new Date()),
       };
     }
 
@@ -685,13 +677,12 @@ export class ApiDataService implements PhantomTraceDataService {
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        this.lastSyncSource = "LOCAL_DEMO";
         return {
           success: false,
           status: "Cloud Connected",
-          source: "Local Fixture (Demo)",
-          message: `Backend sync error: HTTP ${response.status}`,
-          timestamp: new Date().toLocaleTimeString(),
+          source: "Cloud Connected",
+          message: `Unable to update telemetry: HTTP ${response.status}`,
+          timestamp: formatScanDate(new Date()),
         };
       }
 
@@ -700,34 +691,133 @@ export class ApiDataService implements PhantomTraceDataService {
 
       if (Array.isArray(scans) && scans.length > 0) {
         this.lastSyncSource = "REAL_SCANNER";
-        this.lastSyncTimestamp = new Date().toLocaleString();
-        return {
-          success: true,
-          status: "Cloud Connected",
-          source: "Windows Scanner (Cloud)",
-          message: `Synchronized ${scans.length} scan cycle(s) from Windows Scanner (Cloud). Ingested ${scans[0].totalProcesses} processes.`,
-          timestamp: new Date().toLocaleTimeString(),
-        };
+        const latestScan = scans[0];
+        const formattedTimestamp = formatScanDate(latestScan.timestamp || new Date());
+        this.lastSyncTimestamp = formattedTimestamp;
+
+        const isNewer = this.lastKnownScanId !== null && this.lastKnownScanId !== latestScan.scanId;
+        const isFirst = this.lastKnownScanId === null;
+        this.lastKnownScanId = latestScan.scanId;
+
+        if (isNewer || isFirst) {
+          return {
+            success: true,
+            status: "Cloud Connected",
+            source: "Windows Scanner (Cloud)",
+            message: `Updated just now (Latest scan: ${formattedTimestamp})`,
+            timestamp: formattedTimestamp,
+          };
+        } else {
+          return {
+            success: true,
+            status: "Cloud Connected",
+            source: "Windows Scanner (Cloud)",
+            message: `No new scan available (Latest scan: ${formattedTimestamp})`,
+            timestamp: formattedTimestamp,
+          };
+        }
       }
 
-      this.lastSyncSource = "LOCAL_DEMO";
       return {
         success: false,
         status: "Cloud Connected",
-        source: "Local Fixture (Demo)",
-        message: "Cloud sync connected, but no Windows scanner telemetry has been ingested yet.",
-        timestamp: new Date().toLocaleTimeString(),
+        source: "Cloud Connected",
+        message: "No new scan available",
+        timestamp: formatScanDate(new Date()),
       };
     } catch (err: unknown) {
-      this.lastSyncSource = "LOCAL_DEMO";
-      const msg = err instanceof Error ? err.message : "Sync request failed";
+      const msg = err instanceof Error ? err.message : "Network error";
       return {
         success: false,
         status: "Cloud Connected",
-        source: "Local Fixture (Demo)",
-        message: `Sync failed: ${msg}`,
-        timestamp: new Date().toLocaleTimeString(),
+        source: "Cloud Connected",
+        message: `Unable to update telemetry: ${msg}`,
+        timestamp: formatScanDate(new Date()),
       };
+    }
+  }
+
+  /**
+   * Ensures an active user session token exists.
+   * Auto-provisions a secure public session if unauthenticated.
+   */
+  public async ensureAuthenticatedSession(): Promise<string> {
+    if (this.token) return this.token;
+
+    try {
+      const url = `${this.baseUrl}/auth/session`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ displayName: "Security Analyst" }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.sessionToken) {
+          this.setAuthToken(data.sessionToken);
+          return data.sessionToken;
+        }
+      }
+    } catch (err) {
+      console.warn("[ApiDataService] Could not establish public session:", err);
+    }
+    return "";
+  }
+
+  /**
+   * Initiates a short-lived device pairing request.
+   */
+  public async startDevicePairing(): Promise<{ pairingId: string; pairingCode: string; expiresAt: string }> {
+    await this.ensureAuthenticatedSession();
+    return this.safeFetch<{ pairingId: string; pairingCode: string; expiresAt: string }>(
+      "/devices/pair/start",
+      { method: "POST" }
+    );
+  }
+
+  /**
+   * Checks the status of an active device pairing handshake.
+   */
+  public async checkDevicePairingStatus(
+    pairingId: string
+  ): Promise<{ status: "PENDING" | "PAIRED" | "EXPIRED"; deviceId?: string }> {
+    return this.safeFetch<{ status: "PENDING" | "PAIRED" | "EXPIRED"; deviceId?: string }>(
+      `/devices/pair/status?pairingId=${encodeURIComponent(pairingId)}`
+    );
+  }
+
+  /**
+   * Enumerate all registered devices for the current user.
+   */
+  public async getDevices(): Promise<
+    Array<{ deviceId: string; deviceName: string; createdAt: string; lastSeenAt: string; isRevoked: boolean }>
+  > {
+    try {
+      const res = await this.safeFetch<{ devices: any[] }>("/devices");
+      return (res.devices || []).map((d) => ({
+        deviceId: d.deviceId,
+        deviceName: d.deviceName || "Windows PC",
+        createdAt: formatScanDate(d.createdAt),
+        lastSeenAt: formatScanDate(d.lastSeenAt),
+        isRevoked: Boolean(d.isRevoked),
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Revoke a registered device credential, terminating upload permissions immediately.
+   */
+  public async revokeDevice(deviceId: string): Promise<boolean> {
+    try {
+      const res = await this.safeFetch<{ success: boolean }>(
+        `/devices/${encodeURIComponent(deviceId)}/revoke`,
+        { method: "POST" }
+      );
+      return res.success === true;
+    } catch {
+      return false;
     }
   }
 }

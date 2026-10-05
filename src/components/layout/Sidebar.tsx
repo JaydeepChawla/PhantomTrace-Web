@@ -1,12 +1,12 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  AlertTriangle, 
-  Cpu, 
-  History, 
-  FileText, 
-  Settings, 
+import {
+  LayoutDashboard,
+  AlertTriangle,
+  Cpu,
+  History,
+  FileText,
+  Settings,
   ExternalLink,
   Lock
 } from 'lucide-react';
@@ -19,11 +19,11 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ threatAlertsCount = 6 }) => {
   const navItems = [
     { to: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
-    { 
-      to: '/alerts', 
-      label: 'Threat Alerts', 
-      icon: <AlertTriangle size={18} />, 
-      badge: threatAlertsCount > 0 ? threatAlertsCount : undefined 
+    {
+      to: '/alerts',
+      label: 'Threat Alerts',
+      icon: <AlertTriangle size={18} />,
+      badge: threatAlertsCount > 0 ? threatAlertsCount : undefined
     },
     { to: '/processes', label: 'Processes', icon: <Cpu size={18} /> },
     { to: '/history', label: 'Scan History', icon: <History size={18} /> },
@@ -43,12 +43,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ threatAlertsCount = 6 }) => {
             <Logo variant="app" height={32} />
           </div>
         </NavLink>
-        <div 
+        <div
           className="sidebar-tagline"
-          style={{ 
-            fontSize: '0.72rem', 
-            color: '#64748b', 
-            fontStyle: 'italic', 
+          style={{
+            fontSize: '0.72rem',
+            color: '#64748b',
+            fontStyle: 'italic',
             marginTop: '0.65rem',
             paddingLeft: '0.2rem'
           }}
@@ -86,14 +86,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ threatAlertsCount = 6 }) => {
               <span className="nav-text">{item.label}</span>
             </div>
             {item.badge !== undefined && (
-              <span 
-                style={{ 
-                  background: 'rgba(239, 68, 68, 0.2)', 
-                  color: '#f87171', 
+              <span
+                style={{
+                  background: 'rgba(239, 68, 68, 0.2)',
+                  color: '#f87171',
                   border: '1px solid rgba(239, 68, 68, 0.4)',
-                  fontSize: '0.7rem', 
-                  fontWeight: 700, 
-                  padding: '0.1rem 0.45rem', 
+                  fontSize: '0.7rem',
+                  fontWeight: 700,
+                  padding: '0.1rem 0.45rem',
                   borderRadius: '10px',
                   fontFamily: 'var(--font-mono)'
                 }}
@@ -125,10 +125,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ threatAlertsCount = 6 }) => {
       </nav>
 
       {/* Read-Only Engine Status Footer */}
-      <div 
-        style={{ 
-          padding: '1rem 1.15rem', 
-          background: 'rgba(5, 9, 17, 0.7)', 
+      <div
+        style={{
+          padding: '1rem 1.15rem',
+          background: 'rgba(5, 9, 17, 0.7)',
           borderTop: '1px solid var(--pt-border-subtle)',
           display: 'flex',
           flexDirection: 'column',

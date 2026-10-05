@@ -95,8 +95,8 @@ export const AlertInvestigationPage: React.FC = () => {
   }
 
   return (
-    <AlertInvestigation 
-      alert={alert} 
+    <AlertInvestigation
+      alert={alert}
       onStatusChange={handleStatusChange}
       onBack={() => navigate('/alerts')}
     />

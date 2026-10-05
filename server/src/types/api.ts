@@ -23,6 +23,8 @@ export interface AuthenticatedUser {
 export interface AuthenticatedRequest extends Request {
   user?: AuthenticatedUser;
   ownerUid?: string;
+  deviceId?: string;
+  authType?: "owner" | "device" | "user";
 }
 
 export interface UserDocument {
@@ -45,6 +47,35 @@ export interface EndpointDocument {
   scannerVersion: string;
   lastSeenAt: string;
   createdAt: string;
+}
+
+export interface DeviceDocument {
+  deviceId: string;
+  ownerUid: string;
+  deviceName: string;
+  deviceTokenHash: string;
+  createdAt: string;
+  lastSeenAt: string;
+  revokedAt?: string | null;
+}
+
+export interface PairingRequestDocument {
+  pairingId: string;
+  ownerUid: string;
+  code: string;
+  expiresAt: string;
+  usedAt?: string | null;
+  createdAt: string;
+  pairedDeviceId?: string | null;
+}
+
+export interface UserSessionDocument {
+  tokenHash: string;
+  uid: string;
+  email?: string;
+  displayName?: string;
+  createdAt: string;
+  expiresAt: string;
 }
 
 /**

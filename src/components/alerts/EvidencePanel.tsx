@@ -1,19 +1,19 @@
 import React, { useState } from 'react';
-import { 
-  FileCheck2, 
-  Activity, 
-  Layers, 
-  Terminal, 
-  ShieldCheck, 
-  Lock, 
-  AlertCircle 
+import {
+  FileCheck2,
+  Activity,
+  Layers,
+  Terminal,
+  ShieldCheck,
+  Lock,
+  AlertCircle
 } from 'lucide-react';
 import { Badge } from '../common/Badge';
 import { Card } from '../components/../common/Card';
-import type { 
-  MemoryEvidence, 
-  BehaviorEvidence, 
-  CorrelationEvidence 
+import type {
+  MemoryEvidence,
+  BehaviorEvidence,
+  CorrelationEvidence
 } from '../../types';
 
 interface EvidencePanelProps {
@@ -36,11 +36,11 @@ export const EvidencePanel: React.FC<EvidencePanelProps> = ({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       {/* Evidence Sub-Navigation Tabs */}
-      <div 
-        style={{ 
-          display: 'flex', 
-          gap: '0.5rem', 
-          borderBottom: '1px solid var(--pt-border-subtle)', 
+      <div
+        style={{
+          display: 'flex',
+          gap: '0.5rem',
+          borderBottom: '1px solid var(--pt-border-subtle)',
           paddingBottom: '0.65rem',
           flexWrap: 'wrap'
         }}
@@ -89,13 +89,13 @@ export const EvidencePanel: React.FC<EvidencePanelProps> = ({
           }
         >
           {!hasMemory ? (
-            <div 
-              style={{ 
-                padding: '2.5rem 1.5rem', 
-                textAlign: 'center', 
-                background: 'rgba(9, 15, 26, 0.5)', 
+            <div
+              style={{
+                padding: '2.5rem 1.5rem',
+                textAlign: 'center',
+                background: 'rgba(9, 15, 26, 0.5)',
                 borderRadius: '8px',
-                border: '1px solid var(--pt-border-subtle)' 
+                border: '1px solid var(--pt-border-subtle)'
               }}
             >
               <AlertCircle size={24} style={{ color: '#64748b', marginBottom: '0.5rem' }} />
@@ -109,11 +109,11 @@ export const EvidencePanel: React.FC<EvidencePanelProps> = ({
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               {/* Evidence Metrics Grid */}
-              <div 
-                style={{ 
-                  display: 'grid', 
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', 
-                  gap: '0.75rem', 
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                  gap: '0.75rem',
                   padding: '1rem',
                   background: 'rgba(5, 9, 17, 0.7)',
                   borderRadius: '6px',
@@ -208,15 +208,15 @@ export const EvidencePanel: React.FC<EvidencePanelProps> = ({
                   </h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                     {memoryEvidence.indicators.map((ind, i) => (
-                      <div 
+                      <div
                         key={i}
-                        style={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: '0.6rem', 
-                          padding: '0.5rem 0.85rem', 
-                          background: 'rgba(239, 68, 68, 0.08)', 
-                          border: '1px solid rgba(239, 68, 68, 0.25)', 
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.6rem',
+                          padding: '0.5rem 0.85rem',
+                          background: 'rgba(239, 68, 68, 0.08)',
+                          border: '1px solid rgba(239, 68, 68, 0.25)',
                           borderRadius: '6px',
                           fontSize: '0.8rem',
                           color: '#fca5a5'
@@ -238,12 +238,12 @@ export const EvidencePanel: React.FC<EvidencePanelProps> = ({
                   </h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     {memoryEvidence.details.map((det, i) => (
-                      <div 
+                      <div
                         key={i}
-                        style={{ 
-                          padding: '0.65rem 0.85rem', 
-                          background: 'rgba(5, 9, 17, 0.8)', 
-                          borderLeft: '3px solid var(--pt-cyan)', 
+                        style={{
+                          padding: '0.65rem 0.85rem',
+                          background: 'rgba(5, 9, 17, 0.8)',
+                          borderLeft: '3px solid var(--pt-cyan)',
                           borderRadius: '0 6px 6px 0',
                           fontSize: '0.82rem',
                           color: '#cbd5e1',
@@ -274,13 +274,13 @@ export const EvidencePanel: React.FC<EvidencePanelProps> = ({
           subtitle="Process creation anomalies, command-line syntax, and MITRE execution techniques"
         >
           {!hasBehavior ? (
-            <div 
-              style={{ 
-                padding: '2.5rem 1.5rem', 
-                textAlign: 'center', 
-                background: 'rgba(9, 15, 26, 0.5)', 
+            <div
+              style={{
+                padding: '2.5rem 1.5rem',
+                textAlign: 'center',
+                background: 'rgba(9, 15, 26, 0.5)',
                 borderRadius: '8px',
-                border: '1px solid var(--pt-border-subtle)' 
+                border: '1px solid var(--pt-border-subtle)'
               }}
             >
               <AlertCircle size={24} style={{ color: '#64748b', marginBottom: '0.5rem' }} />
@@ -294,11 +294,11 @@ export const EvidencePanel: React.FC<EvidencePanelProps> = ({
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               {/* Behavioral Metrics Grid */}
-              <div 
-                style={{ 
-                  display: 'grid', 
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', 
-                  gap: '0.75rem', 
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                  gap: '0.75rem',
                   padding: '1rem',
                   background: 'rgba(5, 9, 17, 0.7)',
                   borderRadius: '6px',
@@ -365,12 +365,12 @@ export const EvidencePanel: React.FC<EvidencePanelProps> = ({
                     <Terminal size={14} style={{ color: '#00e5ff' }} />
                     Captured Command Line Invocations
                   </span>
-                  <code 
-                    style={{ 
-                      fontSize: '0.78rem', 
-                      color: '#38bdf8', 
-                      wordBreak: 'break-all', 
-                      lineHeight: 1.5, 
+                  <code
+                    style={{
+                      fontSize: '0.78rem',
+                      color: '#38bdf8',
+                      wordBreak: 'break-all',
+                      lineHeight: 1.5,
                       display: 'block',
                       fontFamily: 'var(--font-mono)'
                     }}
@@ -388,15 +388,15 @@ export const EvidencePanel: React.FC<EvidencePanelProps> = ({
                   </h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                     {behaviorEvidence.indicators.map((ind, i) => (
-                      <div 
+                      <div
                         key={i}
-                        style={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: '0.6rem', 
-                          padding: '0.5rem 0.85rem', 
-                          background: 'rgba(249, 115, 22, 0.08)', 
-                          border: '1px solid rgba(249, 115, 22, 0.25)', 
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.6rem',
+                          padding: '0.5rem 0.85rem',
+                          background: 'rgba(249, 115, 22, 0.08)',
+                          border: '1px solid rgba(249, 115, 22, 0.25)',
                           borderRadius: '6px',
                           fontSize: '0.8rem',
                           color: '#fdba74'
@@ -418,12 +418,12 @@ export const EvidencePanel: React.FC<EvidencePanelProps> = ({
                   </h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     {behaviorEvidence.details.map((det, i) => (
-                      <div 
+                      <div
                         key={i}
-                        style={{ 
-                          padding: '0.65rem 0.85rem', 
-                          background: 'rgba(5, 9, 17, 0.8)', 
-                          borderLeft: '3px solid #f97316', 
+                        style={{
+                          padding: '0.65rem 0.85rem',
+                          background: 'rgba(5, 9, 17, 0.8)',
+                          borderLeft: '3px solid #f97316',
                           borderRadius: '0 6px 6px 0',
                           fontSize: '0.82rem',
                           color: '#cbd5e1',
@@ -448,13 +448,13 @@ export const EvidencePanel: React.FC<EvidencePanelProps> = ({
           subtitle="Cross-domain co-occurrence analysis linking memory heuristics with execution behavior"
         >
           {!hasCorrelation ? (
-            <div 
-              style={{ 
-                padding: '2.5rem 1.5rem', 
-                textAlign: 'center', 
-                background: 'rgba(9, 15, 26, 0.5)', 
+            <div
+              style={{
+                padding: '2.5rem 1.5rem',
+                textAlign: 'center',
+                background: 'rgba(9, 15, 26, 0.5)',
                 borderRadius: '8px',
-                border: '1px solid var(--pt-border-subtle)' 
+                border: '1px solid var(--pt-border-subtle)'
               }}
             >
               <AlertCircle size={24} style={{ color: '#64748b', marginBottom: '0.5rem' }} />
@@ -468,11 +468,11 @@ export const EvidencePanel: React.FC<EvidencePanelProps> = ({
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               {/* Correlation Architectural Callout */}
-              <div 
-                style={{ 
-                  background: 'rgba(0, 229, 255, 0.05)', 
-                  borderLeft: '4px solid var(--pt-cyan)', 
-                  padding: '1rem 1.25rem', 
+              <div
+                style={{
+                  background: 'rgba(0, 229, 255, 0.05)',
+                  borderLeft: '4px solid var(--pt-cyan)',
+                  padding: '1rem 1.25rem',
                   borderRadius: '0 6px 6px 0'
                 }}
               >
@@ -488,11 +488,11 @@ export const EvidencePanel: React.FC<EvidencePanelProps> = ({
               </div>
 
               {/* Correlation Attributes Grid */}
-              <div 
-                style={{ 
-                  display: 'grid', 
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', 
-                  gap: '0.75rem', 
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                  gap: '0.75rem',
                   padding: '1rem',
                   background: 'rgba(5, 9, 17, 0.7)',
                   borderRadius: '6px',
@@ -547,12 +547,12 @@ export const EvidencePanel: React.FC<EvidencePanelProps> = ({
                   </h4>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                     {correlationEvidence.correlatedIndicators.map((ind, i) => (
-                      <span 
+                      <span
                         key={i}
-                        style={{ 
-                          padding: '0.3rem 0.75rem', 
-                          background: 'rgba(0, 229, 255, 0.08)', 
-                          border: '1px solid rgba(0, 229, 255, 0.3)', 
+                        style={{
+                          padding: '0.3rem 0.75rem',
+                          background: 'rgba(0, 229, 255, 0.08)',
+                          border: '1px solid rgba(0, 229, 255, 0.3)',
                           borderRadius: '4px',
                           fontSize: '0.78rem',
                           color: '#38bdf8',

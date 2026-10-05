@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  Terminal, 
-  Cpu, 
-  FileCheck2, 
-  Activity, 
-  Layers, 
-  ShieldAlert, 
+import {
+  ArrowLeft,
+  Terminal,
+  Cpu,
+  FileCheck2,
+  Activity,
+  Layers,
+  ShieldAlert,
   Lock,
   Copy,
   Check
@@ -131,22 +131,22 @@ export const ProcessDetailsPage: React.FC = () => {
       </div>
 
       {/* Main Process Identity Card */}
-      <div 
+      <div
         className="pt-card pt-card-cyber"
         style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}
       >
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <div 
-              style={{ 
-                width: '52px', 
-                height: '52px', 
-                borderRadius: '10px', 
-                background: 'rgba(0, 229, 255, 0.1)', 
+            <div
+              style={{
+                width: '52px',
+                height: '52px',
+                borderRadius: '10px',
+                background: 'rgba(0, 229, 255, 0.1)',
                 border: '1px solid rgba(0, 229, 255, 0.3)',
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center' 
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
               }}
             >
               <Cpu size={28} style={{ color: '#00e5ff' }} />
@@ -193,13 +193,13 @@ export const ProcessDetailsPage: React.FC = () => {
         </div>
 
         {/* Process Metadata Attributes Grid */}
-        <div 
-          style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-            gap: '0.85rem', 
-            paddingTop: '1rem', 
-            borderTop: '1px solid var(--pt-border-subtle)' 
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: '0.85rem',
+            paddingTop: '1rem',
+            borderTop: '1px solid var(--pt-border-subtle)'
           }}
         >
           <div>
@@ -238,13 +238,13 @@ export const ProcessDetailsPage: React.FC = () => {
               <span>{copiedCmd ? 'Copied' : 'Copy'}</span>
             </button>
           </div>
-          <code 
-            style={{ 
-              fontSize: '0.78rem', 
-              color: '#38bdf8', 
-              wordBreak: 'break-all', 
-              lineHeight: 1.45, 
-              display: 'block' 
+          <code
+            style={{
+              fontSize: '0.78rem',
+              color: '#38bdf8',
+              wordBreak: 'break-all',
+              lineHeight: 1.45,
+              display: 'block'
             }}
           >
             {p.commandLine}
@@ -365,13 +365,13 @@ export const ProcessDetailsPage: React.FC = () => {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {memoryItems.map((mem) => (
-                <div 
+                <div
                   key={mem.id}
-                  style={{ 
-                    background: 'rgba(9, 15, 26, 0.7)', 
-                    border: '1px solid var(--pt-border-subtle)', 
-                    borderRadius: '8px', 
-                    padding: '1.25rem' 
+                  style={{
+                    background: 'rgba(9, 15, 26, 0.7)',
+                    border: '1px solid var(--pt-border-subtle)',
+                    borderRadius: '8px',
+                    padding: '1.25rem'
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
@@ -424,13 +424,13 @@ export const ProcessDetailsPage: React.FC = () => {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {behaviorItems.map((beh) => (
-                <div 
+                <div
                   key={beh.id}
-                  style={{ 
-                    background: 'rgba(9, 15, 26, 0.7)', 
-                    border: '1px solid var(--pt-border-subtle)', 
-                    borderRadius: '8px', 
-                    padding: '1.25rem' 
+                  style={{
+                    background: 'rgba(9, 15, 26, 0.7)',
+                    border: '1px solid var(--pt-border-subtle)',
+                    borderRadius: '8px',
+                    padding: '1.25rem'
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.45rem' }}>

@@ -3,7 +3,6 @@ import { useLocation } from 'react-router-dom';
 import {
   RefreshCw,
   Clock,
-  Lock,
   Server,
   Cloud,
   CloudOff,
@@ -11,13 +10,11 @@ import {
   AlertTriangle,
   AlertCircle,
   CheckCircle2,
-  ShieldCheck,
-  Database,
   X
 } from 'lucide-react';
 import { Logo } from '../common/Logo';
 import { dataService } from '../../services';
-import type { CloudConnectionStatus, TelemetrySource } from '../../services';
+import type { CloudConnectionStatus } from '../../services';
 
 interface HeaderProps {
   onRefresh?: () => Promise<void> | void;
@@ -28,9 +25,6 @@ export const Header: React.FC<HeaderProps> = ({ onRefresh, isRefreshing = false 
   const location = useLocation();
   const [currentTime, setCurrentTime] = useState<Date>(() => new Date());
   const [cloudStatus, setCloudStatus] = useState<CloudConnectionStatus>("API Offline");
-  const [telemetrySource, setTelemetrySource] = useState<TelemetrySource>(() => {
-    return dataService.getTelemetrySource ? dataService.getTelemetrySource() : "Local Fixture (Demo)";
-  });
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [syncNotification, setSyncNotification] = useState<{
     message: string;
@@ -45,8 +39,6 @@ export const Header: React.FC<HeaderProps> = ({ onRefresh, isRefreshing = false 
     return () => window.clearInterval(timer);
   }, []);
 
-  const [nodeName, setNodeName] = useState<string>("WINDOWS-ENDPOINT-3E7489");
-
   // Initial backend health & cloud verification
   useEffect(() => {
     let active = true;
@@ -57,15 +49,6 @@ export const Header: React.FC<HeaderProps> = ({ onRefresh, isRefreshing = false 
           const health = await dataService.checkHealth();
           if (active) {
             setCloudStatus(health.status);
-            if (dataService.getTelemetrySource) {
-              setTelemetrySource(dataService.getTelemetrySource());
-            }
-          }
-        }
-        if (dataService.getScanOverview) {
-          const overview = await dataService.getScanOverview();
-          if (active && overview && 'endpointName' in overview && overview.endpointName) {
-            setNodeName(overview.endpointName);
           }
         }
       } catch {
@@ -100,10 +83,8 @@ export const Header: React.FC<HeaderProps> = ({ onRefresh, isRefreshing = false 
   };
 
   const handleSync = async () => {
-    // Requirement 8: Prevent duplicate Sync clicks
     if (isSyncing) return;
 
-    // Requirement 7: Show "Syncing..." while request is running
     setIsSyncing(true);
     setSyncNotification(null);
 
@@ -111,21 +92,19 @@ export const Header: React.FC<HeaderProps> = ({ onRefresh, isRefreshing = false 
       if (dataService.syncTelemetry) {
         const result = await dataService.syncTelemetry();
         setCloudStatus(result.status);
-        setTelemetrySource(result.source);
 
-        // Requirement 4: Sync must never report success unless backend actually confirms successful synchronization
         if (result.success) {
+          const isNoNew = result.message.includes('No new scan');
           setSyncNotification({
-            type: 'success',
+            type: isNoNew ? 'warning' : 'success',
             message: result.message,
           });
           if (onRefresh) {
             await onRefresh();
           }
         } else {
-          // Requirements 5 & 6
           setSyncNotification({
-            type: result.status === 'Cloud Not Configured' ? 'warning' : 'error',
+            type: 'error',
             message: result.message,
           });
         }
@@ -136,10 +115,9 @@ export const Header: React.FC<HeaderProps> = ({ onRefresh, isRefreshing = false 
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Sync connection error";
-      setCloudStatus("API Offline");
       setSyncNotification({
         type: 'error',
-        message: `Sync unavailable — ${msg}`,
+        message: `Unable to update telemetry: ${msg}`,
       });
     } finally {
       setIsSyncing(false);
@@ -154,39 +132,15 @@ export const Header: React.FC<HeaderProps> = ({ onRefresh, isRefreshing = false 
           <h1 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#ffffff', letterSpacing: '-0.01em', margin: 0 }}>
             {getPageTitle(location.pathname)}
           </h1>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(255, 255, 255, 0.04)', padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.74rem', color: '#94a3b8' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(0, 229, 255, 0.06)', padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.74rem', color: '#38bdf8', border: '1px solid rgba(0, 229, 255, 0.15)' }}>
             <Server size={12} style={{ color: '#00e5ff' }} />
-            <span>{nodeName}</span>
+            <span>Windows PC</span>
           </div>
         </div>
 
         {/* Header Badges & Actions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-          {/* Requirement 9: Clearly distinguish Windows Scanner (Cloud) vs Local Fixture (Demo) */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              padding: '0.22rem 0.55rem',
-              borderRadius: '4px',
-              background: telemetrySource === 'Windows Scanner (Cloud)' ? 'rgba(0, 229, 255, 0.08)' : 'rgba(255, 255, 255, 0.04)',
-              border: telemetrySource === 'Windows Scanner (Cloud)' ? '1px solid rgba(0, 229, 255, 0.25)' : '1px solid rgba(255, 255, 255, 0.1)',
-              fontSize: '0.72rem',
-              color: telemetrySource === 'Windows Scanner (Cloud)' ? '#38bdf8' : '#94a3b8',
-              fontWeight: 600
-            }}
-            title={`Active Telemetry Source: ${telemetrySource}`}
-          >
-            {telemetrySource === 'Windows Scanner (Cloud)' ? (
-              <ShieldCheck size={12} style={{ color: '#00e5ff' }} />
-            ) : (
-              <Database size={12} style={{ color: '#94a3b8' }} />
-            )}
-            <span>{telemetrySource}</span>
-          </div>
-
-          {/* Requirement 2 & 3: Cloud Status Indicator */}
+          {/* Cloud Status Indicator */}
           <div
             style={{
               display: 'flex',
@@ -230,26 +184,6 @@ export const Header: React.FC<HeaderProps> = ({ onRefresh, isRefreshing = false 
             <span>{cloudStatus}</span>
           </div>
 
-          {/* Read-Only Status Indicator */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              padding: '0.22rem 0.55rem',
-              borderRadius: '4px',
-              background: 'rgba(0, 229, 255, 0.08)',
-              border: '1px solid rgba(0, 229, 255, 0.25)',
-              fontSize: '0.72rem',
-              color: '#38bdf8',
-              fontWeight: 600
-            }}
-            title="PhantomTrace operates strictly as a read-only threat detection engine"
-          >
-            <Lock size={12} style={{ color: '#00e5ff' }} />
-            <span>Read-Only</span>
-          </div>
-
           {/* Dynamic Local Clock */}
           <div
             style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', color: '#94a3b8' }}
@@ -261,7 +195,7 @@ export const Header: React.FC<HeaderProps> = ({ onRefresh, isRefreshing = false 
             </span>
           </div>
 
-          {/* Requirement 1, 7, 8: Sync Action Button */}
+          {/* Sync Action Button */}
           <button
             onClick={handleSync}
             disabled={isSyncing || isRefreshing}
@@ -278,15 +212,15 @@ export const Header: React.FC<HeaderProps> = ({ onRefresh, isRefreshing = false 
             <span>{isSyncing ? 'Syncing...' : 'Sync'}</span>
           </button>
 
-          {/* Analyst Session Badge with Official App Icon */}
+          {/* Endpoint Identity Badge with Official App Icon */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', paddingLeft: '0.5rem', borderLeft: '1px solid var(--pt-border-subtle)' }}>
             <Logo variant="app" height={28} />
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#f8fafc', lineHeight: 1.1 }}>
-                Analyst SEC-8842
+                Windows PC
               </span>
-              <span style={{ fontSize: '0.68rem', color: '#64748b' }}>
-                Tier 2 Triage
+              <span style={{ fontSize: '0.68rem', color: '#10b981', fontWeight: 500 }}>
+                Protected
               </span>
             </div>
           </div>

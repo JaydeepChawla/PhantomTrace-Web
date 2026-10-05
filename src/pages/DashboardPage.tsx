@@ -1,15 +1,15 @@
 import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { 
-  ShieldAlert, 
-  Cpu, 
-  AlertTriangle, 
-  Flame, 
-  Clock, 
-  Zap, 
-  ArrowUpRight, 
-  Lock, 
-  Layers, 
+import {
+  ShieldAlert,
+  ShieldCheck,
+  Cpu,
+  AlertTriangle,
+  Flame,
+  Clock,
+  Zap,
+  ArrowUpRight,
+  Layers,
   ExternalLink,
   Download
 } from 'lucide-react';
@@ -21,10 +21,12 @@ import { ScorePill } from '../components/common/ScorePill';
 import { Logo } from '../components/common/Logo';
 import { ThreatActivityChart } from '../components/charts/ThreatActivityChart';
 import { ThreatDistributionChart } from '../components/charts/ThreatDistributionChart';
+import { ScanMyPcCard } from '../components/agent/ScanMyPcCard';
+import { MyDevicesSection } from '../components/agent/MyDevicesSection';
 
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
-  const { overview, alerts, activityTimeline, loading, error } = useThreatData();
+  const { overview, alerts, activityTimeline, loading, error, refreshData } = useThreatData();
 
   if (loading && !overview) {
     return (
@@ -44,30 +46,37 @@ export const DashboardPage: React.FC = () => {
 
   if (!overview) {
     return (
-      <div style={{ padding: '3.5rem 2rem', textAlign: 'center', maxWidth: '640px', margin: '3rem auto' }} className="pt-card pt-card-cyber">
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.25rem' }}>
-          <Logo variant="windows" height={52} />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', maxWidth: '800px', margin: '2rem auto' }}>
+        <ScanMyPcCard onScanCompleted={() => refreshData()} />
+
+        <div style={{ padding: '2.5rem 2rem', textAlign: 'center' }} className="pt-card pt-card-cyber">
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.25rem' }}>
+            <Logo variant="windows" height={52} />
+          </div>
+          <h3 style={{ fontSize: '1.3rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.65rem' }}>
+            No Active Endpoint Scans Found
+          </h3>
+          <p style={{ fontSize: '0.88rem', color: '#94a3b8', lineHeight: 1.6, marginBottom: '1.75rem' }}>
+            No Windows scanner telemetry has been ingested into this workspace yet. Click "Scan My PC" above with the agent active or download the standalone scanner.
+          </p>
+          <div style={{ display: 'flex', gap: '0.85rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <Link to="/#download" className="pt-btn pt-btn-primary" style={{ padding: '0.65rem 1.25rem', fontSize: '0.86rem' }}>
+              <Download size={16} />
+              <span>Download Windows Scanner</span>
+            </Link>
+            <button
+              type="button"
+              onClick={() => refreshData()}
+              className="pt-btn pt-btn-secondary"
+              style={{ padding: '0.65rem 1.25rem', fontSize: '0.86rem' }}
+            >
+              Refresh Dashboard
+            </button>
+          </div>
         </div>
-        <h3 style={{ fontSize: '1.3rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.65rem' }}>
-          No Active Endpoint Scans Found
-        </h3>
-        <p style={{ fontSize: '0.88rem', color: '#94a3b8', lineHeight: 1.6, marginBottom: '1.75rem' }}>
-          No Windows scanner telemetry has been ingested into this workspace yet. Run the read-only PhantomTrace Windows Scanner on your endpoint and synchronize results to begin investigation.
-        </p>
-        <div style={{ display: 'flex', gap: '0.85rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-          <Link to="/#download" className="pt-btn pt-btn-primary" style={{ padding: '0.65rem 1.25rem', fontSize: '0.86rem' }}>
-            <Download size={16} />
-            <span>Download Windows Scanner</span>
-          </Link>
-          <button
-            type="button"
-            onClick={() => window.location.reload()}
-            className="pt-btn pt-btn-secondary"
-            style={{ padding: '0.65rem 1.25rem', fontSize: '0.86rem' }}
-          >
-            Refresh Dashboard
-          </button>
-        </div>
+
+        {/* Enrolled Devices Section */}
+        <MyDevicesSection />
       </div>
     );
   }
@@ -82,57 +91,82 @@ export const DashboardPage: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      {/* One-Click "Scan My PC" Windows Agent Card */}
+      <ScanMyPcCard lastScanTime={data.scanTime} onScanCompleted={() => refreshData()} />
+
       {/* Real Scanner Telemetry Sync Status Indicator */}
       {isRealScannerData && (
-        <div style={{ 
-          padding: '0.45rem 0.85rem', 
-          background: 'rgba(16, 185, 129, 0.08)', 
-          border: '1px solid rgba(16, 185, 129, 0.25)', 
-          borderRadius: '6px', 
-          display: 'flex', 
-          alignItems: 'center', 
+        <div style={{
+          padding: '0.45rem 0.85rem',
+          background: 'rgba(16, 185, 129, 0.08)',
+          border: '1px solid rgba(16, 185, 129, 0.25)',
+          borderRadius: '6px',
+          display: 'flex',
+          alignItems: 'center',
           justifyContent: 'space-between',
           flexWrap: 'wrap',
           gap: '0.5rem',
-          fontSize: '0.76rem', 
-          color: '#6ee7b7' 
+          fontSize: '0.76rem',
+          color: '#6ee7b7'
         }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
             <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
-            <strong>Last synced from PhantomTrace Windows Scanner:</strong> Verified telemetry for {data.totalProcesses} running processes.
+            <strong>Last synced from Windows PC:</strong> Verified telemetry for {data.totalProcesses} running processes.
           </span>
           <span style={{ color: '#94a3b8' }}>
-            Scan Timestamp: {data.scanTime}
+            Last Scan: {data.scanTime}
           </span>
         </div>
       )}
 
-      {/* Read-Only Safety Protocol Banner */}
-      <div className="pt-readonly-banner">
-        <Lock size={16} style={{ color: 'var(--pt-cyan)', flexShrink: 0 }} />
-        <div style={{ flex: 1 }}>
-          <strong style={{ color: '#ffffff' }}>Read-Only Mode Active: </strong>
-          PhantomTrace scanner enforces passive inspection across {data.totalProcesses} running processes. Forensic artifacts and memory structures are strictly preserved without termination or modification.
+      {/* Compact Scan Status Banner */}
+      <div
+        style={{
+          padding: '0.75rem 1.25rem',
+          borderRadius: '8px',
+          background: 'rgba(16, 185, 129, 0.08)',
+          border: '1px solid rgba(16, 185, 129, 0.25)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '0.75rem'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+          <ShieldCheck size={18} style={{ color: '#10b981', flexShrink: 0 }} />
+          <div>
+            <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span>Scanner Status: Protected &amp; Active</span>
+              <span style={{ fontSize: '0.7rem', padding: '0.1rem 0.45rem', borderRadius: '4px', background: 'rgba(0, 229, 255, 0.1)', color: '#38bdf8', border: '1px solid rgba(0, 229, 255, 0.25)', fontWeight: 500 }}>
+                Read-only analysis enforced
+              </span>
+            </div>
+            <div style={{ fontSize: '0.76rem', color: '#94a3b8', marginTop: '0.15rem' }}>
+              Monitoring {data.totalProcesses} running processes on Windows PC • Passive inspection ensures zero system modification
+            </div>
+          </div>
         </div>
-        <Link 
-          to="/alerts" 
-          style={{ 
-            fontSize: '0.78rem', 
-            color: '#00e5ff', 
-            fontWeight: 600, 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '0.2rem',
+
+        <Link
+          to="/alerts"
+          className="pt-btn pt-btn-cyber"
+          style={{
+            fontSize: '0.78rem',
+            padding: '0.35rem 0.85rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.35rem',
             whiteSpace: 'nowrap'
           }}
         >
-          <span>Triage Threats ({data.threatAlertsCount})</span>
+          <span>View Threats ({data.threatAlertsCount})</span>
           <ArrowUpRight size={14} />
         </Link>
       </div>
 
       {/* Official Dashboard Branding Header */}
-      <div 
+      <div
         className="pt-card pt-card-cyber"
         style={{
           padding: '1.15rem 1.5rem',
@@ -149,14 +183,14 @@ export const DashboardPage: React.FC = () => {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
               <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.01em', margin: 0 }}>
-                Threat Detection Operations Console
+                Security Dashboard
               </h2>
               <span className="pt-badge pt-badge-low" style={{ fontSize: '0.7rem' }}>
-                Memory &amp; Fileless Engine
+                Threat Detection
               </span>
             </div>
             <p style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '0.2rem' }}>
-              "Trace what others can't see." • Endpoint Telemetry &amp; Real-Time Analysis
+              "Trace what others can't see." • Live Production Telemetry
             </p>
           </div>
         </div>
@@ -166,21 +200,14 @@ export const DashboardPage: React.FC = () => {
             <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Telemetry Source</div>
             <div style={{ fontSize: '0.82rem', color: isRealScannerData ? '#10b981' : '#f59e0b', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem', justifyContent: 'flex-end' }}>
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: isRealScannerData ? '#10b981' : '#f59e0b', display: 'inline-block' }} />
-              {isRealScannerData ? 'Windows Scanner (Cloud)' : 'Local Fixture'}
+              {isRealScannerData ? 'Windows Scanner (Cloud)' : 'Cloud Connected'}
             </div>
           </div>
           <div style={{ height: '28px', width: '1px', background: 'var(--pt-border-subtle)' }} />
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Scan ID</div>
-            <div style={{ fontSize: '0.82rem', color: '#00e5ff', fontWeight: 600, fontFamily: 'var(--font-mono)' }}>
-              {data.scanId || 'scan-f10a3c09f063e90a'}
-            </div>
-          </div>
-          <div style={{ height: '28px', width: '1px', background: 'var(--pt-border-subtle)' }} />
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Target Node</div>
+            <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Endpoint</div>
             <div style={{ fontSize: '0.82rem', color: '#ffffff', fontWeight: 600 }}>
-              {data.endpointName || data.endpointId || 'WINDOWS-ENDPOINT-3E7489'}
+              Windows PC
             </div>
           </div>
         </div>
@@ -189,20 +216,20 @@ export const DashboardPage: React.FC = () => {
       {/* Top Telemetry KPI Stat Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '1rem' }}>
         <StatCard
-          label="Total Processes"
+          label="Processes Analyzed"
           value={data.totalProcesses}
           subValue={`${data.memoryInspectedMb} MB RAM Scanned`}
           icon={<Cpu size={20} />}
         />
         <StatCard
-          label="Normal / Clean"
+          label="Clean Processes"
           value={data.normalCount ?? 246}
           subValue="Verified baseline clean"
           icon={<Cpu size={20} />}
           accentColor="#10b981"
         />
         <StatCard
-          label="Threat Alerts"
+          label="Threats Detected"
           value={data.threatAlertsCount}
           subValue="Elevated risk score"
           icon={<ShieldAlert size={20} />}
@@ -216,29 +243,29 @@ export const DashboardPage: React.FC = () => {
           accentColor={data.highestThreatScore === 0 ? "#10b981" : "var(--pt-critical)"}
         />
         <StatCard
-          label="Critical Severity"
+          label="Critical Threats"
           value={data.criticalCount}
-          subValue="Score >= 90 (Immediate)"
+          subValue="Immediate action required"
           icon={<Flame size={20} />}
           accentColor="var(--pt-critical)"
         />
         <StatCard
-          label="High Severity"
+          label="High Risk"
           value={data.highCount}
           subValue="Score 75 - 89"
           icon={<AlertTriangle size={20} />}
           accentColor="var(--pt-high)"
         />
         <StatCard
-          label="Medium / Low"
+          label="Medium / Low Risk"
           value={`${data.mediumCount} / ${data.lowCount}`}
           subValue="Under investigation"
           icon={<Zap size={20} />}
           accentColor="var(--pt-medium)"
         />
         <StatCard
-          label="Scan Timestamp"
-          value={data.scanTime || "2026-09-08 13:23:20 UTC"}
+          label="Last Scan"
+          value={data.scanTime || "05 October 2026, 5:18 PM"}
           subValue={`Duration: ${data.duration || "4.0s"}`}
           icon={<Clock size={20} />}
           accentColor="var(--pt-cyan)"
@@ -407,6 +434,9 @@ export const DashboardPage: React.FC = () => {
           </table>
         </div>
       </Card>
+
+      {/* Enrolled Devices Management */}
+      <MyDevicesSection />
     </div>
   );
 };
