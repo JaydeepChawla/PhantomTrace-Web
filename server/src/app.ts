@@ -24,15 +24,30 @@ app.use((_req, res, next) => {
 });
 
 // Security and Cross-Origin Resource Sharing (CORS)
-const allowedOrigins = process.env.CORS_ORIGIN
+const defaultAllowedOrigins = [
+  "https://phantom-trace-web.vercel.app",
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "http://127.0.0.1:5173",
+];
+
+const rawOrigins = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(",").map((o) => o.trim())
-  : ["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173"];
+  : defaultAllowedOrigins;
+
+// Normalize origins by stripping trailing slashes for resilient matching
+const allowedOrigins = rawOrigins.map((o) => o.replace(/\/+$/, ""));
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (e.g. mobile apps, curl, or server-to-server)
-      if (!origin || allowedOrigins.includes(origin)) {
+      // Allow requests with no origin (e.g. mobile apps, curl, scanner, or server-to-server)
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+      const cleanOrigin = origin.replace(/\/+$/, "");
+      if (allowedOrigins.includes(cleanOrigin)) {
         callback(null, true);
       } else {
         callback(new Error("CORS_NOT_ALLOWED"));

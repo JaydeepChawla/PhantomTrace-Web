@@ -197,7 +197,7 @@ async function runSecurityValidation() {
   // 6. PHASE 5.8, 5.9, 5.24, 5.25: REAL DATA INGESTION & PERFORMANCE
   // -----------------------------------------------------------------
   const rawScannerText = fs.readFileSync(SCAN_FILE, "utf8");
-  const rawScannerJson = JSON.parse(rawScannerText);
+  const _rawScannerJson = JSON.parse(rawScannerText);
 
   console.log("\n[Performance & Large Scan Test] Ingesting real 21.6MB scan payload...");
   const t0 = performance.now();

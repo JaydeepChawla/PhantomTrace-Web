@@ -22,8 +22,8 @@ import argparse
 import urllib.request
 import urllib.error
 
-DEFAULT_API_URL = os.environ.get("PHANTOMTRACE_API_URL", "http://localhost:5000")
-DEFAULT_AUTH_TOKEN = os.environ.get("PHANTOMTRACE_AUTH_TOKEN", "dev-analyst-001")
+DEFAULT_API_URL = os.environ.get("PHANTOMTRACE_API_URL", "https://phantomtrace-web.onrender.com")
+DEFAULT_AUTH_TOKEN = os.environ.get("PHANTOMTRACE_AUTH_TOKEN", "")
 DEFAULT_FILE_PATH = os.environ.get("PHANTOMTRACE_SCAN_FILE", "scan_results.json")
 
 def upload_scan(api_url: str, auth_token: str, file_path: str) -> bool:
@@ -48,15 +48,12 @@ def upload_scan(api_url: str, auth_token: str, file_path: str) -> bool:
             print("[ERROR] Invalid scan payload: root must be a JSON object.")
             return False
 
-        if "processes" not in parsed:
-            print("[ERROR] Invalid scan payload: missing 'processes' collection.")
+        processes_list = parsed.get("processes") or parsed.get("results")
+        if not isinstance(processes_list, list):
+            print("[ERROR] Invalid scan payload: missing 'processes' or 'results' collection.")
             return False
 
-        if not isinstance(parsed["processes"], list):
-            print("[ERROR] Invalid scan payload: 'processes' must be a list.")
-            return False
-
-        process_count = len(parsed["processes"])
+        process_count = len(processes_list)
         print(f"[+] Validated PhantomTrace scanner format. Processes to transmit: {process_count}")
 
         endpoint = f"{api_url.rstrip('/')}/api/scans/ingest"

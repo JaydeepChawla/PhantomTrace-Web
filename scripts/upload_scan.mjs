@@ -16,8 +16,8 @@
 import fs from "fs";
 import path from "path";
 
-const API_URL = process.env.PHANTOMTRACE_API_URL || process.argv[2] || "http://localhost:5000";
-const AUTH_TOKEN = process.env.PHANTOMTRACE_AUTH_TOKEN || process.argv[3] || "dev-analyst-001";
+const API_URL = process.env.PHANTOMTRACE_API_URL || process.argv[2] || "https://phantomtrace-web.onrender.com";
+const AUTH_TOKEN = process.env.PHANTOMTRACE_AUTH_TOKEN || process.argv[3] || "";
 const FILE_PATH = process.env.PHANTOMTRACE_SCAN_FILE || process.argv[4] || "sample_scanner_output/scan_results.json";
 
 async function run() {
@@ -38,12 +38,13 @@ async function run() {
 
   const raw = fs.readFileSync(resolvedPath, "utf-8");
   const parsed = JSON.parse(raw);
-  if (!Array.isArray(parsed.results)) {
-    console.error("[ERROR] Invalid scan payload: missing 'results' collection.");
+  const processes = parsed.processes || parsed.results;
+  if (!Array.isArray(processes)) {
+    console.error("[ERROR] Invalid scan payload: missing 'processes' or 'results' collection.");
     process.exit(1);
   }
 
-  console.log(`[+] Validated scan format. Processes to transmit: ${parsed.results.length}`);
+  console.log(`[+] Validated scan format. Processes to transmit: ${processes.length}`);
 
   const endpoint = `${API_URL.replace(/\/+$/, "")}/api/scans/ingest`;
   const res = await fetch(endpoint, {

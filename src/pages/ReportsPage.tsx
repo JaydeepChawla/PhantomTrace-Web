@@ -30,8 +30,8 @@ export const ReportsPage: React.FC = () => {
         const result = await dataService.getReports();
         if (!cancelled) {
           setReports(result);
-          if (result.length > 0 && !result.some(r => r.id === selectedReportId)) {
-            setSelectedReportId(result[0].id);
+          if (result.length > 0) {
+            setSelectedReportId((prev) => (prev && result.some((r) => r.id === prev) ? prev : result[0].id));
           }
         }
       } catch (err) {

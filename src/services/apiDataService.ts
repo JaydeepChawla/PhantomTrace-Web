@@ -39,11 +39,20 @@ export class ApiDataService implements PhantomTraceDataService {
   private lastSyncTimestamp: string | null = null;
 
   constructor(baseUrl?: string) {
+    const isProductionHost =
+      typeof window !== "undefined" &&
+      window.location.hostname !== "localhost" &&
+      window.location.hostname !== "127.0.0.1";
+
+    const defaultUrl = isProductionHost
+      ? "https://phantomtrace-web.onrender.com"
+      : "http://localhost:5000";
+
     const rawEnvUrl =
       (typeof import.meta !== "undefined" &&
         (import.meta.env?.VITE_API_BASE_URL ||
           import.meta.env?.VITE_PHANTOMTRACE_API_URL)) ||
-      "http://localhost:5000";
+      defaultUrl;
 
     const normalized = rawEnvUrl.endsWith("/") ? rawEnvUrl.slice(0, -1) : rawEnvUrl;
     this.baseUrl = baseUrl || (normalized.endsWith("/api") ? normalized : `${normalized}/api`);
@@ -437,7 +446,7 @@ export class ApiDataService implements PhantomTraceDataService {
     const scans = scansRes.scans || [];
 
     if (scans.length === 0) {
-      throw new Error("No scan data available.");
+      return null as unknown as ScanOverview;
     }
 
     const latestScan = scans[0];

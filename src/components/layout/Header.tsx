@@ -214,7 +214,7 @@ export const Header: React.FC<HeaderProps> = ({ onRefresh, isRefreshing = false 
             }}
             title={
               cloudStatus === 'Cloud Connected'
-                ? 'Cloud Connected: Backend API is live with Firebase'
+                ? 'Cloud Connected: Backend API is live with PostgreSQL/Supabase'
                 : cloudStatus === 'Cloud Not Configured'
                 ? 'Cloud sync is not configured yet.'
                 : 'Sync unavailable — API connection could not be established.'

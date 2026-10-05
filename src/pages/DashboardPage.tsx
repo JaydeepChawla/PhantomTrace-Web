@@ -10,7 +10,8 @@ import {
   ArrowUpRight, 
   Lock, 
   Layers, 
-  ExternalLink
+  ExternalLink,
+  Download
 } from 'lucide-react';
 import { useThreatData } from '../hooks/useThreatData';
 import { StatCard } from '../components/common/StatCard';
@@ -43,8 +44,30 @@ export const DashboardPage: React.FC = () => {
 
   if (!overview) {
     return (
-      <div style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>
-        No scan data available.
+      <div style={{ padding: '3.5rem 2rem', textAlign: 'center', maxWidth: '640px', margin: '3rem auto' }} className="pt-card pt-card-cyber">
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.25rem' }}>
+          <Logo variant="windows" height={52} />
+        </div>
+        <h3 style={{ fontSize: '1.3rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.65rem' }}>
+          No Active Endpoint Scans Found
+        </h3>
+        <p style={{ fontSize: '0.88rem', color: '#94a3b8', lineHeight: 1.6, marginBottom: '1.75rem' }}>
+          No Windows scanner telemetry has been ingested into this workspace yet. Run the read-only PhantomTrace Windows Scanner on your endpoint and synchronize results to begin investigation.
+        </p>
+        <div style={{ display: 'flex', gap: '0.85rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <Link to="/#download" className="pt-btn pt-btn-primary" style={{ padding: '0.65rem 1.25rem', fontSize: '0.86rem' }}>
+            <Download size={16} />
+            <span>Download Windows Scanner</span>
+          </Link>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="pt-btn pt-btn-secondary"
+            style={{ padding: '0.65rem 1.25rem', fontSize: '0.86rem' }}
+          >
+            Refresh Dashboard
+          </button>
+        </div>
       </div>
     );
   }

@@ -10,9 +10,11 @@ import {
   Eye, 
   FileCheck2, 
   Database,
-  Server
+  Server,
+  Download
 } from 'lucide-react';
 import { Logo } from '../components/common/Logo';
+import { WindowsDownloadSection } from '../components/download/WindowsDownloadSection';
 
 export const LandingPage: React.FC = () => {
   const features = [
@@ -60,6 +62,10 @@ export const LandingPage: React.FC = () => {
         </Link>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+          <a href="#download" style={{ fontSize: '0.86rem', color: '#00e5ff', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <Download size={14} />
+            <span>Download</span>
+          </a>
           <Link to="/alerts" style={{ fontSize: '0.86rem', color: '#94a3b8', fontWeight: 500 }}>
             Threat Alerts
           </Link>
@@ -137,7 +143,7 @@ export const LandingPage: React.FC = () => {
         </p>
 
         {/* CTA Buttons */}
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
           <Link 
             to="/dashboard" 
             className="pt-btn pt-btn-primary" 
@@ -146,13 +152,28 @@ export const LandingPage: React.FC = () => {
             <span>Launch Operations Dashboard</span>
             <ArrowRight size={18} />
           </Link>
+          <a
+            href="#download"
+            className="pt-btn pt-btn-secondary"
+            style={{
+              padding: '0.75rem 1.5rem',
+              fontSize: '0.95rem',
+              border: '1px solid rgba(0, 229, 255, 0.35)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}
+          >
+            <Download size={17} style={{ color: '#00e5ff' }} />
+            <span>Download for Windows</span>
+          </a>
           <Link 
             to="/alerts" 
             className="pt-btn pt-btn-secondary" 
-            style={{ padding: '0.75rem 1.5rem', fontSize: '0.95rem' }}
+            style={{ padding: '0.75rem 1.25rem', fontSize: '0.95rem' }}
           >
-            <Eye size={17} style={{ color: '#00e5ff' }} />
-            <span>View Active Alerts (6)</span>
+            <Eye size={17} style={{ color: '#38bdf8' }} />
+            <span>View Active Alerts</span>
           </Link>
         </div>
       </section>
@@ -199,6 +220,9 @@ export const LandingPage: React.FC = () => {
           ))}
         </div>
       </section>
+
+      {/* Windows Scanner Download Experience (Phase 7.2) */}
+      <WindowsDownloadSection />
 
       {/* Architecture Flow Diagram with Windows Icon */}
       <section 
@@ -252,9 +276,9 @@ export const LandingPage: React.FC = () => {
             <ArrowRight size={20} style={{ color: '#00e5ff' }} />
 
             <div style={{ background: 'rgba(16, 26, 46, 0.8)', border: '1px solid var(--pt-border-subtle)', padding: '1rem 1.25rem', borderRadius: '8px', minWidth: '170px' }}>
-              <Database size={24} style={{ color: '#f59e0b', margin: '0 auto 0.4rem auto' }} />
-              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#ffffff' }}>Firebase Cloud</div>
-              <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Realtime Firestore</div>
+              <Database size={24} style={{ color: '#38bdf8', margin: '0 auto 0.4rem auto' }} />
+              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#ffffff' }}>PostgreSQL / Supabase</div>
+              <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Cloud Relational Store</div>
             </div>
 
             <ArrowRight size={20} style={{ color: '#00e5ff' }} />
