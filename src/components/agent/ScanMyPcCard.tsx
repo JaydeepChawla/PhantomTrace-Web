@@ -6,7 +6,6 @@ import {
   Download,
   CheckCircle2,
   AlertCircle,
-  ExternalLink,
   Link2
 } from 'lucide-react';
 import { localAgentService } from '../../services/localAgentService';
@@ -301,12 +300,13 @@ export const ScanMyPcCard: React.FC<ScanMyPcCardProps> = ({
                   </button>
                 ) : (
                   <a
-                    href="#download"
+                    href="/downloads/PhantomTrace_Agent_Setup.exe"
+                    download="PhantomTrace_Agent_Setup.exe"
                     className="pt-btn pt-btn-secondary"
                     style={{ padding: '0.75rem 1.25rem', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
                   >
                     <Download size={15} />
-                    <span>Install Agent</span>
+                    <span>INSTALL AGENT</span>
                   </a>
                 )}
               </div>
@@ -316,17 +316,16 @@ export const ScanMyPcCard: React.FC<ScanMyPcCardProps> = ({
             </div>
           )}
 
-          {/* Fallback / Alternative Link */}
+          {/* Direct Installer Link */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.2rem' }}>
-            <span style={{ fontSize: '0.74rem', color: '#64748b' }}>Alternative:</span>
+            <span style={{ fontSize: '0.74rem', color: '#64748b' }}>Windows Agent:</span>
             <a
-              href="https://github.com/JaydeepChawla/PhantomTrace-Web/releases/tag/v1.0.0"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="/downloads/PhantomTrace_Agent_Setup.exe"
+              download="PhantomTrace_Agent_Setup.exe"
               style={{ fontSize: '0.74rem', color: '#38bdf8', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
             >
-              <span>Download Standalone Scanner</span>
-              <ExternalLink size={11} />
+              <span>Download PhantomTrace_Agent_Setup.exe</span>
+              <Download size={11} />
             </a>
           </div>
         </div>

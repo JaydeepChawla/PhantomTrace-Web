@@ -60,10 +60,15 @@ export const DashboardPage: React.FC = () => {
             No Windows scanner telemetry has been ingested into this workspace yet. Click "Scan My PC" above with the agent active or download the standalone scanner.
           </p>
           <div style={{ display: 'flex', gap: '0.85rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Link to="/#download" className="pt-btn pt-btn-primary" style={{ padding: '0.65rem 1.25rem', fontSize: '0.86rem' }}>
+            <a
+              href="/downloads/PhantomTrace_Agent_Setup.exe"
+              download="PhantomTrace_Agent_Setup.exe"
+              className="pt-btn pt-btn-primary"
+              style={{ padding: '0.65rem 1.25rem', fontSize: '0.86rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
               <Download size={16} />
-              <span>Download Windows Scanner</span>
-            </Link>
+              <span>Download Agent Installer (EXE)</span>
+            </a>
             <button
               type="button"
               onClick={() => refreshData()}

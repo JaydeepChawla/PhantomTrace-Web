@@ -53,20 +53,31 @@ SCAN_OUTPUT_DIR = DATA_DIR / "scans"
 SCAN_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # Scanner Binary Candidates (Protected Stable Scanner)
-CANDIDATE_SCANNER_PATHS = [
+def get_candidate_scanner_paths() -> list:
+    paths = []
     # 1. Environment variable override
-    os.environ.get("PHANTOMTRACE_SCANNER_PATH", ""),
-    # 2. Canonical release directory on host
-    r"D:\Phantom Trace\release\PhantomTrace_Windows_Release_1.0\PhantomTrace_Windows_Release_1.0.exe",
-    # 3. Relative to workspace repository
-    str(Path(__file__).resolve().parent.parent.parent.parent / "Phantom Trace" / "release" / "PhantomTrace_Windows_Release_1.0" / "PhantomTrace_Windows_Release_1.0.exe"),
-    # 4. In agent distribution folder
-    str(Path(__file__).resolve().parent.parent / "scanner" / "PhantomTrace_Windows_Release_1.0.exe"),
-]
+    if os.environ.get("PHANTOMTRACE_SCANNER_PATH"):
+        paths.append(os.environ["PHANTOMTRACE_SCANNER_PATH"])
+
+    # 2. Relative to sys.executable (packaged PyInstaller app)
+    exe_dir = Path(sys.executable).resolve().parent
+    paths.append(str(exe_dir / "scanner" / "PhantomTrace_Windows_Release_1.0.exe"))
+    paths.append(str(exe_dir / "PhantomTrace_Windows_Release_1.0.exe"))
+    paths.append(str(exe_dir.parent / "scanner" / "PhantomTrace_Windows_Release_1.0.exe"))
+
+    # 3. Relative to current file (__file__)
+    file_dir = Path(__file__).resolve().parent
+    paths.append(str(file_dir.parent / "scanner" / "PhantomTrace_Windows_Release_1.0.exe"))
+    paths.append(str(file_dir / "scanner" / "PhantomTrace_Windows_Release_1.0.exe"))
+    paths.append(str(file_dir.parent.parent.parent.parent / "Phantom Trace" / "release" / "PhantomTrace_Windows_Release_1.0" / "PhantomTrace_Windows_Release_1.0.exe"))
+
+    # 4. Canonical release directory on development host
+    paths.append(r"D:\Phantom Trace\release\PhantomTrace_Windows_Release_1.0\PhantomTrace_Windows_Release_1.0.exe")
+    return paths
 
 def locate_scanner_executable() -> str:
     """Finds the existing, untouched PhantomTrace_Windows_Release_1.0.exe binary."""
-    for candidate in CANDIDATE_SCANNER_PATHS:
+    for candidate in get_candidate_scanner_paths():
         if candidate and os.path.isfile(candidate):
             return candidate
     return ""

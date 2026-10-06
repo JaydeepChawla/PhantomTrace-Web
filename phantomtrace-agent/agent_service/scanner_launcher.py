@@ -125,9 +125,12 @@ class ScannerLauncher:
             if sys.platform == "win32":
                 creation_flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
+            from .config import DATA_DIR
+            exec_dir = DATA_DIR if DATA_DIR.is_dir() else scanner_dir
+
             self.process = subprocess.Popen(
                 [scanner_exe],
-                cwd=str(scanner_dir),
+                cwd=str(exec_dir),
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 creationflags=creation_flags,
@@ -149,10 +152,11 @@ class ScannerLauncher:
                 self.state = ScannerState.VALIDATING
                 self.message = "Validating scan results..."
 
-            # Look for scan_results.json in scanner directory
-            expected_json = scanner_dir / "scan_results.json"
+            # Look for scan_results.json in DATA_DIR, then scanner directory, then current directory
+            expected_json = exec_dir / "scan_results.json"
             if not expected_json.is_file():
-                # Check alternative candidate in working directory
+                expected_json = scanner_dir / "scan_results.json"
+            if not expected_json.is_file():
                 expected_json = Path("scan_results.json").resolve()
 
             if not expected_json.is_file():

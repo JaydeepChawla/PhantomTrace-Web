@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Download,
   ShieldCheck,
@@ -6,69 +6,55 @@ import {
   Cpu,
   UploadCloud,
   CheckCircle2,
-  ExternalLink,
   Lock,
-  Info,
-  Copy,
-  Check
+  Info
 } from 'lucide-react';
 import { Logo } from '../common/Logo';
 
 export const WindowsDownloadSection: React.FC = () => {
-  const [copiedCmd, setCopiedCmd] = useState<boolean>(false);
-
-  // Configurable download asset URL via environment variable
+  // Configurable download asset URL or default direct installer EXE
   const configuredDownloadUrl =
     typeof import.meta !== 'undefined' && import.meta.env?.VITE_WINDOWS_SCANNER_DOWNLOAD_URL
       ? import.meta.env.VITE_WINDOWS_SCANNER_DOWNLOAD_URL
-      : null;
+      : '/downloads/PhantomTrace_Agent_Setup.exe';
 
-  // Official fallback repository release URL
-  const officialReleasesUrl = 'https://github.com/JaydeepChawla/PhantomTrace-Web/releases';
-  const downloadUrl = configuredDownloadUrl || officialReleasesUrl;
-  const isDirectBinary = Boolean(configuredDownloadUrl);
-
-  const handleCopyCommand = () => {
-    navigator.clipboard.writeText('.\\PhantomTrace_Windows_Release_1.0.exe --output scan_results.json');
-    setCopiedCmd(true);
-    setTimeout(() => setCopiedCmd(false), 2500);
-  };
+  const downloadUrl = configuredDownloadUrl;
 
   const steps = [
     {
       step: '01',
       title: 'Download',
-      desc: 'Download PhantomTrace Windows Release 1.0 ZIP from the official release page.',
+      desc: 'Download PhantomTrace_Agent_Setup.exe with one click.',
       icon: <Download size={20} style={{ color: '#00e5ff' }} />
     },
     {
       step: '02',
-      title: 'Extract',
-      desc: 'Extract the PhantomTrace_Windows_Release_1.0.zip archive onto your Windows PC.',
+      title: 'Install',
+      desc: 'Run the standalone setup EXE. Installs automatically with zero Python or dependencies needed.',
       icon: <CheckCircle2 size={20} style={{ color: '#38bdf8' }} />
     },
     {
       step: '03',
-      title: 'Run',
-      desc: 'Run PhantomTrace_Windows_Release_1.0.exe locally in a PowerShell or Command Prompt terminal.',
+      title: 'Agent Starts',
+      desc: 'The agent service starts automatically in the background on 127.0.0.1:49152.',
       icon: <Terminal size={20} style={{ color: '#818cf8' }} />
     },
     {
       step: '04',
-      title: 'Scan',
-      desc: 'Wait for the read-only scan to finish. Generates scan_results.json in your local directory.',
+      title: 'Pair PC',
+      desc: 'Click "Connect This PC" on the dashboard for instant local pairing.',
       icon: <Cpu size={20} style={{ color: '#a78bfa' }} />
     },
     {
       step: '05',
-      title: 'Sync',
-      desc: 'Synchronize the generated scan_results.json via the authenticated cloud upload integration.',
+      title: 'Scan',
+      desc: 'Click "SCAN MY PC" to trigger the read-only memory and process analysis engine.',
       icon: <UploadCloud size={20} style={{ color: '#f43f5e' }} />
     },
     {
       step: '06',
       title: 'Review',
-      desc: 'Open the dashboard to view real telemetry, process inspections, and threat alerts.',
+      desc: 'Inspect real telemetry, process inspections, and threat alerts in the dashboard.',
       icon: <CheckCircle2 size={20} style={{ color: '#34d399' }} />
     }
   ];
@@ -196,18 +182,17 @@ export const WindowsDownloadSection: React.FC = () => {
           >
             <div>
               <div style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.45rem', fontWeight: 600 }}>
-                Release Executable
+                Standalone Windows Installer
               </div>
               <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#ffffff', fontFamily: 'var(--font-mono)' }}>
-                PhantomTrace_Windows_Release_1.0.exe
+                PhantomTrace_Agent_Setup.exe
               </div>
             </div>
 
             {/* Download CTA Button */}
             <a
               href={downloadUrl}
-              target={isDirectBinary ? '_self' : '_blank'}
-              rel="noopener noreferrer"
+              download="PhantomTrace_Agent_Setup.exe"
               className="pt-btn pt-btn-primary"
               style={{
                 padding: '0.9rem 1.5rem',
@@ -222,71 +207,25 @@ export const WindowsDownloadSection: React.FC = () => {
               }}
             >
               <Download size={20} />
-              <span>Download for Windows</span>
-              {!isDirectBinary && <ExternalLink size={15} style={{ opacity: 0.8 }} />}
+              <span>Download PhantomTrace_Agent_Setup.exe</span>
             </a>
 
-            {!isDirectBinary && (
-              <div
-                style={{
-                  fontSize: '0.75rem',
-                  color: '#94a3b8',
-                  background: 'rgba(16, 26, 46, 0.8)',
-                  border: '1px solid var(--pt-border-subtle)',
-                  padding: '0.65rem 0.85rem',
-                  borderRadius: '6px',
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '0.5rem'
-                }}
-              >
-                <Info size={14} style={{ color: '#38bdf8', marginTop: '2px', flexShrink: 0 }} />
-                <span>
-                  Official release packages are published in the project’s GitHub Releases repository. Direct mirror URL can be configured via <code style={{ color: '#00e5ff' }}>VITE_WINDOWS_SCANNER_DOWNLOAD_URL</code>.
-                </span>
-              </div>
-            )}
-
-            {/* Quickstart Command Preview */}
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
-                <span style={{ fontSize: '0.72rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Execution Syntax
-                </span>
-                <button
-                  type="button"
-                  onClick={handleCopyCommand}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: copiedCmd ? '#10b981' : '#00e5ff',
-                    cursor: 'pointer',
-                    fontSize: '0.72rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.25rem',
-                    padding: '0.1rem 0.3rem'
-                  }}
-                >
-                  {copiedCmd ? <Check size={12} /> : <Copy size={12} />}
-                  <span>{copiedCmd ? 'Copied' : 'Copy'}</span>
-                </button>
-              </div>
-              <pre
-                style={{
-                  margin: 0,
-                  background: '#040711',
-                  border: '1px solid var(--pt-border-subtle)',
-                  borderRadius: '6px',
-                  padding: '0.65rem 0.85rem',
-                  color: '#38bdf8',
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: '0.78rem',
-                  overflowX: 'auto'
-                }}
-              >
-                .\PhantomTrace_Windows_Release_1.0.exe --output scan_results.json
-              </pre>
+            {/* Quickstart Double-Click Notice */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                background: '#040711',
+                border: '1px solid var(--pt-border-subtle)',
+                borderRadius: '6px',
+                padding: '0.65rem 0.85rem',
+                fontSize: '0.8rem',
+                color: '#94a3b8'
+              }}
+            >
+              <CheckCircle2 size={16} style={{ color: '#10b981', flexShrink: 0 }} />
+              <span>Double-click <strong>PhantomTrace_Agent_Setup.exe</strong> to install. Zero CLI, Python, or terminal required.</span>
             </div>
           </div>
         </div>
