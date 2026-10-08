@@ -38,11 +38,12 @@ scansRouter.post("/ingest", async (req: AuthenticatedRequest, res: Response): Pr
         : undefined;
 
     const customEndpointId =
-      typeof req.headers["x-endpoint-id"] === "string"
+      req.deviceId ||
+      (typeof req.headers["x-endpoint-id"] === "string"
         ? req.headers["x-endpoint-id"]
         : typeof rawPayload.endpoint_id === "string"
         ? rawPayload.endpoint_id
-        : undefined;
+        : undefined);
 
     // Parse and adapt scanner telemetry into PhantomTrace models
     const bundle = scannerAdapter.parseScanResult(

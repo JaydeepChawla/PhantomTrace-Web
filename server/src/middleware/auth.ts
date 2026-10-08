@@ -33,7 +33,7 @@ export async function authMiddleware(
     return;
   }
 
-  const token = authHeader.slice("Bearer ".length).trim();
+  const token = authHeader.slice("Bearer ".length).trim().replace(/^["']|["']$/g, "");
 
   if (!token) {
     res.status(401).json({

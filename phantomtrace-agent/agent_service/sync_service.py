@@ -81,8 +81,10 @@ class CloudSyncService:
             err_msg = f"Cloud upload rejected by server (HTTP {e.code}): {e.reason}"
             try:
                 err_details = json.loads(e.read().decode("utf-8"))
-                if isinstance(err_details, dict) and "error" in err_details:
-                    err_msg += f" - {err_details['error']}"
+                if isinstance(err_details, dict):
+                    server_detail = err_details.get("message") or err_details.get("error")
+                    if server_detail and server_detail != e.reason:
+                        err_msg += f" - {server_detail}"
             except Exception:
                 pass
             logger.error(f"[CloudSync] {err_msg}")
