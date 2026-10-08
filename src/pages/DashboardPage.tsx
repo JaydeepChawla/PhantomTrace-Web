@@ -10,8 +10,7 @@ import {
   Zap,
   ArrowUpRight,
   Layers,
-  ExternalLink,
-  Download
+  ExternalLink
 } from 'lucide-react';
 import { useThreatData } from '../hooks/useThreatData';
 import { StatCard } from '../components/common/StatCard';
@@ -23,6 +22,7 @@ import { ThreatActivityChart } from '../components/charts/ThreatActivityChart';
 import { ThreatDistributionChart } from '../components/charts/ThreatDistributionChart';
 import { ScanMyPcCard } from '../components/agent/ScanMyPcCard';
 import { MyDevicesSection } from '../components/agent/MyDevicesSection';
+import { DownloadAgentButton } from '../components/agent/DownloadAgentButton';
 
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
@@ -59,16 +59,8 @@ export const DashboardPage: React.FC = () => {
           <p style={{ fontSize: '0.88rem', color: '#94a3b8', lineHeight: 1.6, marginBottom: '1.75rem' }}>
             No Windows scanner telemetry has been ingested into this workspace yet. Click "Scan My PC" above with the agent active or download the standalone scanner.
           </p>
-          <div style={{ display: 'flex', gap: '0.85rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <a
-              href="/downloads/PhantomTrace_Agent_Setup.exe"
-              download="PhantomTrace_Agent_Setup.exe"
-              className="pt-btn pt-btn-primary"
-              style={{ padding: '0.65rem 1.25rem', fontSize: '0.86rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              <Download size={16} />
-              <span>Download Agent Installer (EXE)</span>
-            </a>
+          <div style={{ display: 'flex', gap: '0.85rem', justifyContent: 'center', flexWrap: 'wrap', alignItems: 'center' }}>
+            <DownloadAgentButton variant="primary" />
             <button
               type="button"
               onClick={() => refreshData()}
@@ -215,6 +207,8 @@ export const DashboardPage: React.FC = () => {
               Windows PC
             </div>
           </div>
+          <div style={{ height: '28px', width: '1px', background: 'var(--pt-border-subtle)' }} />
+          <DownloadAgentButton variant="cyber" size="sm" />
         </div>
       </div>
 

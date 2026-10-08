@@ -1,0 +1,128 @@
+# ==============================================================================
+# PHANTOMTRACE PRODUCTION RELEASE SIGNING WORKFLOW
+#
+# FUTURE PRODUCTION SIGNING CREDENTIALS (GITHUB REPOSITORY SECRETS):
+#   - CODE_SIGNING_PFX_BASE64   : Base64-encoded production .pfx certificate
+#   - CODE_SIGNING_PFX_PASSWORD : Password for production .pfx certificate
+#
+# NOTE:
+#   - In local development/testing, a local self-signed certificate is used.
+#   - Local self-signed certificates or private keys must NEVER be uploaded
+#     to GitHub repository secrets.
+#   - When production secrets are not configured, this workflow safely skips
+#     release signing with a clear diagnostic notice, and never creates or uses
+#     a self-signed certificate in production CI/CD.
+# ==============================================================================
+
+name: Build and Sign PhantomTrace Agent
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: 'Release version tag (e.g. v1.0.1)'
+        required: true
+        default: 'v1.0.1'
+
+jobs:
+  build-and-sign:
+    name: Build & Authenticode Sign Agent
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+
+      - name: Install Build Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r agent/requirements.txt
+          pip install pyinstaller
+
+      - name: Build Standalone Executable (PyInstaller)
+        run: |
+          pyinstaller --name "PhantomTrace-Agent" --onefile --clean --paths "." --distpath release_bin --hidden-import "agent" --hidden-import "agent.core" --hidden-import "agent.core.baseline" --hidden-import "agent.core.behavior_engine" --hidden-import "agent.core.memory_analyzer" --hidden-import "agent.core.memory_scanner" --hidden-import "agent.core.process_scanner" --hidden-import "agent.core.threat_score" --hidden-import "agent.notifications" --hidden-import "alert_history" --hidden-import "psutil" agent/main.py
+
+      - name: Check Executable Output
+        run: |
+          if (-not (Test-Path "release_bin/PhantomTrace-Agent.exe")) {
+            Write-Error "PhantomTrace-Agent.exe was not created."
+            exit 1
+          }
+          Get-Item "release_bin/PhantomTrace-Agent.exe" | Format-List Name, Length
+
+      # Verify whether future production signing secrets are configured
+      # Documented secret names:
+      #   - CODE_SIGNING_PFX_BASE64
+      #   - CODE_SIGNING_PFX_PASSWORD
+      - name: Check Production Code-Signing Credentials
+        id: check_signing_creds
+        shell: powershell
+        env:
+          PFX_BASE64: ${{ secrets['CODE_SIGNING_PFX_BASE64'] }}
+          PFX_PASSWORD: ${{ secrets['CODE_SIGNING_PFX_PASSWORD'] }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:PFX_BASE64) -or [string]::IsNullOrWhiteSpace($env:PFX_PASSWORD)) {
+            Write-Host "::warning::Production code-signing credentials are not configured. Skipping production release signing."
+            Write-Host "Production code-signing credentials are not configured. Skipping production release signing."
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "can_sign=false"
+          } else {
+            Write-Host "Production code-signing credentials detected. Proceeding with production release signing."
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "can_sign=true"
+          }
+
+      - name: Sign Executable (PFX / Windows SDK SignTool)
+        if: steps.check_signing_creds.outputs.can_sign == 'true'
+        env:
+          PFX_BASE64: ${{ secrets['CODE_SIGNING_PFX_BASE64'] }}
+          PFX_PASSWORD: ${{ secrets['CODE_SIGNING_PFX_PASSWORD'] }}
+        shell: powershell
+        run: |
+          $pfxBytes = [Convert]::FromBase64String($env:PFX_BASE64)
+          $pfxFile = [System.IO.Path]::GetTempFileName() + ".pfx"
+          [System.IO.File]::WriteAllBytes($pfxFile, $pfxBytes)
+          try {
+            $env:CODE_SIGNING_PFX_PATH = $pfxFile
+            $env:CODE_SIGNING_PFX_PASSWORD = $env:PFX_PASSWORD
+            & .\scripts\sign_agent.ps1 -ExePath "release_bin/PhantomTrace-Agent.exe"
+          }
+          finally {
+            if (Test-Path $pfxFile) { Remove-Item $pfxFile -Force }
+          }
+
+      - name: Verify Authenticode Signature
+        if: steps.check_signing_creds.outputs.can_sign == 'true'
+        shell: powershell
+        run: |
+          $sig = Get-AuthenticodeSignature "release_bin/PhantomTrace-Agent.exe"
+          Write-Host "Authenticode Status: $($sig.Status)"
+          Write-Host "Publisher: $($sig.SignerCertificate.Subject)"
+          if ($sig.Status -ne "Valid") {
+            Write-Error "Digital signature verification failed! Status: $($sig.Status)"
+            exit 1
+          }
+
+      - name: Upload Signed Agent Artifact
+        if: steps.check_signing_creds.outputs.can_sign == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: PhantomTrace-Agent-Signed
+          path: release_bin/PhantomTrace-Agent.exe
+          if-no-files-found: error
+
+      - name: Upload Unsigned Agent Artifact (Signing Skipped)
+        if: steps.check_signing_creds.outputs.can_sign != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: PhantomTrace-Agent-Unsigned
+          path: release_bin/PhantomTrace-Agent.exe
+          if-no-files-found: error

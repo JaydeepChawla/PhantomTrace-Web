@@ -14,8 +14,18 @@ server/node_modules/
 # Production Builds
 dist/
 dist-ssr/
+build/
 server/dist/
+release_bin/
+agent/dist/
+PhantomTrace-Agent.exe
+**/PhantomTrace-Agent.exe
 *.local
+
+# Forensic Scanner Outputs & Reports
+scan_results.json
+phantomtrace_validation_report.txt
+alert_history.json
 
 # Editor & System Files
 .vscode/*

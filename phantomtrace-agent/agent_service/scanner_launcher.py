@@ -200,6 +200,15 @@ class ScannerLauncher:
 
             logger.info(f"Scan validated: {total_processes} processes, highest score {highest_score}")
 
+            # Phase 2: Windows notification dispatch safeguard
+            alerts = scan_data.get("threat_alerts") or scan_data.get("alerts") or []
+            if alerts:
+                try:
+                    from agent.notifications import dispatch_threat_notifications
+                    dispatch_threat_notifications(alerts)
+                except Exception as ne:
+                    logger.debug(f"Notification dispatch: {ne}")
+
             # Notify sync service
             if self.on_scan_ready_for_upload:
                 self.on_scan_ready_for_upload(expected_json, summary)

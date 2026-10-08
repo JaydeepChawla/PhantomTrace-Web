@@ -3,7 +3,6 @@ import {
   Shield,
   ShieldCheck,
   RefreshCw,
-  Download,
   CheckCircle2,
   AlertCircle,
   Link2
@@ -11,6 +10,7 @@ import {
 import { localAgentService } from '../../services/localAgentService';
 import type { AgentStatus } from '../../services/localAgentService';
 import { DevicePairingModal } from './DevicePairingModal';
+import { DownloadAgentButton } from './DownloadAgentButton';
 
 interface ScanMyPcCardProps {
   lastScanTime?: string;
@@ -299,15 +299,7 @@ export const ScanMyPcCard: React.FC<ScanMyPcCardProps> = ({
                     <span>Retry</span>
                   </button>
                 ) : (
-                  <a
-                    href="/downloads/PhantomTrace_Agent_Setup.exe"
-                    download="PhantomTrace_Agent_Setup.exe"
-                    className="pt-btn pt-btn-secondary"
-                    style={{ padding: '0.75rem 1.25rem', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-                  >
-                    <Download size={15} />
-                    <span>INSTALL AGENT</span>
-                  </a>
+                  <DownloadAgentButton variant="secondary" size="md" />
                 )}
               </div>
               <span style={{ fontSize: '0.76rem', color: '#94a3b8' }}>
@@ -316,17 +308,9 @@ export const ScanMyPcCard: React.FC<ScanMyPcCardProps> = ({
             </div>
           )}
 
-          {/* Direct Installer Link */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.2rem' }}>
-            <span style={{ fontSize: '0.74rem', color: '#64748b' }}>Windows Agent:</span>
-            <a
-              href="/downloads/PhantomTrace_Agent_Setup.exe"
-              download="PhantomTrace_Agent_Setup.exe"
-              style={{ fontSize: '0.74rem', color: '#38bdf8', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
-            >
-              <span>Download PhantomTrace_Agent_Setup.exe</span>
-              <Download size={11} />
-            </a>
+          {/* Download Agent Button */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.35rem' }}>
+            <DownloadAgentButton variant="cyber" size="sm" />
           </div>
         </div>
       </div>

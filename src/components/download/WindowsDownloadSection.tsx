@@ -10,21 +10,14 @@ import {
   Info
 } from 'lucide-react';
 import { Logo } from '../common/Logo';
+import { DownloadAgentButton } from '../agent/DownloadAgentButton';
 
 export const WindowsDownloadSection: React.FC = () => {
-  // Configurable download asset URL or default direct installer EXE
-  const configuredDownloadUrl =
-    typeof import.meta !== 'undefined' && import.meta.env?.VITE_WINDOWS_SCANNER_DOWNLOAD_URL
-      ? import.meta.env.VITE_WINDOWS_SCANNER_DOWNLOAD_URL
-      : '/downloads/PhantomTrace_Agent_Setup.exe';
-
-  const downloadUrl = configuredDownloadUrl;
-
   const steps = [
     {
       step: '01',
       title: 'Download',
-      desc: 'Download PhantomTrace_Agent_Setup.exe with one click.',
+      desc: 'Download the verified PhantomTrace Windows Agent with one click.',
       icon: <Download size={20} style={{ color: '#00e5ff' }} />
     },
     {
@@ -182,35 +175,21 @@ export const WindowsDownloadSection: React.FC = () => {
           >
             <div>
               <div style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.45rem', fontWeight: 600 }}>
-                Standalone Windows Installer
+                Windows Agent
               </div>
-              <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#ffffff', fontFamily: 'var(--font-mono)' }}>
-                PhantomTrace_Agent_Setup.exe
+              <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#ffffff' }}>
+                Windows 10 / 11 (64-bit)
               </div>
             </div>
 
             {/* Download CTA Button */}
-            <a
-              href={downloadUrl}
-              download="PhantomTrace_Agent_Setup.exe"
-              className="pt-btn pt-btn-primary"
-              style={{
-                padding: '0.9rem 1.5rem',
-                fontSize: '1rem',
-                fontWeight: 700,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.65rem',
-                textDecoration: 'none',
-                boxShadow: '0 4px 16px rgba(0, 229, 255, 0.3)'
-              }}
-            >
-              <Download size={20} />
-              <span>Download PhantomTrace_Agent_Setup.exe</span>
-            </a>
+            <DownloadAgentButton
+              variant="primary"
+              size="lg"
+              style={{ width: '100%', justifyContent: 'center' }}
+            />
 
-            {/* Quickstart Double-Click Notice */}
+            {/* Quickstart Notice */}
             <div
               style={{
                 display: 'flex',
@@ -225,7 +204,7 @@ export const WindowsDownloadSection: React.FC = () => {
               }}
             >
               <CheckCircle2 size={16} style={{ color: '#10b981', flexShrink: 0 }} />
-              <span>Double-click <strong>PhantomTrace_Agent_Setup.exe</strong> to install. Zero CLI, Python, or terminal required.</span>
+              <span>Standalone executable with zero Python or terminal setup required.</span>
             </div>
           </div>
         </div>

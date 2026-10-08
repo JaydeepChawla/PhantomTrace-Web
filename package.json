@@ -10,7 +10,10 @@
     "preview": "vite preview",
     "server": "npm --prefix server run dev",
     "server:build": "npm --prefix server run build",
-    "server:start": "npm --prefix server run start"
+    "server:start": "npm --prefix server run start",
+    "agent:build": "powershell -ExecutionPolicy Bypass -File scripts/build_and_sign_agent.ps1 -SkipSigningIfUnconfigured",
+    "agent:sign": "powershell -ExecutionPolicy Bypass -File scripts/sign_agent.ps1",
+    "installer:build": "powershell -ExecutionPolicy Bypass -File scripts/build_and_sign_installer.ps1"
   },
   "dependencies": {
     "lucide-react": "^1.48.0",

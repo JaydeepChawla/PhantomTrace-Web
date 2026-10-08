@@ -9,6 +9,7 @@ import { scansRouter } from "./routes/scans";
 import { processesRouter } from "./routes/processes";
 import { alertsRouter } from "./routes/alerts";
 import { reportsRouter } from "./routes/reports";
+import { agentRouter } from "./routes/agent";
 import { errorHandler } from "./middleware/errorHandler";
 
 export const app = express();
@@ -75,6 +76,7 @@ app.use("/api/scans", scansRouter);
 app.use("/api/processes", processesRouter);
 app.use("/api/alerts", alertsRouter);
 app.use("/api/reports", reportsRouter);
+app.use("/api/agent", agentRouter);
 
 // Root informational endpoint
 app.get("/", (_req, res) => {
