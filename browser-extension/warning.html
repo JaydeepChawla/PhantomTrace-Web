@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PhantomTrace Security Warning</title>
+  <link rel="stylesheet" href="warning.css">
+</head>
+<body>
+  <div class="warning-container">
+    <div class="warning-card">
+      <!-- Icon & Header -->
+      <div class="icon-wrapper">
+        <svg class="shield-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <path d="M12 8v4"/>
+          <path d="M12 16h.01"/>
+        </svg>
+      </div>
+
+      <div class="banner">
+        <span id="severityBadge" class="badge">POTENTIAL THREAT</span>
+        <h1 id="warningTitle" class="title">Website Flagged by PhantomTrace</h1>
+      </div>
+
+      <p class="subtitle">
+        Navigation to <strong id="domainDisplay" class="domain-highlight">domain.com</strong> was intercepted to protect your system.
+      </p>
+
+      <!-- Threat Details Grid -->
+      <div class="details-box">
+        <div class="detail-row">
+          <span class="detail-label">Classification:</span>
+          <span id="classificationVal" class="detail-val">Phishing</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Detection Source:</span>
+          <span id="sourceVal" class="detail-val">Threat Intelligence</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Indicator / Rule:</span>
+          <span id="ruleVal" class="detail-val font-mono">TI-RULE-7412</span>
+        </div>
+        <div class="detail-row explanation-row">
+          <span class="detail-label">Explanation:</span>
+          <span id="explanationVal" class="detail-val">Confirmed malicious domain serving deceptive login pages.</span>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="actions">
+        <button id="safeBtn" class="btn btn-primary">
+          Return to Safety
+        </button>
+        <button id="proceedBtn" class="btn btn-ghost">
+          I understand the risks, proceed anyway
+        </button>
+      </div>
+
+      <!-- Footer Disclaimer -->
+      <footer class="footer">
+        <p>
+          PhantomTrace Endpoint Security — Read-only Passive Inspection.
+          Legitimate security tools never guarantee 100% protection against all web threats.
+        </p>
+      </footer>
+    </div>
+  </div>
+
+  <script src="warning.js"></script>
+</body>
+</html>

@@ -10,6 +10,7 @@ import { processesRouter } from "./routes/processes";
 import { alertsRouter } from "./routes/alerts";
 import { reportsRouter } from "./routes/reports";
 import { agentRouter } from "./routes/agent";
+import { webThreatsRouter } from "./routes/webThreats";
 import { errorHandler } from "./middleware/errorHandler";
 
 export const app = express();
@@ -50,7 +51,12 @@ app.use(
         return;
       }
       const cleanOrigin = origin.replace(/\/+$/, "");
-      if (allowedOrigins.includes(cleanOrigin)) {
+      if (
+        allowedOrigins.includes(cleanOrigin) ||
+        cleanOrigin.startsWith("chrome-extension://") ||
+        cleanOrigin.startsWith("edge-extension://") ||
+        cleanOrigin.startsWith("moz-extension://")
+      ) {
         callback(null, true);
       } else {
         callback(new Error("CORS_NOT_ALLOWED"));
@@ -77,6 +83,7 @@ app.use("/api/processes", processesRouter);
 app.use("/api/alerts", alertsRouter);
 app.use("/api/reports", reportsRouter);
 app.use("/api/agent", agentRouter);
+app.use("/api/web-threats", webThreatsRouter);
 
 // Root informational endpoint
 app.get("/", (_req, res) => {

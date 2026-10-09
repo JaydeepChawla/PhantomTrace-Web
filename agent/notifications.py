@@ -80,7 +80,7 @@ def compute_event_id(alert: Dict[str, Any]) -> str:
     Uses process basename, severity level, and sorted indicators.
     Does NOT depend on volatile PID to ensure scan-to-scan deduplication.
     """
-    raw_name = str(alert.get("name") or "unknown").strip().lower()
+    raw_name = str(alert.get("domain") or alert.get("name") or "unknown").strip().lower()
     clean_name = Path(raw_name).name
     level = str(alert.get("level") or "NORMAL").strip().upper()
 
@@ -222,7 +222,7 @@ class NotificationDeduplicator:
 
     def record_sent(self, event_id: str, alert: Dict[str, Any]) -> None:
         """Records a successful notification event in the persistent cache."""
-        clean_name = Path(str(alert.get("name") or "unknown")).name
+        clean_name = Path(str(alert.get("domain") or alert.get("name") or "unknown")).name
         current_entry = self._cache.get(event_id, {})
         count = int(current_entry.get("count", 0)) + 1
 
@@ -263,7 +263,7 @@ def log_notification_audit(
     """
     target_file = audit_file or AUDIT_LOG_FILE
 
-    clean_name = Path(str(alert.get("name") or "unknown")).name
+    clean_name = Path(str(alert.get("domain") or alert.get("name") or "unknown")).name
     level = str(alert.get("level") or "NORMAL").upper()
     try:
         score = round(float(alert.get("score", 0.0) or 0.0), 1)
@@ -297,9 +297,7 @@ def format_notification(alert: Dict[str, Any]) -> Dict[str, str]:
     Generates a clean, professional, non-technical Windows notification payload.
     NEVER includes memory addresses, file contents, or raw paths.
     """
-    raw_name = str(alert.get("name") or "Unknown Process").strip()
-    safe_name = Path(raw_name).name  # Extract clean basename only
-
+    is_web_threat = alert.get("source") == "browser" or "domain" in alert
     level = str(alert.get("level") or "HIGH").strip().upper()
     try:
         score = float(alert.get("score", 0.0) or 0.0)
@@ -307,15 +305,32 @@ def format_notification(alert: Dict[str, Any]) -> Dict[str, str]:
     except Exception:
         score_str = "N/A"
 
-    if level == "CRITICAL":
-        title = f"{APP_NAME}: Critical Threat Detected"
-        body = f"High-risk suspicious activity detected on this PC ({safe_name}). Threat Score: {score_str}."
-    elif level == "HIGH":
-        title = f"{APP_NAME}: Suspicious Activity Detected"
-        body = f"Potentially malicious activity detected ({safe_name}). Threat Score: {score_str}."
+    if is_web_threat:
+        safe_domain = str(alert.get("domain") or alert.get("name") or "Suspicious Domain").strip().lower()
+        classification = str(alert.get("classification") or "Malicious Website").replace("_", " ").title()
+        if level == "CRITICAL":
+            title = f"{APP_NAME}: Critical Web Threat Blocked"
+            body = f"High-risk {classification} site blocked ({safe_domain}). Threat Score: {score_str}."
+        elif level == "HIGH":
+            title = f"{APP_NAME}: Web Threat Detected"
+            body = f"Potentially malicious web navigation detected ({safe_domain}). Type: {classification}."
+        else:
+            title = f"{APP_NAME}: Web Security Notice"
+            body = f"Suspicious web activity noted for {safe_domain}."
+        safe_name = safe_domain
     else:
-        title = f"{APP_NAME}: Security Notice"
-        body = f"Potentially suspicious activity noted for {safe_name}. Threat Level: {level}."
+        raw_name = str(alert.get("name") or "Unknown Process").strip()
+        safe_name = Path(raw_name).name  # Extract clean basename only
+
+        if level == "CRITICAL":
+            title = f"{APP_NAME}: Critical Threat Detected"
+            body = f"High-risk suspicious activity detected on this PC ({safe_name}). Threat Score: {score_str}."
+        elif level == "HIGH":
+            title = f"{APP_NAME}: Suspicious Activity Detected"
+            body = f"Potentially malicious activity detected ({safe_name}). Threat Score: {score_str}."
+        else:
+            title = f"{APP_NAME}: Security Notice"
+            body = f"Potentially suspicious activity noted for {safe_name}. Threat Level: {level}."
 
     action_hint = "Open PhantomTrace for full investigation details."
 

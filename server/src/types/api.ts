@@ -419,4 +419,26 @@ export interface IngestResponse {
   message?: string;
 }
 
-
+/**
+ * =====================================================================
+ * PHASE 3: WEB THREAT MONITOR TYPES & CONTRACTS
+ * =====================================================================
+ */
+export interface WebThreatEventDocument {
+  id: string;
+  ownerUid: string;
+  deviceId?: string;
+  timestamp: string;
+  domain: string;
+  url?: string;
+  classification: "PHISHING" | "MALWARE" | "SUSPICIOUS_HEURISTIC" | "UNWANTED_SOFTWARE" | "UNKNOWN";
+  severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "NORMAL";
+  score: number;
+  confidence: "HIGH" | "MEDIUM" | "LOW";
+  detectionSource: "THREAT_INTEL" | "HEURISTIC" | "REPUTATION_CACHE" | "UNKNOWN";
+  ruleId?: string;
+  explanation: string;
+  browser?: string;
+  notified?: boolean;
+  status: "ACTIVE" | "DISMISSED" | "INVESTIGATING";
+}

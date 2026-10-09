@@ -16,6 +16,8 @@ SECURITY GUARANTEES:
 """
 
 import json
+import sys
+from pathlib import Path
 import urllib.parse
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from typing import Optional
@@ -40,30 +42,47 @@ class LocalAgentRequestHandler(BaseHTTPRequestHandler):
         # Route standard server logging through our logging service
         logger.debug(f"{self.address_string()} - {format % args}")
 
-    def _get_cors_origin(self) -> Optional[str]:
-        """Validates and returns allowed CORS origin."""
-        origin = self.headers.get("Origin")
+    def _is_origin_allowed(self, origin: Optional[str]) -> bool:
+        """Checks if the origin is explicitly authorized."""
         if not origin:
-            return "*"
+            return True
         origin_clean = origin.rstrip("/")
         for allowed in ALLOWED_ORIGINS:
             if allowed.rstrip("/") == origin_clean:
-                return origin
-        # Allow localhost origins for local frontend testing
-        if "localhost" in origin or "127.0.0.1" in origin:
+                return True
+        try:
+            parsed = urllib.parse.urlparse(origin)
+            hostname = (parsed.hostname or "").lower()
+            if hostname in {"localhost", "127.0.0.1", "::1"}:
+                return True
+        except Exception:
+            pass
+        if (
+            origin.startswith("chrome-extension://")
+            or origin.startswith("extension://")
+            or origin.startswith("edge-extension://")
+        ):
+            return True
+        return False
+
+    def _get_cors_origin(self) -> Optional[str]:
+        """Validates and returns allowed CORS origin, or None if disallowed."""
+        origin = self.headers.get("Origin")
+        if not origin:
+            return "*"
+        if self._is_origin_allowed(origin):
             return origin
-        return ALLOWED_ORIGINS[0]
+        return None
 
     def _send_cors_headers(self):
         """Applies essential CORS and Private Network Access headers."""
         origin = self._get_cors_origin()
         if origin:
             self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Access-Control-Allow-Credentials", "true")
+            self.send_header("Access-Control-Allow-Private-Network", "true")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Endpoint-Id, X-Local-Token")
-        self.send_header("Access-Control-Allow-Credentials", "true")
-        # Chrome/Chromium Private Network Access (PNA) header
-        self.send_header("Access-Control-Allow-Private-Network", "true")
 
     def _send_json_response(self, status_code: int, data: dict):
         """Sends a JSON response with security and CORS headers."""
@@ -81,6 +100,12 @@ class LocalAgentRequestHandler(BaseHTTPRequestHandler):
 
     def do_OPTIONS(self):
         """Handle CORS and Private Network Access preflights."""
+        origin = self.headers.get("Origin")
+        if origin and not self._is_origin_allowed(origin):
+            self.send_response(403)
+            self.end_headers()
+            return
+
         self.send_response(204)
         self._send_cors_headers()
         self.send_header("Content-Length", "0")
@@ -191,6 +216,79 @@ class LocalAgentRequestHandler(BaseHTTPRequestHandler):
                 self._send_json_response(500, {
                     "error": "StorageError",
                     "message": "Failed to persist device pairing token."
+                })
+
+        elif path == "/api/threats/browser-event":
+            # Validates origin and handles high-confidence browser threats for Windows notifications
+            origin = self.headers.get("Origin")
+            allowed_origin = self._get_cors_origin()
+            if origin and not allowed_origin:
+                self._send_json_response(403, {
+                    "error": "Forbidden",
+                    "message": "Origin not permitted to submit threat events."
+                })
+                return
+
+            domain = str(body_data.get("domain") or "").strip().lower()
+            if not domain or len(domain) > 255:
+                self._send_json_response(400, {
+                    "error": "InvalidPayload",
+                    "message": "Valid 'domain' field is required."
+                })
+                return
+
+            level = str(body_data.get("level") or "HIGH").strip().upper()
+            if level not in ["CRITICAL", "HIGH", "MEDIUM", "LOW", "NORMAL"]:
+                level = "HIGH"
+
+            try:
+                score = float(body_data.get("score", 75.0))
+            except (ValueError, TypeError):
+                score = 75.0
+
+            classification = str(body_data.get("classification") or "MALICIOUS_SITE").strip()
+            rule_id = str(body_data.get("ruleId") or "").strip()
+            explanation = str(body_data.get("explanation") or "High-confidence web threat detected.").strip()
+
+            indicators = ["WEB_THREAT", classification]
+            if rule_id:
+                indicators.append(rule_id)
+
+            alert = {
+                "source": "browser",
+                "domain": domain,
+                "name": domain,
+                "level": level,
+                "score": score,
+                "classification": classification,
+                "indicators": indicators,
+                "ruleId": rule_id,
+                "explanation": explanation,
+            }
+
+            try:
+                # Ensure project root is available in sys.path
+                root_dir = str(Path(__file__).resolve().parent.parent.parent)
+                if root_dir not in sys.path:
+                    sys.path.insert(0, root_dir)
+
+                # pyrefly: ignore [missing-import]
+                from agent.notifications import dispatch_threat_notifications, compute_event_id
+                event_id = compute_event_id(alert)
+                metrics = dispatch_threat_notifications([alert])
+                self._send_json_response(200, {
+                    "success": True,
+                    "eventId": event_id,
+                    "dispatched": metrics.get("sent", 0) > 0,
+                    "suppressed": metrics.get("suppressed", 0) > 0,
+                    "ignored": metrics.get("ignored", 0) > 0,
+                    "metrics": metrics,
+                })
+            except Exception as e:
+                logger.error(f"Failed to dispatch browser threat notification: {e}")
+                self._send_json_response(500, {
+                    "error": "DispatchError",
+                    "message": f"Notification engine error: {str(e)}"
                 })
 
         else:

@@ -11,11 +11,13 @@ import type {
     ReportDocument,
     IngestedScanBundle,
     IngestResponse,
+    WebThreatEventDocument,
 } from "../types/api";
 
 class PostgresService {
     private memoryUsers: Map<string, UserDocument> = new Map();
     private memoryScans: Map<string, ScanDocument> = new Map();
+    private memoryWebThreatEvents: Map<string, WebThreatEventDocument[]> = new Map();
 
     async getUser(uid: string): Promise<UserDocument | null> {
         try {
@@ -968,8 +970,29 @@ class PostgresService {
                     expires_at TIMESTAMPTZ NOT NULL
                 );
                 CREATE INDEX IF NOT EXISTS idx_user_sessions_uid ON user_sessions (uid);
+
+                CREATE TABLE IF NOT EXISTS web_threat_events (
+                    id VARCHAR(128) PRIMARY KEY,
+                    owner_uid VARCHAR(128) NOT NULL,
+                    device_id VARCHAR(128),
+                    timestamp TIMESTAMPTZ NOT NULL,
+                    domain VARCHAR(255) NOT NULL,
+                    url TEXT,
+                    classification VARCHAR(64) NOT NULL,
+                    severity VARCHAR(32) NOT NULL,
+                    score NUMERIC(5,2) NOT NULL,
+                    confidence VARCHAR(32) NOT NULL,
+                    detection_source VARCHAR(64) NOT NULL,
+                    rule_id VARCHAR(128),
+                    explanation TEXT,
+                    browser VARCHAR(128),
+                    notified BOOLEAN NOT NULL DEFAULT FALSE,
+                    status VARCHAR(32) NOT NULL DEFAULT 'ACTIVE'
+                );
+                CREATE INDEX IF NOT EXISTS idx_web_threat_events_owner ON web_threat_events (owner_uid);
+                CREATE INDEX IF NOT EXISTS idx_web_threat_events_timestamp ON web_threat_events (timestamp DESC);
             `);
-            console.log("[PostgreSQL] Device, pairing, and session schemas verified.");
+            console.log("[PostgreSQL] Device, pairing, session, and web threat schemas verified.");
         } catch (err) {
             console.warn("[PostgreSQL] Schema auto-migration check:", (err as Error).message);
         }
@@ -1308,6 +1331,141 @@ class PostgresService {
 
         return this.memoryUserSessions.get(tokenHash) || null;
     }
+
+    /*
+     * ---------------------------------------------------------------
+     * Phase 3: Web Threat Events
+     * ---------------------------------------------------------------
+     */
+    async createWebThreatEvent(event: WebThreatEventDocument): Promise<void> {
+        // Enforce in-memory retention limit (max 500 events per owner)
+        const userEvents = this.memoryWebThreatEvents.get(event.ownerUid) || [];
+        const filtered = userEvents.filter((e) => e.id !== event.id);
+        filtered.unshift(event);
+        if (filtered.length > 500) {
+            filtered.pop();
+        }
+        this.memoryWebThreatEvents.set(event.ownerUid, filtered);
+
+        try {
+            await postgresPool.query(
+                `
+                INSERT INTO web_threat_events (
+                    id,
+                    owner_uid,
+                    device_id,
+                    timestamp,
+                    domain,
+                    url,
+                    classification,
+                    severity,
+                    score,
+                    confidence,
+                    detection_source,
+                    rule_id,
+                    explanation,
+                    browser,
+                    notified,
+                    status
+                )
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+                ON CONFLICT (id) DO UPDATE SET
+                    status = EXCLUDED.status,
+                    notified = EXCLUDED.notified
+                `,
+                [
+                    event.id,
+                    event.ownerUid,
+                    event.deviceId || null,
+                    event.timestamp,
+                    event.domain,
+                    event.url || null,
+                    event.classification,
+                    event.severity,
+                    event.score,
+                    event.confidence,
+                    event.detectionSource,
+                    event.ruleId || null,
+                    event.explanation,
+                    event.browser || null,
+                    event.notified ?? false,
+                    event.status || "ACTIVE",
+                ]
+            );
+        } catch {
+            // in-memory fallback preserved
+        }
+    }
+
+    async getWebThreatEvents(uid: string): Promise<WebThreatEventDocument[]> {
+        try {
+            const result = await postgresPool.query(
+                `
+                SELECT *
+                FROM web_threat_events
+                WHERE owner_uid = $1
+                ORDER BY timestamp DESC
+                LIMIT 200
+                `,
+                [uid]
+            );
+
+            if (result.rows.length > 0) {
+                return result.rows.map((row) => ({
+                    id: row.id,
+                    ownerUid: row.owner_uid,
+                    deviceId: row.device_id || undefined,
+                    timestamp: new Date(row.timestamp).toISOString(),
+                    domain: row.domain,
+                    url: row.url || undefined,
+                    classification: row.classification,
+                    severity: row.severity,
+                    score: Number(row.score),
+                    confidence: row.confidence,
+                    detectionSource: row.detection_source,
+                    ruleId: row.rule_id || undefined,
+                    explanation: row.explanation,
+                    browser: row.browser || undefined,
+                    notified: Boolean(row.notified),
+                    status: row.status,
+                }));
+            }
+        } catch {
+            // memory fallback
+        }
+
+        return this.memoryWebThreatEvents.get(uid) || [];
+    }
+
+    async dismissWebThreatEvent(uid: string, eventId: string): Promise<boolean> {
+        const userEvents = this.memoryWebThreatEvents.get(uid);
+        let found = false;
+        if (userEvents) {
+            for (const ev of userEvents) {
+                if (ev.id === eventId) {
+                    ev.status = "DISMISSED";
+                    found = true;
+                }
+            }
+        }
+
+        try {
+            const res = await postgresPool.query(
+                `
+                UPDATE web_threat_events
+                SET status = 'DISMISSED'
+                WHERE id = $1 AND owner_uid = $2
+                `,
+                [eventId, uid]
+            );
+            if (res.rowCount && res.rowCount > 0) found = true;
+        } catch {
+            // fallback
+        }
+
+        return found;
+    }
 }
+
 
 export const postgresService = new PostgresService();

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PhantomTrace Web Threat Monitor</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="brand">
+        <img src="icons/icon48.png" alt="Logo" class="logo-icon">
+        <div class="brand-text">
+          <span class="brand-title">PhantomTrace</span>
+          <span class="brand-subtitle">Web Threat Monitor</span>
+        </div>
+      </div>
+      <div id="statusIndicator" class="status-pill status-off">Disabled</div>
+    </header>
+
+    <!-- Main Switch -->
+    <div class="toggle-card">
+      <div class="toggle-info">
+        <span class="toggle-label">Active Web Monitoring</span>
+        <span class="toggle-sublabel">Inspect visited domains against threat intelligence</span>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="enableToggle">
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <!-- Backend Connection Info -->
+    <div class="card connection-card">
+      <div class="connection-header">
+        <span class="card-title">Backend Connection</span>
+        <span id="backendBadge" class="badge badge-amber">Checking...</span>
+      </div>
+      <div class="input-row">
+        <input type="text" id="backendUrlInput" placeholder="http://localhost:5000">
+        <button id="saveBackendBtn" class="btn btn-secondary">Save</button>
+      </div>
+      <div class="input-row" style="margin-top: 6px;">
+        <input type="password" id="authTokenInput" placeholder="Optional Token (pt_dev_... / dev-...)">
+        <button id="saveTokenBtn" class="btn btn-secondary">Set</button>
+      </div>
+    </div>
+
+    <!-- Recent Detections -->
+    <div class="card threats-card">
+      <div class="threats-header">
+        <span class="card-title">Recent Threats</span>
+        <button id="clearHistoryBtn" class="btn-link">Clear</button>
+      </div>
+      <div id="threatsList" class="threats-list">
+        <div class="empty-state">No web threats detected. Safe browsing active.</div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p class="privacy-note">
+        Privacy Guarantee: Only hostnames are verified. Query parameters, passwords, and form inputs are never collected.
+      </p>
+    </footer>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

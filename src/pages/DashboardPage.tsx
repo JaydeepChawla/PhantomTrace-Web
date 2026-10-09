@@ -23,6 +23,7 @@ import { ThreatDistributionChart } from '../components/charts/ThreatDistribution
 import { ScanMyPcCard } from '../components/agent/ScanMyPcCard';
 import { MyDevicesSection } from '../components/agent/MyDevicesSection';
 import { DownloadAgentButton } from '../components/agent/DownloadAgentButton';
+import { WebThreatMonitorSection } from '../components/webthreat/WebThreatMonitorSection';
 
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
@@ -48,6 +49,9 @@ export const DashboardPage: React.FC = () => {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', maxWidth: '800px', margin: '2rem auto' }}>
         <ScanMyPcCard onScanCompleted={() => refreshData()} />
+
+        {/* Phase 3 Web Threat Monitor Section */}
+        <WebThreatMonitorSection />
 
         <div style={{ padding: '2.5rem 2rem', textAlign: 'center' }} className="pt-card pt-card-cyber">
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.25rem' }}>
@@ -433,6 +437,9 @@ export const DashboardPage: React.FC = () => {
           </table>
         </div>
       </Card>
+
+      {/* Phase 3 Web Threat Monitor Section */}
+      <WebThreatMonitorSection />
 
       {/* Enrolled Devices Management */}
       <MyDevicesSection />

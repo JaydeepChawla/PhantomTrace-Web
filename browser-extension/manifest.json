@@ -1,0 +1,46 @@
+{
+  "manifest_version": 3,
+  "name": "PhantomTrace Web Threat Monitor",
+  "version": "1.0.0",
+  "description": "Real-time web threat and phishing detection for PhantomTrace endpoint security.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_title": "PhantomTrace Web Threat Monitor",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": [
+    "webNavigation",
+    "storage"
+  ],
+  "host_permissions": [
+    "http://localhost:5000/*",
+    "http://127.0.0.1:5000/*",
+    "https://phantomtrace-web.onrender.com/*",
+    "http://127.0.0.1:49152/*"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "warning.html",
+        "warning.css",
+        "warning.js",
+        "icons/*"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ]
+}

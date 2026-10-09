@@ -6,6 +6,8 @@ import type {
   Report,
   ScanOverview,
   SystemSettings,
+  WebThreatEvent,
+  WebThreatStatus,
 } from "../types";
 import type {
   PhantomTraceDataService,
@@ -813,6 +815,57 @@ export class ApiDataService implements PhantomTraceDataService {
     try {
       const res = await this.safeFetch<{ success: boolean }>(
         `/devices/${encodeURIComponent(deviceId)}/revoke`,
+        { method: "POST" }
+      );
+      return res.success === true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * =====================================================================
+   * PHASE 3: WEB THREAT MONITOR METHODS
+   * =====================================================================
+   */
+  public async getWebThreatStatus(): Promise<WebThreatStatus> {
+    try {
+      const res = await this.safeFetch<{
+        status: string;
+        service?: string;
+        provider?: string;
+        cachedCount?: number;
+      }>("/web-threats/status");
+
+      return {
+        status: res.status === "ok" ? "ENABLED" : "UNAVAILABLE",
+        provider: res.provider || "PhantomTrace-Mock-ThreatIntel",
+        serviceOnline: res.status === "ok",
+        activeCount: res.cachedCount || 0,
+      };
+    } catch (err: any) {
+      return {
+        status: "UNAVAILABLE",
+        serviceOnline: false,
+        activeCount: 0,
+        message: err?.message || "Reputation provider unreachable",
+      };
+    }
+  }
+
+  public async getWebThreatEvents(): Promise<WebThreatEvent[]> {
+    try {
+      const res = await this.safeFetch<{ events: WebThreatEvent[] }>("/web-threats/events");
+      return res.events || [];
+    } catch {
+      return [];
+    }
+  }
+
+  public async dismissWebThreatEvent(eventId: string): Promise<boolean> {
+    try {
+      const res = await this.safeFetch<{ success: boolean }>(
+        `/web-threats/events/${encodeURIComponent(eventId)}/dismiss`,
         { method: "POST" }
       );
       return res.success === true;

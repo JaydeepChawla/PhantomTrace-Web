@@ -469,3 +469,35 @@ export interface Report {
   content?: string;
   recordCount?: number;
 }
+
+/**
+ * =====================================================================
+ * PHASE 3: WEB THREAT MONITOR TYPES
+ * =====================================================================
+ */
+export interface WebThreatEvent {
+  id: string;
+  ownerUid?: string;
+  deviceId?: string;
+  timestamp: string;
+  domain: string;
+  url?: string;
+  classification: "PHISHING" | "MALWARE" | "SUSPICIOUS_HEURISTIC" | "UNWANTED_SOFTWARE" | "UNKNOWN" | string;
+  severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "NORMAL";
+  score: number;
+  confidence: "HIGH" | "MEDIUM" | "LOW";
+  detectionSource: "THREAT_INTEL" | "HEURISTIC" | "REPUTATION_CACHE" | "UNKNOWN" | string;
+  ruleId?: string;
+  explanation: string;
+  browser?: string;
+  notified?: boolean;
+  status?: "ACTIVE" | "DISMISSED" | "INVESTIGATING";
+}
+
+export interface WebThreatStatus {
+  status: "ENABLED" | "DISABLED" | "UNAVAILABLE";
+  provider?: string;
+  serviceOnline: boolean;
+  activeCount: number;
+  message?: string;
+}

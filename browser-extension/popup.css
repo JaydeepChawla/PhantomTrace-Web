@@ -1,0 +1,293 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+body {
+  width: 340px;
+  background-color: #0b0f19;
+  color: #f1f5f9;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.popup-container {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #1e293b;
+  padding-bottom: 10px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logo-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 4px;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.brand-title {
+  font-weight: 700;
+  font-size: 14px;
+  color: #ffffff;
+  letter-spacing: 0.3px;
+}
+
+.brand-subtitle {
+  font-size: 10px;
+  color: #06b6d4;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-pill {
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.status-on {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.status-off {
+  background: rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.toggle-card {
+  background: #131d2e;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.toggle-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 220px;
+}
+
+.toggle-label {
+  font-weight: 600;
+  color: #f8fafc;
+  font-size: 12px;
+}
+
+.toggle-sublabel {
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+/* Toggle Switch */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 42px;
+  height: 24px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #334155;
+  transition: 0.25s;
+  border-radius: 24px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: #ffffff;
+  transition: 0.25s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: #10b981;
+}
+
+input:checked + .slider:before {
+  transform: translateX(18px);
+}
+
+.card {
+  background: #131d2e;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.card-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #cbd5e1;
+  letter-spacing: 0.5px;
+}
+
+.connection-header, .threats-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.badge {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.badge-green {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+}
+
+.badge-amber {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+}
+
+.badge-red {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
+
+.input-row {
+  display: flex;
+  gap: 6px;
+}
+
+.input-row input {
+  flex: 1;
+  background: #0b0f19;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  padding: 5px 8px;
+  color: #f1f5f9;
+  font-size: 11px;
+}
+
+.input-row input:focus {
+  outline: none;
+  border-color: #06b6d4;
+}
+
+.btn {
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+}
+
+.btn-secondary {
+  background: #1e293b;
+  color: #cbd5e1;
+  border: 1px solid #334155;
+}
+
+.btn-secondary:hover {
+  background: #334155;
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.btn-link:hover {
+  color: #cbd5e1;
+}
+
+.threats-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 130px;
+  overflow-y: auto;
+}
+
+.empty-state {
+  text-align: center;
+  color: #64748b;
+  font-size: 10px;
+  padding: 10px 0;
+}
+
+.threat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #0b0f19;
+  padding: 6px 8px;
+  border-radius: 4px;
+  border-left: 3px solid #ef4444;
+}
+
+.threat-domain {
+  font-weight: 600;
+  font-size: 11px;
+  color: #f8fafc;
+  max-width: 190px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.footer {
+  border-top: 1px solid #1e293b;
+  padding-top: 8px;
+}
+
+.privacy-note {
+  font-size: 9px;
+  color: #64748b;
+  line-height: 1.3;
+}
