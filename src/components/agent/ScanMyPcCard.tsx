@@ -288,7 +288,8 @@ export const ScanMyPcCard: React.FC<ScanMyPcCardProps> = ({
                   <Link2 size={16} />
                   <span>Connect This PC</span>
                 </button>
-                {agentStatus.state === 'OFFLINE' ? (
+                <DownloadAgentButton variant="secondary" size="md" />
+                {agentStatus.state === 'OFFLINE' && (
                   <button
                     type="button"
                     onClick={checkAgent}
@@ -298,8 +299,6 @@ export const ScanMyPcCard: React.FC<ScanMyPcCardProps> = ({
                     <RefreshCw size={15} />
                     <span>Retry</span>
                   </button>
-                ) : (
-                  <DownloadAgentButton variant="secondary" size="md" />
                 )}
               </div>
               <span style={{ fontSize: '0.76rem', color: '#94a3b8' }}>
@@ -307,11 +306,6 @@ export const ScanMyPcCard: React.FC<ScanMyPcCardProps> = ({
               </span>
             </div>
           )}
-
-          {/* Download Agent Button */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.35rem' }}>
-            <DownloadAgentButton variant="cyber" size="sm" />
-          </div>
         </div>
       </div>
 
