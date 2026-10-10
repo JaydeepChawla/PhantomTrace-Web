@@ -6,7 +6,9 @@ import {
   Check,
   FileCode,
   Layers,
-  Lock
+  Lock,
+  ShieldAlert,
+  RefreshCw
 } from 'lucide-react';
 import { dataService } from '../services';
 import type { Report } from '../types';
@@ -19,6 +21,22 @@ export const ReportsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedReportId, setSelectedReportId] = useState<string>('rep-01');
   const [copied, setCopied] = useState(false);
+  const [generating, setGenerating] = useState(false);
+
+  const handleGenerateUnifiedReport = async () => {
+    try {
+      setGenerating(true);
+      if (dataService.generateUnifiedSocReport) {
+        const newReport = await dataService.generateUnifiedSocReport();
+        setReports((prev) => [newReport, ...prev.filter((r) => r.id !== newReport.id)]);
+        setSelectedReportId(newReport.id);
+      }
+    } catch (err: any) {
+      console.error(err);
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -113,9 +131,22 @@ export const ReportsPage: React.FC = () => {
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(0, 229, 255, 0.08)', border: '1px solid rgba(0, 229, 255, 0.25)', padding: '0.4rem 0.85rem', borderRadius: '6px', fontSize: '0.78rem', color: '#38bdf8' }}>
-          <Lock size={14} style={{ color: '#00e5ff' }} />
-          <span>Prepared for Real File Ingestion</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={handleGenerateUnifiedReport}
+            disabled={generating}
+            className="pt-btn pt-btn-primary"
+            style={{ padding: '0.45rem 0.95rem', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '0.45rem' }}
+          >
+            {generating ? <RefreshCw size={14} className="animate-spin" /> : <ShieldAlert size={14} />}
+            <span>{generating ? 'Compiling SOC Audit...' : 'Generate Unified SOC Report'}</span>
+          </button>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(0, 229, 255, 0.08)', border: '1px solid rgba(0, 229, 255, 0.25)', padding: '0.4rem 0.85rem', borderRadius: '6px', fontSize: '0.78rem', color: '#38bdf8' }}>
+            <Lock size={14} style={{ color: '#00e5ff' }} />
+            <span>Read-Only Telemetry Audit</span>
+          </div>
         </div>
       </div>
 

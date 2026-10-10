@@ -6,6 +6,7 @@ import type {
 import { normalizeUrlSafely } from "./urlNormalizer";
 import { MockThreatIntelProvider } from "./mockProvider";
 import { evaluateHeuristics, heuristicToResult } from "./heuristicEngine";
+import { postgresService } from "../postgresService";
 
 interface CacheEntry {
   result: ThreatIntelResult;
@@ -51,8 +52,48 @@ export class ThreatIntelService {
   /**
    * Checks a URL or domain against threat intelligence and conservative heuristics.
    */
-  public async check(urlOrDomain: string): Promise<ThreatIntelResult> {
+  public async check(urlOrDomain: string, ownerUid?: string): Promise<ThreatIntelResult> {
     const parsed = normalizeUrlSafely(urlOrDomain);
+
+    if (parsed.valid && ownerUid) {
+      try {
+        const policy = await postgresService.findDomainPolicy(ownerUid, parsed.domain);
+        if (policy) {
+          if (policy.policyType === "BLOCK") {
+            return {
+              domain: parsed.domain,
+              normalizedUrl: parsed.normalizedUrl,
+              verdict: "POLICY_VIOLATION",
+              severity: "CRITICAL",
+              score: 100,
+              confidence: "HIGH",
+              source: "POLICY_RULE",
+              provider: "PhantomTrace-SOC-Policy",
+              ruleId: "POLICY_USER_BLOCKED",
+              explanation: policy.reason || "Domain explicitly blocked by SOC security policy.",
+              status: "SUCCESS",
+              checkedAt: new Date().toISOString(),
+            };
+          } else if (policy.policyType === "ALLOW") {
+            return {
+              domain: parsed.domain,
+              normalizedUrl: parsed.normalizedUrl,
+              verdict: "BENIGN",
+              severity: "NORMAL",
+              score: 0,
+              confidence: "HIGH",
+              source: "POLICY_RULE",
+              provider: "PhantomTrace-SOC-Policy",
+              explanation: policy.reason || "Domain explicitly allowed by SOC security policy.",
+              status: "SUCCESS",
+              checkedAt: new Date().toISOString(),
+            };
+          }
+        }
+      } catch {
+        // Fall back to standard threat intel evaluation if policy check fails
+      }
+    }
 
     if (!parsed.valid) {
       return {

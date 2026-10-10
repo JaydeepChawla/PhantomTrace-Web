@@ -6,8 +6,10 @@ import {
   RefreshCw,
   Info,
   CheckCircle2,
-  XCircle
+  XCircle,
+  Shield
 } from 'lucide-react';
+import { DomainPolicyModal } from '../policy/DomainPolicyModal';
 import { ApiDataService } from '../../services/apiDataService';
 import type { WebThreatEvent, WebThreatStatus } from '../../types';
 import { formatScanDate } from '../../utils/dateFormat';
@@ -25,6 +27,7 @@ export const WebThreatMonitorSection: React.FC<WebThreatMonitorSectionProps> = (
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [dismissingId, setDismissingId] = useState<string | null>(null);
+  const [isPolicyModalOpen, setIsPolicyModalOpen] = useState<boolean>(false);
 
   const apiService = React.useMemo(() => new ApiDataService(), []);
 
@@ -163,6 +166,16 @@ export const WebThreatMonitorSection: React.FC<WebThreatMonitorSectionProps> = (
             </span>
           )}
 
+          <button
+            type="button"
+            onClick={() => setIsPolicyModalOpen(true)}
+            className="pt-btn pt-btn-secondary"
+            style={{ padding: '0.35rem 0.65rem', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+            title="Manage Domain Allowlist & Blocklist Policies (Phase 4)"
+          >
+            <Shield size={13} style={{ color: '#00e5ff' }} />
+            Domain Policies
+          </button>
           <button
             type="button"
             onClick={() => loadData(true)}
@@ -366,6 +379,12 @@ export const WebThreatMonitorSection: React.FC<WebThreatMonitorSectionProps> = (
           </table>
         </div>
       )}
+
+      <DomainPolicyModal
+        isOpen={isPolicyModalOpen}
+        onClose={() => setIsPolicyModalOpen(false)}
+        onPoliciesUpdated={() => loadData(true)}
+      />
     </div>
   );
 };

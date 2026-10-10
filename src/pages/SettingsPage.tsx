@@ -23,6 +23,8 @@ export const SettingsPage: React.FC = () => {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [pingStatus, setPingStatus] = useState<{ message: string; success: boolean } | null>(null);
   const [isPinging, setIsPinging] = useState(false);
+  const [adminAuthStatus, setAdminAuthStatus] = useState<{ message: string; success: boolean } | null>(null);
+  const [isAdminAuthenticating, setIsAdminAuthenticating] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -67,6 +69,35 @@ export const SettingsPage: React.FC = () => {
       });
     } finally {
       setIsPinging(false);
+    }
+  };
+
+  const handleAdminAuth = async () => {
+    if (!settings?.api.apiKeyMasked) return;
+    setIsAdminAuthenticating(true);
+    setAdminAuthStatus(null);
+    try {
+      if (dataService.loginWithApiKey) {
+        const res = await dataService.loginWithApiKey(settings.api.apiKeyMasked);
+        if (res.success) {
+          setAdminAuthStatus({
+            success: true,
+            message: 'Authenticated successfully as System Administrator (phantomtrace-owner).'
+          });
+        } else {
+          setAdminAuthStatus({
+            success: false,
+            message: res.message || 'Invalid administrator API key.'
+          });
+        }
+      }
+    } catch {
+      setAdminAuthStatus({
+        success: false,
+        message: 'Administrator authentication failed.'
+      });
+    } finally {
+      setIsAdminAuthenticating(false);
     }
   };
 
@@ -213,13 +244,37 @@ export const SettingsPage: React.FC = () => {
             <label style={{ fontSize: '0.78rem', color: '#94a3b8', display: 'block', marginBottom: '0.35rem', fontWeight: 600 }}>
               API Key (Masked Bearer Token)
             </label>
-            <input
-              type="password"
-              value={settings.api.apiKeyMasked}
-              onChange={(e) => setSettings({ ...settings, api: { ...settings.api, apiKeyMasked: e.target.value } })}
-              className="pt-input text-mono"
-              style={{ width: '100%' }}
-            />
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <input
+                type="password"
+                value={settings.api.apiKeyMasked}
+                onChange={(e) => setSettings({ ...settings, api: { ...settings.api, apiKeyMasked: e.target.value } })}
+                className="pt-input text-mono"
+                style={{ flex: 1 }}
+                placeholder="Enter master owner API key..."
+              />
+              <button
+                type="button"
+                onClick={handleAdminAuth}
+                disabled={isAdminAuthenticating || !settings.api.apiKeyMasked}
+                className="pt-btn pt-btn-cyber"
+                style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+                title="Authenticate session as phantomtrace-owner using this key"
+              >
+                {isAdminAuthenticating ? 'Verifying...' : 'Sign In as Owner'}
+              </button>
+            </div>
+            {adminAuthStatus && (
+              <div
+                style={{
+                  marginTop: '0.45rem',
+                  fontSize: '0.74rem',
+                  color: adminAuthStatus.success ? '#10b981' : '#ef4444',
+                }}
+              >
+                {adminAuthStatus.message}
+              </div>
+            )}
           </div>
 
           <div>

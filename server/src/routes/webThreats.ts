@@ -40,7 +40,8 @@ webThreatsRouter.post("/check", async (req: Request, res: Response): Promise<voi
       return;
     }
 
-    const result = await threatIntelService.check(rawTarget);
+    const ownerUid = (req.body?.ownerUid as string | undefined) || ((req as any).ownerUid as string | undefined);
+    const result = await threatIntelService.check(rawTarget, ownerUid);
     res.status(200).json({ result });
   } catch (err: any) {
     console.error("[WebThreats] Error checking URL reputation:", err);
@@ -213,6 +214,247 @@ webThreatsRouter.post("/events/:eventId/dismiss", async (req: AuthenticatedReque
       error: {
         code: "INTERNAL_SERVER_ERROR",
         message: "Failed to dismiss web threat event.",
+      },
+    });
+  }
+});
+
+/**
+ * =====================================================================
+ * PHASE 4: DOMAIN POLICY MANAGEMENT (ALLOWLIST / BLOCKLIST)
+ * =====================================================================
+ */
+
+/**
+ * GET /api/web-threats/policies
+ * List all domain policies configured for the authenticated user/tenant.
+ */
+webThreatsRouter.get("/policies", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const uid = req.ownerUid!;
+    const policies = await postgresService.getDomainPolicies(uid);
+    res.status(200).json({ policies });
+  } catch (err: any) {
+    console.error("[WebThreats] Error listing domain policies:", err);
+    res.status(500).json({
+      error: {
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to list domain security policies.",
+      },
+    });
+  }
+});
+
+/**
+ * POST /api/web-threats/policies
+ * Create or update a domain policy rule (ALLOW or BLOCK).
+ */
+webThreatsRouter.post("/policies", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const uid = req.ownerUid!;
+    const body = req.body || {};
+
+    const rawDomain = body.domain || body.url;
+    if (!rawDomain || typeof rawDomain !== "string") {
+      res.status(400).json({
+        error: {
+          code: "INVALID_INPUT",
+          message: "Field 'domain' is required.",
+        },
+      });
+      return;
+    }
+
+    const normalized = normalizeUrlSafely(rawDomain);
+    if (!normalized.valid) {
+      res.status(400).json({
+        error: {
+          code: "MALFORMED_DOMAIN",
+          message: normalized.error || "The supplied domain is invalid.",
+        },
+      });
+      return;
+    }
+
+    const rawPolicyType = String(body.policyType || "").toUpperCase();
+    if (rawPolicyType !== "ALLOW" && rawPolicyType !== "BLOCK") {
+      res.status(400).json({
+        error: {
+          code: "INVALID_POLICY_TYPE",
+          message: "Field 'policyType' must be either 'ALLOW' or 'BLOCK'.",
+        },
+      });
+      return;
+    }
+
+    const policyId = `pol-${crypto.randomBytes(8).toString("hex")}`;
+    const timestamp = new Date().toISOString();
+
+    const policyDoc = {
+      policyId,
+      ownerUid: uid,
+      domain: normalized.domain,
+      policyType: rawPolicyType as "ALLOW" | "BLOCK",
+      reason: typeof body.reason === "string" ? body.reason.slice(0, 500) : undefined,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+
+    const saved = await postgresService.upsertDomainPolicy(policyDoc);
+
+    res.status(201).json({
+      success: true,
+      policy: saved,
+      message: `Domain '${normalized.domain}' successfully added to ${rawPolicyType}list.`,
+    });
+  } catch (err: any) {
+    console.error("[WebThreats] Error creating domain policy:", err);
+    res.status(500).json({
+      error: {
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to persist domain security policy.",
+      },
+    });
+  }
+});
+
+/**
+ * DELETE /api/web-threats/policies/:policyId
+ * Removes an existing domain security policy rule.
+ */
+webThreatsRouter.delete("/policies/:policyId", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const uid = req.ownerUid!;
+    const { policyId } = req.params;
+
+    if (!isValidIdentifier(policyId)) {
+      res.status(400).json({
+        error: {
+          code: "INVALID_IDENTIFIER",
+          message: "Invalid policyId parameter format.",
+        },
+      });
+      return;
+    }
+
+    const deleted = await postgresService.deleteDomainPolicy(uid, policyId);
+    if (!deleted) {
+      res.status(404).json({
+        error: {
+          code: "NOT_FOUND",
+          message: `Policy rule '${policyId}' not found or unauthorized.`,
+        },
+      });
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      policyId,
+      message: "Domain policy rule deleted successfully.",
+    });
+  } catch (err: any) {
+    console.error("[WebThreats] Error deleting domain policy:", err);
+    res.status(500).json({
+      error: {
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to delete domain security policy.",
+      },
+    });
+  }
+});
+
+/**
+ * =====================================================================
+ * PHASE 4: INCIDENT TRIAGE & CORRELATION ROUTES
+ * =====================================================================
+ */
+
+/**
+ * POST /api/web-threats/events/:eventId/status
+ * PATCH /api/web-threats/events/:eventId/status
+ * Updates incident triage status and optional investigation notes.
+ */
+const handleStatusUpdate = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const uid = req.ownerUid!;
+    const { eventId } = req.params;
+
+    if (!isValidIdentifier(eventId)) {
+      res.status(400).json({
+        error: {
+          code: "INVALID_IDENTIFIER",
+          message: "Invalid eventId parameter format.",
+        },
+      });
+      return;
+    }
+
+    const rawStatus = String(req.body?.status || "").toUpperCase();
+    const validStatuses = new Set(["ACTIVE", "DISMISSED", "INVESTIGATING", "RESOLVED", "FALSE_POSITIVE"]);
+    if (!validStatuses.has(rawStatus)) {
+      res.status(400).json({
+        error: {
+          code: "INVALID_STATUS",
+          message: "Status must be one of: ACTIVE, DISMISSED, INVESTIGATING, RESOLVED, FALSE_POSITIVE.",
+        },
+      });
+      return;
+    }
+
+    const notes = typeof req.body?.notes === "string" ? req.body.notes.slice(0, 1000) : undefined;
+    const updated = await postgresService.updateWebThreatEventStatus(
+      uid,
+      eventId,
+      rawStatus as any,
+      notes
+    );
+
+    if (!updated) {
+      res.status(404).json({
+        error: {
+          code: "NOT_FOUND",
+          message: `Web threat event '${eventId}' not found.`,
+        },
+      });
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      eventId,
+      status: rawStatus,
+      notes,
+    });
+  } catch (err: any) {
+    console.error("[WebThreats] Error updating event status:", err);
+    res.status(500).json({
+      error: {
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to update web threat event status.",
+      },
+    });
+  }
+};
+
+webThreatsRouter.post("/events/:eventId/status", handleStatusUpdate);
+webThreatsRouter.patch("/events/:eventId/status", handleStatusUpdate);
+
+/**
+ * GET /api/web-threats/correlated
+ * Retrieve web threat events correlated with endpoint browser process telemetry.
+ */
+webThreatsRouter.get("/correlated", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const uid = req.ownerUid!;
+    const correlatedEvents = await postgresService.getCorrelatedThreatEvents(uid);
+    res.status(200).json({ correlatedEvents });
+  } catch (err: any) {
+    console.error("[WebThreats] Error listing correlated threat events:", err);
+    res.status(500).json({
+      error: {
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to correlate threat events.",
       },
     });
   }

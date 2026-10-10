@@ -10,6 +10,7 @@ export type ThreatClassification =
   | "MALWARE"
   | "SUSPICIOUS_HEURISTIC"
   | "UNWANTED_SOFTWARE"
+  | "POLICY_VIOLATION"
   | "UNKNOWN";
 
 export type ThreatSeverity = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "NORMAL";
@@ -18,6 +19,7 @@ export type ThreatDetectionSource =
   | "THREAT_INTEL"
   | "HEURISTIC"
   | "REPUTATION_CACHE"
+  | "POLICY_RULE"
   | "UNKNOWN";
 
 export type ProviderCheckStatus =

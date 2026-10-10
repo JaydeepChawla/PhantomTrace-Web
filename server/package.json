@@ -8,7 +8,11 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "tsx watch src/index.ts",
-    "test:phase3": "node test_web_threat_phase3.mjs"
+    "test:phase3": "node test_web_threat_phase3.mjs",
+    "test:phase4": "node test_phase4_unified_soc.mjs",
+    "test:phase5": "node test_phase5_security_monitor.mjs",
+    "test:security": "node test_security_authentication.mjs",
+    "test:all": "npm run test:phase3 && npm run test:phase4 && npm run test:phase5 && npm run test:security"
   },
   "dependencies": {
     "cors": "^2.8.5",

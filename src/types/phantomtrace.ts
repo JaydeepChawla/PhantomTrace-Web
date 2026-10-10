@@ -491,7 +491,10 @@ export interface WebThreatEvent {
   explanation: string;
   browser?: string;
   notified?: boolean;
-  status?: "ACTIVE" | "DISMISSED" | "INVESTIGATING";
+  status?: "ACTIVE" | "DISMISSED" | "INVESTIGATING" | "RESOLVED" | "FALSE_POSITIVE";
+  processPid?: number;
+  processName?: string;
+  notes?: string;
 }
 
 export interface WebThreatStatus {
@@ -500,4 +503,140 @@ export interface WebThreatStatus {
   serviceOnline: boolean;
   activeCount: number;
   message?: string;
+}
+
+/**
+ * =====================================================================
+ * PHASE 4: UNIFIED THREAT CORRELATION & SOC POLICY TYPES
+ * =====================================================================
+ */
+export interface DomainPolicy {
+  policyId: string;
+  ownerUid?: string;
+  domain: string;
+  policyType: "ALLOW" | "BLOCK";
+  reason?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type ThreatVector = "ENDPOINT_MEMORY" | "WEB_THREAT";
+
+export interface UnifiedThreatAlert {
+  id: string;
+  vector: ThreatVector;
+  title: string;
+  targetName: string;
+  targetDetail?: string;
+  level: ThreatLevel | string;
+  score: number;
+  status: "NEW" | "INVESTIGATING" | "RESOLVED" | "DISMISSED" | "FALSE_POSITIVE" | "ACTIVE";
+  timestamp: string;
+  indicators: string[];
+  explanation?: string;
+  correlatedProcess?: {
+    pid: number;
+    name: string;
+    path?: string;
+    score?: number;
+  };
+  rawAlert?: ThreatAlert;
+  rawWebThreat?: WebThreatEvent;
+}
+
+export interface CorrelatedThreatEvent {
+  webThreat: WebThreatEvent;
+  correlatedProcess?: {
+    pid: number;
+    name: string;
+    path?: string;
+    cmdline?: string;
+    threatScore?: number;
+    threatLevel?: string;
+  };
+  correlationConfidence: "HIGH" | "MEDIUM" | "LOW" | "NONE";
+  correlationReason?: string;
+}
+
+/**
+ * =====================================================================
+ * PHASE 5: DASHBOARD SECURITY MONITOR CONTRACTS
+ * =====================================================================
+ */
+
+export interface DashboardSecurityOverview {
+  totalScans: number;
+  registeredEndpoints: number;
+  processFindings: {
+    totalAnalyzed: number;
+    cleanProcesses: number;
+    elevatedProcesses: number;
+    highestThreatScore: number;
+    memoryInspectedMb: number;
+  };
+  threatAlertsDistribution: {
+    total: number;
+    critical: number;
+    high: number;
+    medium: number;
+    low: number;
+    byStatus: {
+      new: number;
+      investigating: number;
+      contained: number;
+      resolved: number;
+      dismissed: number;
+    };
+    byVector: {
+      memory: number;
+      web: number;
+    };
+  };
+  recentSecurityEventsCount: number;
+  lastSuccessfulScanUpload: string | null;
+  lastSuccessfulRefresh: string;
+  telemetryFreshness: "FRESH" | "RECENT" | "STALE" | "NONE";
+  telemetryMode: "PERIODIC_SCAN_SNAPSHOT";
+  isRealScannerData: boolean;
+}
+
+export type TimelineEventType =
+  | "SCAN_FINDING"
+  | "WEB_THREAT"
+  | "POLICY_EVENT"
+  | "ALERT_TRIAGE"
+  | "SCAN_INGEST";
+
+export interface SecurityTimelineEvent {
+  id: string;
+  timestamp: string;
+  eventType: TimelineEventType;
+  severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "NORMAL" | "INFO";
+  title: string;
+  description: string;
+  target: string;
+  status?: string;
+  evidenceSummary?: string[];
+  source: string;
+  relatedId?: string;
+  disclaimer?: string;
+}
+
+export interface SystemHealthStatus {
+  apiStatus: "ONLINE" | "DEGRADED" | "OFFLINE";
+  apiVersion: string;
+  apiLatencyMs?: number;
+  database: {
+    engine: "PostgreSQL";
+    connected: boolean;
+    verifiedAt: string;
+  };
+  lastScanUpload: string | null;
+  lastDataRefresh: string;
+  endpointTelemetryFreshness: {
+    status: "FRESH" | "RECENT" | "STALE" | "NO_TELEMETRY";
+    lastSeenAt: string | null;
+    description: string;
+  };
+  monitoringNotice: string;
 }

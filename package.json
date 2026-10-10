@@ -14,7 +14,11 @@
     "test:phase3": "npm --prefix server run test:phase3 && python -m unittest discover -s tests -p \"test_*.py\"",
     "agent:build": "powershell -ExecutionPolicy Bypass -File scripts/build_and_sign_agent.ps1 -SkipSigningIfUnconfigured",
     "agent:sign": "powershell -ExecutionPolicy Bypass -File scripts/sign_agent.ps1",
-    "installer:build": "powershell -ExecutionPolicy Bypass -File scripts/build_and_sign_installer.ps1"
+    "installer:build": "powershell -ExecutionPolicy Bypass -File scripts/build_and_sign_installer.ps1",
+    "test:phase4": "npm --prefix server run test:phase4",
+    "test:phase5": "npm --prefix server run test:phase5",
+    "test:security": "npm --prefix server run test:security",
+    "test:all": "npm --prefix server run test:phase3 && npm --prefix server run test:phase4 && npm --prefix server run test:phase5 && npm --prefix server run test:security && python -m unittest discover -s tests -p \"test_*.py\""
   },
   "dependencies": {
     "lucide-react": "^1.48.0",

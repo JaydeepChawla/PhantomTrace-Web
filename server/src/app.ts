@@ -11,6 +11,7 @@ import { alertsRouter } from "./routes/alerts";
 import { reportsRouter } from "./routes/reports";
 import { agentRouter } from "./routes/agent";
 import { webThreatsRouter } from "./routes/webThreats";
+import { dashboardRouter } from "./routes/dashboard";
 import { errorHandler } from "./middleware/errorHandler";
 
 export const app = express();
@@ -84,6 +85,7 @@ app.use("/api/alerts", alertsRouter);
 app.use("/api/reports", reportsRouter);
 app.use("/api/agent", agentRouter);
 app.use("/api/web-threats", webThreatsRouter);
+app.use("/api/dashboard", dashboardRouter);
 
 // Root informational endpoint
 app.get("/", (_req, res) => {

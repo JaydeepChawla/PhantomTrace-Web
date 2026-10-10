@@ -4,17 +4,20 @@ import {
   Search,
   ExternalLink,
   ArrowUpDown,
-  Lock
+  Lock,
+  Globe,
+  Cpu,
+  Layers
 } from 'lucide-react';
 import { dataService } from '../services';
 import { Badge } from '../components/common/Badge';
 import { ScorePill } from '../components/common/ScorePill';
 import { Card } from '../components/common/Card';
-import type { ThreatAlert, ThreatLevel, ScoreMode } from '../types';
+import type { UnifiedThreatAlert } from '../types';
 
 export const ThreatAlertsPage: React.FC = () => {
   const navigate = useNavigate();
-  const [alerts, setAlerts] = useState<ThreatAlert[]>([]);
+  const [alerts, setAlerts] = useState<UnifiedThreatAlert[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,13 +28,36 @@ export const ThreatAlertsPage: React.FC = () => {
       try {
         setLoading(true);
         setError(null);
-        const result = await dataService.getThreatAlerts();
+        let result: UnifiedThreatAlert[] = [];
+        if (dataService.getUnifiedThreatAlerts) {
+          result = await dataService.getUnifiedThreatAlerts();
+        } else {
+          const raw = await dataService.getThreatAlerts();
+          result = raw.map((a) => ({
+            id: a.id,
+            vector: 'ENDPOINT_MEMORY',
+            title: a.title || `Memory Threat: ${a.processName} (PID ${a.pid})`,
+            targetName: a.processName,
+            targetDetail: `PID ${a.pid}`,
+            level: a.level,
+            score: a.score,
+            status: (a.status as any) || 'NEW',
+            timestamp: a.detectedAt || new Date().toISOString(),
+            indicators: [
+              ...(a.memoryEvidence?.indicators || []),
+              ...(a.behaviorEvidence?.indicators || []),
+            ],
+            explanation: a.description,
+            rawAlert: a,
+          }));
+        }
+
         if (!cancelled) {
           setAlerts(result);
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Unable to load threat alerts.');
+          setError(err instanceof Error ? err.message : 'Unable to load unified threat alerts.');
         }
       } finally {
         if (!cancelled) {
@@ -48,42 +74,59 @@ export const ThreatAlertsPage: React.FC = () => {
   }, []);
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [vectorFilter, setVectorFilter] = useState<'ALL' | 'ENDPOINT_MEMORY' | 'WEB_THREAT'>('ALL');
   const [levelFilter, setLevelFilter] = useState<string>('ALL');
-  const [modeFilter, setModeFilter] = useState<string>('ALL');
-  const [sortField, setSortField] = useState<'threatScore' | 'pid' | 'process'>('threatScore');
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [sortField, setSortField] = useState<'score' | 'targetName' | 'timestamp'>('score');
   const [sortAsc, setSortAsc] = useState(false);
+
+  const memoryCount = alerts.filter((a) => a.vector === 'ENDPOINT_MEMORY').length;
+  const webCount = alerts.filter((a) => a.vector === 'WEB_THREAT').length;
 
   const filteredAlerts = useMemo(() => {
     return alerts
       .filter((alert) => {
-        const procName = alert.process || alert.processName || '';
-        const memStr = typeof alert.memoryEvidence === 'string'
-          ? alert.memoryEvidence
-          : alert.memoryEvidence?.details?.join(' ') || alert.memoryEvidence?.indicators?.join(' ') || '';
-        const correlationStr = alert.correlation || '';
+        const matchesVector = vectorFilter === 'ALL' || alert.vector === vectorFilter;
+
+        const target = alert.targetName || '';
+        const detail = alert.targetDetail || '';
+        const expl = alert.explanation || '';
+        const indStr = alert.indicators?.join(' ') || '';
 
         const matchesSearch =
-          procName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          alert.pid.toString().includes(searchTerm) ||
-          memStr.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          correlationStr.toLowerCase().includes(searchTerm.toLowerCase());
+          target.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          detail.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          expl.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          indStr.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          alert.id.toLowerCase().includes(searchTerm.toLowerCase());
 
-        const matchesLevel = levelFilter === 'ALL' || (alert.level as string) === levelFilter || alert.threatLevel === levelFilter;
-        const matchesMode = modeFilter === 'ALL' || (alert.scoreMode as string) === modeFilter;
+        const matchesLevel =
+          levelFilter === 'ALL' ||
+          String(alert.level).toUpperCase() === levelFilter.toUpperCase();
 
-        return matchesSearch && matchesLevel && matchesMode;
+        const matchesStatus =
+          statusFilter === 'ALL' ||
+          String(alert.status).toUpperCase() === statusFilter.toUpperCase();
+
+        return matchesVector && matchesSearch && matchesLevel && matchesStatus;
       })
       .sort((a, b) => {
-        const valA = a[sortField] ?? (sortField === 'threatScore' ? a.score : sortField === 'process' ? a.processName : a.pid);
-        const valB = b[sortField] ?? (sortField === 'threatScore' ? b.score : sortField === 'process' ? b.processName : b.pid);
-        if (typeof valA === 'string') {
-          return sortAsc ? valA.localeCompare(valB as string) : (valB as string).localeCompare(valA);
+        if (sortField === 'score') {
+          return sortAsc ? a.score - b.score : b.score - a.score;
         }
-        return sortAsc ? (valA as number) - (valB as number) : (valB as number) - (valA as number);
+        if (sortField === 'targetName') {
+          return sortAsc ? a.targetName.localeCompare(b.targetName) : b.targetName.localeCompare(a.targetName);
+        }
+        if (sortField === 'timestamp') {
+          return sortAsc
+            ? new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+            : new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+        }
+        return 0;
       });
-  }, [alerts, searchTerm, levelFilter, modeFilter, sortField, sortAsc]);
+  }, [alerts, searchTerm, vectorFilter, levelFilter, statusFilter, sortField, sortAsc]);
 
-  const toggleSort = (field: 'threatScore' | 'pid' | 'process') => {
+  const toggleSort = (field: 'score' | 'targetName' | 'timestamp') => {
     if (sortField === field) {
       setSortAsc(!sortAsc);
     } else {
@@ -95,7 +138,7 @@ export const ThreatAlertsPage: React.FC = () => {
   if (loading && alerts.length === 0) {
     return (
       <div style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>
-        Loading PhantomTrace data...
+        Loading PhantomTrace Unified Threat Telemetry...
       </div>
     );
   }
@@ -103,7 +146,7 @@ export const ThreatAlertsPage: React.FC = () => {
   if (error && alerts.length === 0) {
     return (
       <div style={{ padding: '2rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', borderRadius: '8px', color: '#fca5a5', textAlign: 'center' }}>
-        Unable to load PhantomTrace data.
+        Unable to load PhantomTrace threat alerts: {error}
       </div>
     );
   }
@@ -113,19 +156,107 @@ export const ThreatAlertsPage: React.FC = () => {
       {/* Header Info Banner */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <h2 style={{ fontSize: '1.35rem', fontWeight: 700, color: '#ffffff', letterSpacing: '-0.01em' }}>
-            Elevated Threat Alerts
-          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <h2 style={{ fontSize: '1.35rem', fontWeight: 700, color: '#ffffff', letterSpacing: '-0.01em', margin: 0 }}>
+              Unified Threat Alerts
+            </h2>
+            <span
+              style={{
+                fontSize: '0.68rem',
+                fontWeight: 700,
+                padding: '0.15rem 0.5rem',
+                borderRadius: '4px',
+                background: 'rgba(6, 182, 212, 0.15)',
+                color: '#38bdf8',
+                border: '1px solid rgba(6, 182, 212, 0.3)',
+              }}
+            >
+              PHASE 4 UNIFIED
+            </span>
+          </div>
           <p style={{ fontSize: '0.82rem', color: '#94a3b8', marginTop: '0.2rem' }}>
-            Search and filter memory anomalies, behavioral indicators, and correlated execution vectors
+            Correlated triage stream combining Endpoint Memory anomalies and Web Threat Monitor detections
           </p>
         </div>
 
         {/* Read-Only Safety Assurance */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(0, 229, 255, 0.08)', border: '1px solid rgba(0, 229, 255, 0.25)', padding: '0.4rem 0.85rem', borderRadius: '6px', fontSize: '0.78rem', color: '#38bdf8' }}>
           <Lock size={14} style={{ color: '#00e5ff' }} />
-          <span>Non-destructive inspection • Read-only telemetry</span>
+          <span>Non-destructive inspection • Read-only evidence preservation</span>
         </div>
+      </div>
+
+      {/* Vector Selection Tabs */}
+      <div
+        style={{
+          display: 'flex',
+          gap: '0.5rem',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+          paddingBottom: '0.5rem',
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => setVectorFilter('ALL')}
+          style={{
+            padding: '0.45rem 1rem',
+            borderRadius: '6px',
+            fontSize: '0.82rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+            border: 'none',
+            background: vectorFilter === 'ALL' ? 'rgba(0, 229, 255, 0.15)' : 'transparent',
+            color: vectorFilter === 'ALL' ? '#00e5ff' : '#94a3b8',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.45rem',
+          }}
+        >
+          <Layers size={14} />
+          <span>All Threat Vectors ({alerts.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setVectorFilter('ENDPOINT_MEMORY')}
+          style={{
+            padding: '0.45rem 1rem',
+            borderRadius: '6px',
+            fontSize: '0.82rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+            border: 'none',
+            background: vectorFilter === 'ENDPOINT_MEMORY' ? 'rgba(6, 182, 212, 0.2)' : 'transparent',
+            color: vectorFilter === 'ENDPOINT_MEMORY' ? '#38bdf8' : '#94a3b8',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.45rem',
+          }}
+        >
+          <Cpu size={14} />
+          <span>Endpoint Memory ({memoryCount})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setVectorFilter('WEB_THREAT')}
+          style={{
+            padding: '0.45rem 1rem',
+            borderRadius: '6px',
+            fontSize: '0.82rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+            border: 'none',
+            background: vectorFilter === 'WEB_THREAT' ? 'rgba(168, 85, 247, 0.2)' : 'transparent',
+            color: vectorFilter === 'WEB_THREAT' ? '#c084fc' : '#94a3b8',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.45rem',
+          }}
+        >
+          <Globe size={14} />
+          <span>Web Threat Monitor ({webCount})</span>
+        </button>
       </div>
 
       {/* Filter and Search Bar */}
@@ -137,7 +268,7 @@ export const ThreatAlertsPage: React.FC = () => {
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: '1rem',
-          flexWrap: 'wrap'
+          flexWrap: 'wrap',
         }}
       >
         {/* Search Input */}
@@ -145,7 +276,7 @@ export const ThreatAlertsPage: React.FC = () => {
           <Search size={16} style={{ color: '#64748b' }} />
           <input
             type="text"
-            placeholder="Search by PID, process name, evidence keyword..."
+            placeholder="Search by target domain, process PID, indicators, or keyword..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pt-input"
@@ -158,40 +289,43 @@ export const ThreatAlertsPage: React.FC = () => {
           <span style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: 600 }}>Severity:</span>
           <select
             value={levelFilter}
-            onChange={(e) => setLevelFilter(e.target.value as ThreatLevel | 'ALL')}
+            onChange={(e) => setLevelFilter(e.target.value)}
             className="pt-select"
           >
-            <option value="ALL">All Severities ({alerts.length})</option>
-            <option value="Critical">Critical</option>
-            <option value="High">High</option>
-            <option value="Medium">Medium</option>
-            <option value="Low">Low</option>
+            <option value="ALL">All Severities</option>
+            <option value="CRITICAL">Critical</option>
+            <option value="HIGH">High</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="LOW">Low</option>
+            <option value="NORMAL">Normal</option>
           </select>
         </div>
 
-        {/* Score Mode Filter */}
+        {/* Status Filter */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: 600 }}>Score Mode:</span>
+          <span style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: 600 }}>Status:</span>
           <select
-            value={modeFilter}
-            onChange={(e) => setModeFilter(e.target.value as ScoreMode | 'ALL')}
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
             className="pt-select"
           >
-            <option value="ALL">All Modes</option>
-            <option value="Correlated">Correlated (Mem + Beh)</option>
-            <option value="Memory Only">Memory Only</option>
-            <option value="Behavior Only">Behavior Only</option>
-            <option value="Baseline">Baseline</option>
+            <option value="ALL">All Statuses</option>
+            <option value="NEW">New</option>
+            <option value="ACTIVE">Active</option>
+            <option value="INVESTIGATING">Investigating</option>
+            <option value="RESOLVED">Resolved</option>
+            <option value="DISMISSED">Dismissed</option>
           </select>
         </div>
 
         {/* Reset */}
-        {(searchTerm || levelFilter !== 'ALL' || modeFilter !== 'ALL') && (
+        {(searchTerm || levelFilter !== 'ALL' || statusFilter !== 'ALL' || vectorFilter !== 'ALL') && (
           <button
             onClick={() => {
               setSearchTerm('');
               setLevelFilter('ALL');
-              setModeFilter('ALL');
+              setStatusFilter('ALL');
+              setVectorFilter('ALL');
             }}
             className="pt-btn pt-btn-secondary"
             style={{ padding: '0.45rem 0.85rem', fontSize: '0.78rem' }}
@@ -205,115 +339,189 @@ export const ThreatAlertsPage: React.FC = () => {
       <Card>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem', fontSize: '0.8rem', color: '#94a3b8' }}>
           <span>Showing <strong>{filteredAlerts.length}</strong> matching threat alerts</span>
-          <span>Click any row to open full alert investigation &amp; response workflow</span>
+          <span>Click any row or Investigate button to triage forensic evidence</span>
         </div>
 
         <div className="pt-table-container">
           <table className="pt-table">
             <thead>
               <tr>
-                <th onClick={() => toggleSort('pid')} style={{ cursor: 'pointer' }}>
+                <th style={{ width: '120px' }}>Vector</th>
+                <th onClick={() => toggleSort('targetName')} style={{ cursor: 'pointer' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                    <span>PID</span>
+                    <span>Target &amp; Origin</span>
                     <ArrowUpDown size={12} />
                   </div>
                 </th>
-                <th onClick={() => toggleSort('process')} style={{ cursor: 'pointer' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                    <span>Process</span>
-                    <ArrowUpDown size={12} />
-                  </div>
-                </th>
-                <th onClick={() => toggleSort('threatScore')} style={{ cursor: 'pointer' }}>
+                <th onClick={() => toggleSort('score')} style={{ cursor: 'pointer', width: '110px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                     <span>Threat Score</span>
                     <ArrowUpDown size={12} />
                   </div>
                 </th>
-                <th>Threat Level</th>
-                <th>Status</th>
-                <th>Application</th>
-                <th>Score Mode</th>
-                <th>Behavior</th>
-                <th>Memory</th>
-                <th>Correlation</th>
-                <th>Memory Evidence</th>
-                <th>Timestamp</th>
-                <th>Action</th>
+                <th style={{ width: '110px' }}>Severity</th>
+                <th style={{ width: '130px' }}>Status</th>
+                <th>Observed Evidence Indicators</th>
+                <th onClick={() => toggleSort('timestamp')} style={{ cursor: 'pointer', width: '120px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                    <span>Detected</span>
+                    <ArrowUpDown size={12} />
+                  </div>
+                </th>
+                <th style={{ width: '100px', textAlign: 'right' }}>Action</th>
               </tr>
             </thead>
             <tbody>
               {filteredAlerts.length === 0 ? (
                 <tr>
-                  <td colSpan={13} style={{ textAlign: 'center', padding: '2.5rem', color: '#64748b' }}>
-                    No threat alerts matched the current search and filter criteria.
+                  <td colSpan={8} style={{ textAlign: 'center', padding: '2.5rem', color: '#94a3b8' }}>
+                    No threat alerts matching selected filters.
                   </td>
                 </tr>
               ) : (
-                filteredAlerts.map((alert) => (
-                  <tr
-                    key={alert.id}
-                    className="clickable-row"
-                    onClick={() => navigate(`/alerts/${alert.id}`)}
-                  >
-                    <td className="text-mono" style={{ fontWeight: 700, color: '#00e5ff' }}>
-                      {alert.pid}
-                    </td>
-                    <td style={{ fontWeight: 600, color: '#ffffff' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <span>{alert.process || alert.processName}</span>
-                        <ExternalLink size={12} style={{ color: '#64748b' }} />
-                      </div>
-                    </td>
-                    <td>
-                      <ScorePill score={alert.threatScore ?? alert.score} />
-                    </td>
-                    <td>
-                      <Badge level={alert.threatLevel}>{alert.threatLevel}</Badge>
-                    </td>
-                    <td>
-                      <Badge level={alert.status === 'INVESTIGATING' ? 'High' : alert.status === 'RESOLVED' ? 'Clean' : 'neutral'}>
-                        {alert.status || 'NEW'}
-                      </Badge>
-                    </td>
-                    <td>
-                      <Badge level="neutral">{alert.application}</Badge>
-                    </td>
-                    <td style={{ fontSize: '0.78rem', color: '#cbd5e1' }}>
-                      {alert.scoreMode}
-                    </td>
-                    <td className="text-mono" style={{ color: '#f97316', fontWeight: 600 }}>
-                      {alert.behaviorScore}
-                    </td>
-                    <td className="text-mono" style={{ color: '#00e5ff', fontWeight: 600 }}>
-                      {alert.memoryScore}
-                    </td>
-                    <td style={{ fontSize: '0.78rem', color: '#cbd5e1', maxWidth: '180px' }}>
-                      {alert.correlation}
-                    </td>
-                    <td style={{ fontSize: '0.78rem', color: '#94a3b8', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {typeof alert.memoryEvidence === 'string'
-                        ? alert.memoryEvidence
-                        : alert.memoryEvidence?.details?.[0] || alert.memoryEvidence?.indicators?.[0] || 'None'}
-                    </td>
-                    <td className="text-mono" style={{ fontSize: '0.74rem', color: '#64748b', whiteSpace: 'nowrap' }}>
-                      {alert.timestamp || alert.detectedAt}
-                    </td>
-                    <td>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/alerts/${alert.id}`);
-                        }}
-                        className="pt-btn pt-btn-cyber"
-                        style={{ padding: '0.25rem 0.65rem', fontSize: '0.72rem' }}
-                      >
-                        Investigate
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                filteredAlerts.map((alert) => {
+                  const isMemory = alert.vector === 'ENDPOINT_MEMORY';
+                  return (
+                    <tr
+                      key={alert.id}
+                      onClick={() => navigate(`/alerts/${alert.id}`)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      {/* Vector Column */}
+                      <td>
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.3rem',
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            padding: '0.2rem 0.55rem',
+                            borderRadius: '4px',
+                            background: isMemory ? 'rgba(6, 182, 212, 0.15)' : 'rgba(168, 85, 247, 0.15)',
+                            color: isMemory ? '#38bdf8' : '#c084fc',
+                            border: `1px solid ${isMemory ? 'rgba(6, 182, 212, 0.3)' : 'rgba(168, 85, 247, 0.3)'}`,
+                            letterSpacing: '0.5px',
+                          }}
+                        >
+                          {isMemory ? <Cpu size={12} /> : <Globe size={12} />}
+                          <span>{isMemory ? 'MEMORY' : 'WEB'}</span>
+                        </span>
+                      </td>
+
+                      {/* Target Column */}
+                      <td>
+                        <div>
+                          <div style={{ fontWeight: 600, color: '#ffffff', fontFamily: isMemory ? 'var(--font-mono)' : 'sans-serif' }}>
+                            {alert.targetName}
+                          </div>
+                          <div style={{ fontSize: '0.74rem', color: '#94a3b8', marginTop: '1px' }}>
+                            {alert.targetDetail}
+                            {alert.correlatedProcess && (
+                              <span
+                                style={{ color: '#00e5ff', marginLeft: '0.4rem', cursor: 'help' }}
+                                title="Heuristic correlation: Active browser process was identified in endpoint telemetry during scan window. Does not constitute proof that this process executed the URL."
+                              >
+                                • Correlated: {alert.correlatedProcess.name} (PID {alert.correlatedProcess.pid})
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Score Column */}
+                      <td>
+                        <ScorePill score={alert.score} />
+                      </td>
+
+                      {/* Level Column */}
+                      <td>
+                        <Badge level={alert.level}>{alert.level}</Badge>
+                      </td>
+
+                      {/* Status Column */}
+                      <td>
+                        <span
+                          style={{
+                            fontSize: '0.72rem',
+                            fontWeight: 600,
+                            padding: '0.15rem 0.45rem',
+                            borderRadius: '4px',
+                            background:
+                              alert.status === 'RESOLVED'
+                                ? 'rgba(16, 185, 129, 0.15)'
+                                : alert.status === 'INVESTIGATING'
+                                ? 'rgba(245, 158, 11, 0.15)'
+                                : alert.status === 'DISMISSED'
+                                ? 'rgba(100, 116, 139, 0.15)'
+                                : 'rgba(239, 68, 68, 0.15)',
+                            color:
+                              alert.status === 'RESOLVED'
+                                ? '#34d399'
+                                : alert.status === 'INVESTIGATING'
+                                ? '#fbbf24'
+                                : alert.status === 'DISMISSED'
+                                ? '#94a3b8'
+                                : '#f87171',
+                          }}
+                        >
+                          {alert.status || 'NEW'}
+                        </span>
+                      </td>
+
+                      {/* Indicators Column */}
+                      <td>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                          {alert.indicators && alert.indicators.length > 0 ? (
+                            alert.indicators.slice(0, 3).map((ind, i) => (
+                              <span
+                                key={i}
+                                style={{
+                                  fontSize: '0.7rem',
+                                  padding: '0.15rem 0.45rem',
+                                  background: 'rgba(255, 255, 255, 0.05)',
+                                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                                  borderRadius: '3px',
+                                  color: '#cbd5e1',
+                                }}
+                              >
+                                {ind}
+                              </span>
+                            ))
+                          ) : (
+                            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>None</span>
+                          )}
+                          {alert.indicators && alert.indicators.length > 3 && (
+                            <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                              +{alert.indicators.length - 3} more
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Detected Column */}
+                      <td style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                        {alert.timestamp ? new Date(alert.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recent'}
+                      </td>
+
+                      {/* Action Column */}
+                      <td style={{ textAlign: 'right' }}>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/alerts/${alert.id}`);
+                          }}
+                          className="pt-btn pt-btn-secondary"
+                          style={{ padding: '0.3rem 0.65rem', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                        >
+                          <span>Triage</span>
+                          <ExternalLink size={12} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

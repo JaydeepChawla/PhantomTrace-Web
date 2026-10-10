@@ -6,6 +6,14 @@ import type {
   Report,
   ScanOverview,
   SystemSettings,
+  WebThreatEvent,
+  WebThreatStatus,
+  DomainPolicy,
+  UnifiedThreatAlert,
+  CorrelatedThreatEvent,
+  DashboardSecurityOverview,
+  SecurityTimelineEvent,
+  SystemHealthStatus,
 } from "../types";
 
 export type CloudConnectionStatus = "Cloud Connected" | "Cloud Not Configured" | "API Offline";
@@ -138,6 +146,32 @@ export interface PhantomTraceDataService {
   revokeDevice?(deviceId: string): Promise<boolean>;
   startDevicePairing?(): Promise<{ pairingId: string; pairingCode: string; expiresAt: string }>;
   checkDevicePairingStatus?(pairingId: string): Promise<{ status: "PENDING" | "PAIRED" | "EXPIRED"; deviceId?: string }>;
+
+  /**
+   * Web Threat Monitor operations (Phase 3 & 4)
+   */
+  getWebThreatStatus?(): Promise<WebThreatStatus>;
+  getWebThreatEvents?(): Promise<WebThreatEvent[]>;
+  dismissWebThreatEvent?(eventId: string): Promise<boolean>;
+  updateWebThreatStatus?(eventId: string, status: string, notes?: string): Promise<boolean>;
+
+  /**
+   * Phase 4: Domain Policy Management & Cross-Vector Unified Telemetry
+   */
+  getDomainPolicies?(): Promise<DomainPolicy[]>;
+  addDomainPolicy?(domain: string, policyType: "ALLOW" | "BLOCK", reason?: string): Promise<DomainPolicy>;
+  deleteDomainPolicy?(policyId: string): Promise<boolean>;
+  getUnifiedThreatAlerts?(): Promise<UnifiedThreatAlert[]>;
+  getCorrelatedThreatEvents?(): Promise<CorrelatedThreatEvent[]>;
+  generateUnifiedSocReport?(): Promise<Report>;
+
+  /**
+   * Phase 5: Dashboard Security Monitor Operations
+   */
+  getDashboardOverview?(): Promise<DashboardSecurityOverview>;
+  getSecurityTimeline?(type?: string, severity?: string, limit?: number, offset?: number): Promise<{ events: SecurityTimelineEvent[]; total: number }>;
+  getSystemHealth?(): Promise<SystemHealthStatus>;
+  loginWithApiKey?(apiKey: string): Promise<{ success: boolean; message?: string }>;
 }
 
 // TODO Phase 3:

@@ -184,10 +184,11 @@ export const ScanHistoryPage: React.FC = () => {
                       style={{
                         fontFamily: 'var(--font-mono)',
                         fontWeight: 700,
-                        color: (item.alerts ?? item.totalAlerts ?? 0) > 0 ? '#ef4444' : '#10b981'
+                        color: (item.totalAlerts ?? item.alerts ?? 0) > 0 ? '#ef4444' : '#10b981'
                       }}
+                      title={`Total Alerts: ${item.totalAlerts ?? item.alerts ?? 0} (Critical: ${item.critical ?? 0}, High: ${item.high ?? 0}, Medium: ${item.medium ?? 0}, Low: ${item.low ?? 0})`}
                     >
-                      {item.alerts ?? item.totalAlerts ?? 0}
+                      {item.totalAlerts ?? item.alerts ?? 0}
                     </span>
                   </td>
                   <td className="text-mono" style={{ color: (item.critical ?? 0) > 0 ? '#ef4444' : '#64748b' }}>

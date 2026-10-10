@@ -25,7 +25,52 @@ export const AlertInvestigationPage: React.FC = () => {
       try {
         setLoading(true);
         setError(null);
-        const result = await dataService.getThreatAlert(id!);
+        let result = await dataService.getThreatAlert(id!);
+
+        if (!result && dataService.getWebThreatEvents) {
+          try {
+            const webEvents = await dataService.getWebThreatEvents();
+            const match = webEvents.find((w) => w.id === id);
+            if (match) {
+              let correlatedProc: any;
+              if (dataService.getCorrelatedThreatEvents) {
+                try {
+                  const corrs = await dataService.getCorrelatedThreatEvents();
+                  const cMatch = corrs.find((c) => c.webThreat.id === id);
+                  if (cMatch) correlatedProc = cMatch.correlatedProcess;
+                } catch {
+                  // ignore
+                }
+              }
+
+              result = {
+                id: match.id,
+                pid: match.processPid || (correlatedProc?.pid || 0),
+                process: match.domain,
+                processName: match.domain,
+                score: match.score,
+                level: match.severity as any,
+                threatLevel: match.severity as any,
+                scoreMode: 'BEHAVIOR_ONLY' as any,
+                title: `Web Threat: ${match.domain} (${match.classification})`,
+                description: match.explanation,
+                detectedAt: match.timestamp,
+                timestamp: match.timestamp,
+                status: (match.status as any) || 'NEW',
+                indicators: [match.classification, match.detectionSource, match.ruleId].filter(Boolean) as string[],
+                recommendedActions: [
+                  `Examine browser navigation to ${match.domain}.`,
+                  correlatedProc ? `Heuristic correlation: Active browser process ${correlatedProc.name} (PID ${correlatedProc.pid}) detected on endpoint during scan window (indicates temporal presence, not proof of URL execution).` : 'Inspect active browser instance on endpoint.',
+                  `Enforce immediate BLOCK policy rule for ${match.domain}.`,
+                  'Verify whether credential entry or file download occurred during the session.'
+                ]
+              } as ThreatAlert;
+            }
+          } catch {
+            // ignore
+          }
+        }
+
         if (!cancelled) {
           setAlert(result);
         }
@@ -50,7 +95,9 @@ export const AlertInvestigationPage: React.FC = () => {
   const handleStatusChange = async (newStatus: 'NEW' | 'INVESTIGATING' | 'RESOLVED' | 'DISMISSED') => {
     if (!id || !alert) return;
     try {
-      if (dataService.updateAlertStatus) {
+      if (id.startsWith('wte-') && dataService.updateWebThreatStatus) {
+        await dataService.updateWebThreatStatus(id, newStatus);
+      } else if (dataService.updateAlertStatus) {
         await dataService.updateAlertStatus(id, newStatus);
       }
       setAlert((prev) => prev ? { ...prev, status: newStatus } : null);

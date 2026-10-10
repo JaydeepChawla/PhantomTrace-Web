@@ -12,12 +12,20 @@ import type {
     IngestedScanBundle,
     IngestResponse,
     WebThreatEventDocument,
+    DomainPolicyDocument,
+    UnifiedThreatAlertDocument,
+    CorrelatedThreatEventDocument,
 } from "../types/api";
 
 class PostgresService {
     private memoryUsers: Map<string, UserDocument> = new Map();
     private memoryScans: Map<string, ScanDocument> = new Map();
+    private memoryEndpoints: Map<string, EndpointDocument> = new Map();
+    private memoryThreatAlerts: Map<string, ThreatAlertDocument> = new Map();
+    private memoryProcesses: Map<string, ProcessDocument[]> = new Map();
+    private memoryReports: Map<string, ReportDocument> = new Map();
     private memoryWebThreatEvents: Map<string, WebThreatEventDocument[]> = new Map();
+    private memoryDomainPolicies: Map<string, DomainPolicyDocument[]> = new Map();
 
     async getUser(uid: string): Promise<UserDocument | null> {
         try {
@@ -107,8 +115,20 @@ class PostgresService {
         let client;
         try {
             client = await postgresPool.connect();
-        } catch {
+        } catch (err) {
+            if (process.env.NODE_ENV === "production") {
+                console.error("[PostgreSQL] Ingest rejected: database connection pool unavailable in production:", err);
+                throw new Error("Database persistence failed: PostgreSQL connection pool unavailable in production");
+            }
             this.memoryScans.set(scan.scanId, scan);
+            this.memoryEndpoints.set(endpoint.endpointId, endpoint);
+            this.memoryProcesses.set(scan.scanId, processes);
+            for (const alert of threatAlerts) {
+                this.memoryThreatAlerts.set(alert.id, alert);
+            }
+            if (report) {
+                this.memoryReports.set(report.id, report);
+            }
             return {
                 success: true,
                 scanId: scan.scanId,
@@ -547,71 +567,82 @@ class PostgresService {
     }
 
     async getEndpoints(uid: string): Promise<EndpointDocument[]> {
-        const result = await postgresPool.query(
-            `
-      SELECT
-        endpoint_id,
-        owner_uid,
-        name,
-        platform,
-        scanner_version,
-        last_seen_at,
-        created_at
-      FROM endpoints
-      WHERE owner_uid = $1
-      ORDER BY last_seen_at DESC
-      `,
-            [uid],
-        );
+        try {
+            const result = await postgresPool.query(
+                `
+          SELECT
+            endpoint_id,
+            owner_uid,
+            name,
+            platform,
+            scanner_version,
+            last_seen_at,
+            created_at
+          FROM endpoints
+          WHERE owner_uid = $1
+          ORDER BY last_seen_at DESC
+          `,
+                [uid],
+            );
 
-        return result.rows.map((row) => ({
-            endpointId: row.endpoint_id,
-            ownerUid: row.owner_uid,
-            name: row.name,
-            platform: row.platform,
-            scannerVersion: row.scanner_version,
-            lastSeenAt: new Date(row.last_seen_at).toISOString(),
-            createdAt: new Date(row.created_at).toISOString(),
-        }));
+            return result.rows.map((row) => ({
+                endpointId: row.endpoint_id,
+                ownerUid: row.owner_uid,
+                name: row.name,
+                platform: row.platform,
+                scannerVersion: row.scanner_version,
+                lastSeenAt: new Date(row.last_seen_at).toISOString(),
+                createdAt: new Date(row.created_at).toISOString(),
+            }));
+        } catch {
+            return Array.from(this.memoryEndpoints.values()).filter(
+                (e) => e.ownerUid === uid,
+            );
+        }
     }
 
     async getEndpoint(
         uid: string,
         endpointId: string,
     ): Promise<EndpointDocument | null> {
-        const result = await postgresPool.query(
-            `
-      SELECT
-        endpoint_id,
-        owner_uid,
-        name,
-        platform,
-        scanner_version,
-        last_seen_at,
-        created_at
-      FROM endpoints
-      WHERE endpoint_id = $1
-        AND owner_uid = $2
-      LIMIT 1
-      `,
-            [endpointId, uid],
-        );
+        try {
+            const result = await postgresPool.query(
+                `
+          SELECT
+            endpoint_id,
+            owner_uid,
+            name,
+            platform,
+            scanner_version,
+            last_seen_at,
+            created_at
+          FROM endpoints
+          WHERE endpoint_id = $1
+            AND owner_uid = $2
+          LIMIT 1
+          `,
+                [endpointId, uid],
+            );
 
-        if (result.rows.length === 0) {
-            return null;
+            if (result.rows.length === 0) {
+                return null;
+            }
+
+            const row = result.rows[0];
+
+            return {
+                endpointId: row.endpoint_id,
+                ownerUid: row.owner_uid,
+                name: row.name,
+                platform: row.platform,
+                scannerVersion: row.scanner_version,
+                lastSeenAt: new Date(row.last_seen_at).toISOString(),
+                createdAt: new Date(row.created_at).toISOString(),
+            };
+        } catch {
+            const ep = this.memoryEndpoints.get(endpointId);
+            return ep && ep.ownerUid === uid ? ep : null;
         }
-
-        const row = result.rows[0];
-
-        return {
-            endpointId: row.endpoint_id,
-            ownerUid: row.owner_uid,
-            name: row.name,
-            platform: row.platform,
-            scannerVersion: row.scanner_version,
-            lastSeenAt: new Date(row.last_seen_at).toISOString(),
-            createdAt: new Date(row.created_at).toISOString(),
-        };
     }
 
     async getScans(uid: string): Promise<ScanDocument[]> {
@@ -723,17 +754,22 @@ class PostgresService {
     }
 
     async getProcesses(uid: string): Promise<ProcessDocument[]> {
-        const result = await postgresPool.query(
-            `
-      SELECT *
-      FROM processes
-      WHERE owner_uid = $1
-      ORDER BY timestamp DESC
-      `,
-            [uid],
-        );
+        try {
+            const result = await postgresPool.query(
+                `
+          SELECT *
+          FROM processes
+          WHERE owner_uid = $1
+          ORDER BY timestamp DESC
+          `,
+                [uid],
+            );
 
-        return result.rows.map((row) => this.mapProcess(row));
+            return result.rows.map((row) => this.mapProcess(row));
+        } catch {
+            const allProcs = Array.from(this.memoryProcesses.values()).flat();
+            return allProcs.filter((p) => p.ownerUid === uid);
+        }
     }
 
     async getProcess(
@@ -813,39 +849,50 @@ class PostgresService {
     }
 
     async getThreatAlerts(uid: string): Promise<ThreatAlertDocument[]> {
-        const result = await postgresPool.query(
-            `
-      SELECT *
-      FROM threat_alerts
-      WHERE owner_uid = $1
-      ORDER BY detected_at DESC
-      `,
-            [uid],
-        );
+        try {
+            const result = await postgresPool.query(
+                `
+          SELECT *
+          FROM threat_alerts
+          WHERE owner_uid = $1
+          ORDER BY detected_at DESC
+          `,
+                [uid],
+            );
 
-        return result.rows.map((row) => this.mapAlert(row));
+            return result.rows.map((row) => this.mapAlert(row));
+        } catch {
+            return Array.from(this.memoryThreatAlerts.values()).filter(
+                (a) => a.ownerUid === uid,
+            );
+        }
     }
 
     async getThreatAlert(
         uid: string,
         alertId: string,
     ): Promise<ThreatAlertDocument | null> {
-        const result = await postgresPool.query(
-            `
-      SELECT *
-      FROM threat_alerts
-      WHERE id = $1
-        AND owner_uid = $2
-      LIMIT 1
-      `,
-            [alertId, uid],
-        );
+        try {
+            const result = await postgresPool.query(
+                `
+          SELECT *
+          FROM threat_alerts
+          WHERE id = $1
+            AND owner_uid = $2
+          LIMIT 1
+          `,
+                [alertId, uid],
+            );
 
-        if (result.rows.length === 0) {
-            return null;
+            if (result.rows.length === 0) {
+                return null;
+            }
+
+            return this.mapAlert(result.rows[0]);
+        } catch {
+            const alert = this.memoryThreatAlerts.get(alertId);
+            return alert && alert.ownerUid === uid ? alert : null;
         }
-
-        return this.mapAlert(result.rows[0]);
     }
 
     private mapAlert(row: any): ThreatAlertDocument {
@@ -991,6 +1038,23 @@ class PostgresService {
                 );
                 CREATE INDEX IF NOT EXISTS idx_web_threat_events_owner ON web_threat_events (owner_uid);
                 CREATE INDEX IF NOT EXISTS idx_web_threat_events_timestamp ON web_threat_events (timestamp DESC);
+
+                CREATE TABLE IF NOT EXISTS domain_policies (
+                    policy_id VARCHAR(128) PRIMARY KEY,
+                    owner_uid VARCHAR(128) NOT NULL,
+                    domain VARCHAR(255) NOT NULL,
+                    policy_type VARCHAR(32) NOT NULL,
+                    reason VARCHAR(500),
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    CONSTRAINT uq_owner_domain UNIQUE (owner_uid, domain)
+                );
+                CREATE INDEX IF NOT EXISTS idx_domain_policies_owner ON domain_policies (owner_uid);
+                CREATE INDEX IF NOT EXISTS idx_domain_policies_domain ON domain_policies (domain);
+
+                ALTER TABLE web_threat_events ADD COLUMN IF NOT EXISTS process_pid INTEGER;
+                ALTER TABLE web_threat_events ADD COLUMN IF NOT EXISTS process_name VARCHAR(128);
+                ALTER TABLE web_threat_events ADD COLUMN IF NOT EXISTS notes TEXT;
             `);
             console.log("[PostgreSQL] Device, pairing, session, and web threat schemas verified.");
         } catch (err) {
@@ -1392,8 +1456,12 @@ class PostgresService {
                     event.status || "ACTIVE",
                 ]
             );
-        } catch {
-            // in-memory fallback preserved
+        } catch (err) {
+            console.error("[PostgreSQL] Error persisting web threat event:", err);
+            if (process.env.NODE_ENV === "production") {
+                throw new Error("Database persistence failed for web threat event");
+            }
+            // in non-production/test environments, in-memory fallback preserved
         }
     }
 
@@ -1465,6 +1533,485 @@ class PostgresService {
 
         return found;
     }
+
+    /*
+     * ---------------------------------------------------------------
+     * Phase 4: Domain Policy Management (Allowlist / Blocklist)
+     * ---------------------------------------------------------------
+     */
+    async getDomainPolicies(uid: string): Promise<DomainPolicyDocument[]> {
+        try {
+            const result = await postgresPool.query(
+                `
+                SELECT policy_id, owner_uid, domain, policy_type, reason, created_at, updated_at
+                FROM domain_policies
+                WHERE owner_uid = $1
+                ORDER BY created_at DESC
+                `,
+                [uid]
+            );
+
+            if (result.rows.length > 0) {
+                return result.rows.map((row) => ({
+                    policyId: row.policy_id,
+                    ownerUid: row.owner_uid,
+                    domain: row.domain,
+                    policyType: row.policy_type as "ALLOW" | "BLOCK",
+                    reason: row.reason || undefined,
+                    createdAt: new Date(row.created_at).toISOString(),
+                    updatedAt: new Date(row.updated_at).toISOString(),
+                }));
+            }
+        } catch {
+            // fallback to memory
+        }
+
+        return this.memoryDomainPolicies.get(uid) || [];
+    }
+
+    async upsertDomainPolicy(policy: DomainPolicyDocument): Promise<DomainPolicyDocument> {
+        // Enforce memory store
+        const userPolicies = this.memoryDomainPolicies.get(policy.ownerUid) || [];
+        const filtered = userPolicies.filter((p) => p.domain.toLowerCase() !== policy.domain.toLowerCase());
+        filtered.unshift(policy);
+        this.memoryDomainPolicies.set(policy.ownerUid, filtered);
+
+        try {
+            await postgresPool.query(
+                `
+                INSERT INTO domain_policies (
+                    policy_id, owner_uid, domain, policy_type, reason, created_at, updated_at
+                )
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                ON CONFLICT (owner_uid, domain)
+                DO UPDATE SET
+                    policy_type = EXCLUDED.policy_type,
+                    reason = EXCLUDED.reason,
+                    updated_at = EXCLUDED.updated_at
+                `,
+                [
+                    policy.policyId,
+                    policy.ownerUid,
+                    policy.domain.toLowerCase(),
+                    policy.policyType,
+                    policy.reason || null,
+                    policy.createdAt,
+                    policy.updatedAt,
+                ]
+            );
+        } catch (err) {
+            console.error("[PostgreSQL] Error persisting domain policy:", err);
+            if (process.env.NODE_ENV === "production") {
+                throw new Error("Database persistence failed for domain policy");
+            }
+            // in non-production/test environments, memory fallback handles operation
+        }
+
+        return policy;
+    }
+
+    async deleteDomainPolicy(uid: string, policyId: string): Promise<boolean> {
+        let removed = false;
+        const userPolicies = this.memoryDomainPolicies.get(uid);
+        if (userPolicies) {
+            const idx = userPolicies.findIndex((p) => p.policyId === policyId);
+            if (idx !== -1) {
+                userPolicies.splice(idx, 1);
+                removed = true;
+            }
+        }
+
+        try {
+            const res = await postgresPool.query(
+                `
+                DELETE FROM domain_policies
+                WHERE policy_id = $1 AND owner_uid = $2
+                `,
+                [policyId, uid]
+            );
+            if (res.rowCount && res.rowCount > 0) removed = true;
+        } catch (err) {
+            console.error("[PostgreSQL] Error deleting domain policy:", err);
+            if (process.env.NODE_ENV === "production") {
+                throw new Error("Database persistence failed for domain policy deletion");
+            }
+            // in non-production/test environments, memory fallback handles operation
+        }
+
+        return removed;
+    }
+
+    async findDomainPolicy(uid?: string, domain?: string): Promise<DomainPolicyDocument | null> {
+        if (!domain) return null;
+        const cleanDomain = domain.toLowerCase().trim();
+
+        if (uid) {
+            const userPolicies = this.memoryDomainPolicies.get(uid) || [];
+            const memMatch = userPolicies.find((p) => p.domain.toLowerCase() === cleanDomain);
+            if (memMatch) return memMatch;
+
+            try {
+                const res = await postgresPool.query(
+                    `
+                    SELECT policy_id, owner_uid, domain, policy_type, reason, created_at, updated_at
+                    FROM domain_policies
+                    WHERE owner_uid = $1 AND domain = $2
+                    LIMIT 1
+                    `,
+                    [uid, cleanDomain]
+                );
+                if (res.rows.length > 0) {
+                    const row = res.rows[0];
+                    return {
+                        policyId: row.policy_id,
+                        ownerUid: row.owner_uid,
+                        domain: row.domain,
+                        policyType: row.policy_type as "ALLOW" | "BLOCK",
+                        reason: row.reason || undefined,
+                        createdAt: new Date(row.created_at).toISOString(),
+                        updatedAt: new Date(row.updated_at).toISOString(),
+                    };
+                }
+            } catch {
+                // fallback
+            }
+        }
+
+        return null;
+    }
+
+    /*
+     * ---------------------------------------------------------------
+     * Phase 4: Incident Triage & Event Status Workflow
+     * ---------------------------------------------------------------
+     */
+    async updateWebThreatEventStatus(
+        uid: string,
+        eventId: string,
+        status: "ACTIVE" | "DISMISSED" | "INVESTIGATING" | "RESOLVED" | "FALSE_POSITIVE",
+        notes?: string
+    ): Promise<boolean> {
+        let updated = false;
+        const userEvents = this.memoryWebThreatEvents.get(uid);
+        if (userEvents) {
+            for (const ev of userEvents) {
+                if (ev.id === eventId) {
+                    ev.status = status;
+                    if (notes) (ev as any).notes = notes;
+                    updated = true;
+                }
+            }
+        }
+
+        try {
+            const res = await postgresPool.query(
+                `
+                UPDATE web_threat_events
+                SET status = $1, notes = COALESCE($2, notes)
+                WHERE id = $3 AND owner_uid = $4
+                `,
+                [status, notes || null, eventId, uid]
+            );
+            if (res.rowCount && res.rowCount > 0) updated = true;
+        } catch (err) {
+            console.error("[PostgreSQL] Error updating web threat event status:", err);
+            if (process.env.NODE_ENV === "production") {
+                throw new Error("Database persistence failed for event status update");
+            }
+            // in non-production/test environments, memory fallback handles operation
+        }
+
+        return updated;
+    }
+
+    /*
+     * ---------------------------------------------------------------
+     * Phase 4: Cross-Vector Threat Correlation
+     * ---------------------------------------------------------------
+     */
+    async getCorrelatedThreatEvents(uid: string): Promise<CorrelatedThreatEventDocument[]> {
+        const webThreats = await this.getWebThreatEvents(uid);
+        let browserProcesses: ProcessDocument[] = [];
+
+        try {
+            const scans = await this.getScans(uid);
+            if (scans && scans.length > 0) {
+                const processes = await this.getProcesses(uid);
+                browserProcesses = processes.filter((p: ProcessDocument) =>
+                    /^(msedge|chrome|firefox|brave|opera|iexplore|safari)\.exe$/i.test(p.name)
+                );
+            }
+        } catch {
+            // Proceed without scan processes if unavailable
+        }
+
+        return webThreats.map((wt) => {
+            let matchedProcess: ProcessDocument | undefined;
+            let directMatch = false;
+            const bLower = (wt.browser || "").toLowerCase();
+
+            if (bLower.includes("edge")) {
+                matchedProcess = browserProcesses.find((p: ProcessDocument) => p.name.toLowerCase() === "msedge.exe");
+                if (matchedProcess) directMatch = true;
+            } else if (bLower.includes("chrome")) {
+                matchedProcess = browserProcesses.find((p: ProcessDocument) => p.name.toLowerCase() === "chrome.exe");
+                if (matchedProcess) directMatch = true;
+            } else if (bLower.includes("firefox")) {
+                matchedProcess = browserProcesses.find((p: ProcessDocument) => p.name.toLowerCase() === "firefox.exe");
+                if (matchedProcess) directMatch = true;
+            }
+
+            if (!matchedProcess && browserProcesses.length > 0) {
+                matchedProcess = browserProcesses[0];
+                directMatch = false;
+            }
+
+            const hasMatch = Boolean(matchedProcess);
+            const confidence: "HIGH" | "MEDIUM" | "LOW" | "NONE" = !hasMatch
+                ? "NONE"
+                : directMatch && (matchedProcess!.threatScore && matchedProcess!.threatScore > 20)
+                ? "HIGH"
+                : directMatch
+                ? "MEDIUM"
+                : "LOW";
+
+            const reasonText = !hasMatch
+                ? "No active browser process telemetry matched in latest endpoint scan."
+                : directMatch
+                ? `Heuristic correlation: Active browser process (${matchedProcess!.name}, PID ${matchedProcess!.pid}) identified in endpoint scan matching browser telemetry. Note: Temporal correlation indicates concurrent presence during scan window, not proof of process-level URL execution.`
+                : `Ambient correlation: Active browser process (${matchedProcess!.name}, PID ${matchedProcess!.pid}) observed on endpoint during scan window; browser identity does not directly match telemetry source.`;
+
+            return {
+                webThreat: wt,
+                correlatedProcess: matchedProcess
+                    ? {
+                          pid: matchedProcess.pid,
+                          name: matchedProcess.name,
+                          path: matchedProcess.executablePath,
+                          cmdline: matchedProcess.commandLine,
+                          threatScore: matchedProcess.threatScore,
+                          threatLevel: matchedProcess.threatLevel,
+                      }
+                    : undefined,
+                correlationConfidence: confidence,
+                correlationReason: reasonText,
+            };
+        });
+    }
+
+    /*
+     * ---------------------------------------------------------------
+     * Phase 4: Unified Threat Alerts Stream
+     * ---------------------------------------------------------------
+     */
+    async getUnifiedThreatAlerts(uid: string): Promise<UnifiedThreatAlertDocument[]> {
+        const memoryAlerts: ThreatAlertDocument[] = [];
+        try {
+            const alerts = await this.getThreatAlerts(uid);
+            memoryAlerts.push(...alerts);
+        } catch {
+            // empty if table not available
+        }
+
+        const correlatedEvents = await this.getCorrelatedThreatEvents(uid);
+
+        const unifiedList: UnifiedThreatAlertDocument[] = [];
+
+        // 1. Map Endpoint Memory Alerts
+        for (const a of memoryAlerts) {
+            unifiedList.push({
+                id: a.id,
+                vector: "ENDPOINT_MEMORY",
+                title: a.title || `Memory Anomaly: ${a.processName} (PID ${a.pid})`,
+                targetName: a.processName,
+                targetDetail: `PID ${a.pid} • Risk Score ${a.score}/100`,
+                level: a.level,
+                score: a.score,
+                status: (a.status as any) || "NEW",
+                timestamp: a.detectedAt,
+                indicators: [
+                    ...(a.memoryEvidence?.indicators || []),
+                    ...(a.behaviorEvidence?.indicators || []),
+                ],
+                explanation: a.description || a.correlationEvidence?.explanation,
+                rawAlert: a,
+            });
+        }
+
+        // 2. Map Web Threat Events
+        for (const c of correlatedEvents) {
+            const wt = c.webThreat;
+            unifiedList.push({
+                id: wt.id,
+                vector: "WEB_THREAT",
+                title: `Web Threat: ${wt.domain} (${wt.classification})`,
+                targetName: wt.domain,
+                targetDetail: c.correlatedProcess
+                    ? `Browser PID ${c.correlatedProcess.pid} (${c.correlatedProcess.name})`
+                    : (wt.browser || "Browser Navigation"),
+                level: wt.severity,
+                score: wt.score,
+                status: (wt.status as any) || "ACTIVE",
+                timestamp: wt.timestamp,
+                indicators: [wt.classification, wt.detectionSource, wt.ruleId].filter(Boolean) as string[],
+                explanation: wt.explanation,
+                correlatedProcess: c.correlatedProcess
+                    ? {
+                          pid: c.correlatedProcess.pid,
+                          name: c.correlatedProcess.name,
+                          path: c.correlatedProcess.path,
+                          score: c.correlatedProcess.threatScore,
+                      }
+                    : undefined,
+                rawWebThreat: wt,
+            });
+        }
+
+        // Sort by timestamp descending
+        unifiedList.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        return unifiedList;
+    }
+
+    /*
+     * ---------------------------------------------------------------
+     * Phase 4: Unified SOC Incident Report Generation
+     * ---------------------------------------------------------------
+     */
+    async generateUnifiedSocReport(uid: string): Promise<ReportDocument> {
+        const unifiedAlerts = await this.getUnifiedThreatAlerts(uid);
+        const policies = await this.getDomainPolicies(uid);
+        const scans = await this.getScans(uid);
+        const latestScan = scans.length > 0 ? scans[0] : null;
+
+        const memoryCount = unifiedAlerts.filter((a) => a.vector === "ENDPOINT_MEMORY").length;
+        const webCount = unifiedAlerts.filter((a) => a.vector === "WEB_THREAT").length;
+        const criticalCount = unifiedAlerts.filter((a) => a.level === "CRITICAL").length;
+        const highCount = unifiedAlerts.filter((a) => a.level === "HIGH").length;
+        const peakScore = unifiedAlerts.length > 0 ? Math.max(...unifiedAlerts.map((a) => a.score)) : 0;
+        const peakLevel = peakScore >= 75 ? "CRITICAL" : peakScore >= 50 ? "HIGH" : peakScore >= 25 ? "MEDIUM" : "NORMAL";
+
+        const reportId = `rep-unified-${Date.now()}`;
+        const timestamp = new Date().toISOString();
+
+        const alertsBlock = unifiedAlerts.length === 0
+            ? "No critical or high-severity threat incidents documented during current audit window."
+            : unifiedAlerts.slice(0, 15).map((a, idx) =>
+                `[Incident #${idx + 1}] [${a.vector}] ${a.title}\n  Severity:     ${a.level} (Score: ${a.score}/100)\n  Target:       ${a.targetName} (${a.targetDetail || "N/A"})\n  Status:       ${a.status}\n  Indicators:   ${a.indicators.join(", ") || "None"}\n  Summary:      ${a.explanation || "Analyzed by PhantomTrace heuristic detection engine."}`
+            ).join("\n\n");
+
+        const policiesBlock = policies.length === 0
+            ? "No tenant-specific domain allowlist or blocklist rules configured."
+            : policies.map((p) => `• [${p.policyType}] ${p.domain} - ${p.reason || "Enforced by SOC Administrator"} (Updated: ${p.updatedAt})`).join("\n");
+
+        const reportContent = `
+================================================================================
+PHANTOMTRACE UNIFIED SOC INCIDENT & THREAT AUDIT REPORT
+================================================================================
+Report ID:        ${reportId}
+Generated At:     ${timestamp}
+Target Owner:     ${uid}
+Endpoint Host:    ${latestScan?.endpointId || "Windows Endpoint"}
+Peak Threat Score:${peakScore}/100 [${peakLevel}]
+Platform Mode:    100% Non-Destructive Read-Only Forensic Analysis
+
+--------------------------------------------------------------------------------
+1. EXECUTIVE THREAT TELEMETRY SUMMARY
+--------------------------------------------------------------------------------
+Total Unified Incidents:   ${unifiedAlerts.length}
+  - Endpoint Memory Alerts: ${memoryCount}
+  - Web Threat Detections:  ${webCount}
+Severity Distribution:
+  - Critical Severity:      ${criticalCount}
+  - High Severity:          ${highCount}
+  - Medium / Low Severity:  ${unifiedAlerts.length - criticalCount - highCount}
+Enforced Domain Policies:  ${policies.length} (Allow: ${policies.filter((p) => p.policyType === "ALLOW").length}, Block: ${policies.filter((p) => p.policyType === "BLOCK").length})
+
+--------------------------------------------------------------------------------
+2. CROSS-VECTOR CORRELATION & THREAT BREAKDOWN
+--------------------------------------------------------------------------------
+${alertsBlock}
+
+--------------------------------------------------------------------------------
+3. DOMAIN SECURITY POLICIES IN EFFECT
+--------------------------------------------------------------------------------
+${policiesBlock}
+
+--------------------------------------------------------------------------------
+4. NON-DESTRUCTIVE INCIDENT RESPONSE PROTOCOL
+--------------------------------------------------------------------------------
+1. Memory & Process Integrity:
+   - In accordance with legal preservation standards, PhantomTrace has NOT terminated, modified,
+     or quarantined any running process or memory segment.
+2. Recommended Containment Steps:
+   - Review correlated browser PIDs for unauthorized parent processes (e.g. cmd.exe, powershell.exe).
+   - If a malicious web domain was reached, inspect memory segments of the browser instance for unbacked executable code.
+   - For malicious domains, enforce an immediate BLOCK policy rule via PhantomTrace Policy Control.
+   - Isolate endpoint from network access via perimeter firewall if memory injection is confirmed.
+
+================================================================================
+END OF REPORT — PHANTOMTRACE FORENSIC ENGINE RELEASE 1.0
+================================================================================
+`.trim();
+
+        const reportDoc: ReportDocument = {
+            id: reportId,
+            scanId: latestScan?.scanId || "unified-session",
+            endpointId: latestScan?.endpointId || "windows-endpoint",
+            ownerUid: uid,
+            createdAt: timestamp,
+            title: `Unified SOC Incident Audit — ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`,
+            summary: `Automated cross-vector threat audit synthesizing ${memoryCount} memory telemetry alerts and ${webCount} web threat events. Peak score ${peakScore}/100 (${peakLevel}).`,
+            totalProcesses: latestScan?.totalProcesses || 0,
+            totalAlerts: unifiedAlerts.length,
+            highestScore: peakScore,
+            highestThreatLevel: peakLevel,
+            alerts: (unifiedAlerts.filter(a => a.rawAlert).map(a => a.rawAlert!) as any) || [],
+            generatedBy: "PHANTOMTRACE",
+            type: "txt",
+            size: `${(reportContent.length / 1024).toFixed(1)} KB`,
+            recordCount: unifiedAlerts.length,
+        };
+
+        (reportDoc as any).content = reportContent;
+        (reportDoc as any).name = `phantomtrace_soc_report_${reportId}.txt`;
+
+        try {
+            await postgresPool.query(
+                `
+                INSERT INTO reports (
+                    id, scan_id, endpoint_id, owner_uid, created_at, title, summary,
+                    total_processes, total_alerts, highest_score, highest_threat_level,
+                    alerts, generated_by, type, size, record_count
+                )
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+                ON CONFLICT (id) DO NOTHING
+                `,
+                [
+                    reportDoc.id,
+                    reportDoc.scanId,
+                    reportDoc.endpointId,
+                    reportDoc.ownerUid,
+                    reportDoc.createdAt,
+                    reportDoc.title,
+                    reportDoc.summary,
+                    reportDoc.totalProcesses,
+                    reportDoc.totalAlerts,
+                    reportDoc.highestScore,
+                    reportDoc.highestThreatLevel,
+                    JSON.stringify(reportDoc.alerts),
+                    reportDoc.generatedBy,
+                    reportDoc.type,
+                    reportDoc.size,
+                    reportDoc.recordCount,
+                ]
+            );
+        } catch {
+            // memory fallback
+        }
+
+        return reportDoc;
+    }
+
 }
 
 

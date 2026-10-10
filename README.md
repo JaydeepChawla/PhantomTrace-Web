@@ -100,9 +100,6 @@ VITE_API_BASE_URL=https://phantomtrace-web.onrender.com
 # In local development:
 # VITE_API_BASE_URL=http://localhost:5000
 
-# Analyst Bearer Authentication Token
-VITE_PHANTOMTRACE_AUTH_TOKEN=your-production-api-key
-
 # Optional: Direct binary download mirror
 # VITE_WINDOWS_SCANNER_DOWNLOAD_URL=https://github.com/JaydeepChawla/PhantomTrace-Web/releases/latest/download/PhantomTrace_Windows_Release_1.0.exe
 ```

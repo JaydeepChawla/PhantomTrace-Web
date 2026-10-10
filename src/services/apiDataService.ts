@@ -8,6 +8,12 @@ import type {
   SystemSettings,
   WebThreatEvent,
   WebThreatStatus,
+  DomainPolicy,
+  UnifiedThreatAlert,
+  CorrelatedThreatEvent,
+  DashboardSecurityOverview,
+  SecurityTimelineEvent,
+  SystemHealthStatus,
 } from "../types";
 import type {
   PhantomTraceDataService,
@@ -62,21 +68,14 @@ export class ApiDataService implements PhantomTraceDataService {
     this.baseUrl = baseUrl || (normalized.endsWith("/api") ? normalized : `${normalized}/api`);
     this.localFallback = new LocalDataService();
 
-    // Authenticate with configured environment token or stored session token
+    // Authenticate strictly with user session stored in local storage (never hardcode or bundle shared production secrets)
     if (typeof window !== "undefined") {
       this.token =
         localStorage.getItem("phantomtrace_auth_token") ||
-        localStorage.getItem("phantomtrace_api_key") ||
-        (typeof import.meta !== "undefined" &&
-          (import.meta.env?.VITE_PHANTOMTRACE_AUTH_TOKEN ||
-            import.meta.env?.VITE_PHANTOMTRACE_API_KEY)) ||
+        localStorage.getItem("phantomtrace_session_token") ||
         "";
     } else {
-      this.token =
-        (typeof import.meta !== "undefined" &&
-          (import.meta.env?.VITE_PHANTOMTRACE_AUTH_TOKEN ||
-            import.meta.env?.VITE_PHANTOMTRACE_API_KEY)) ||
-        "";
+      this.token = "";
     }
   }
 
@@ -90,6 +89,7 @@ export class ApiDataService implements PhantomTraceDataService {
         localStorage.setItem("phantomtrace_auth_token", token);
       } else {
         localStorage.removeItem("phantomtrace_auth_token");
+        localStorage.removeItem("phantomtrace_session_token");
         localStorage.removeItem("phantomtrace_api_key");
       }
     }
@@ -98,7 +98,7 @@ export class ApiDataService implements PhantomTraceDataService {
   /**
    * Retrieve active authentication headers.
    */
-  private getHeaders(): HeadersInit {
+  private getHeaders(): Record<string, string> {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
@@ -110,15 +110,40 @@ export class ApiDataService implements PhantomTraceDataService {
 
   /**
    * Performs an authenticated fetch against the backend API.
+   * Auto-provisions a scoped public session if unauthenticated.
    * Throws an error on non-2xx responses to preserve strict error reporting
    * rather than generating fake or mock security data.
    */
   private async safeFetch<T>(path: string, options?: RequestInit): Promise<T> {
+    // If no token exists and not hitting auth route, attempt auto-session negotiation
+    if (!this.token && !path.startsWith("/auth/session") && typeof window !== "undefined") {
+      await this.ensureAuthenticatedSession();
+    }
+
     const url = `${this.baseUrl}${path.startsWith("/") ? path : `/${path}`}`;
-    const response = await fetch(url, {
-      headers: this.getHeaders(),
+    let response = await fetch(url, {
       ...options,
+      headers: {
+        ...this.getHeaders(),
+        ...((options?.headers as Record<string, string>) || {}),
+      },
     });
+
+    // If unauthorized, attempt one-time session recovery for public sessions
+    if (response.status === 401 && !path.startsWith("/auth/session") && typeof window !== "undefined") {
+      this.token = "";
+      localStorage.removeItem("phantomtrace_auth_token");
+      await this.ensureAuthenticatedSession();
+      if (this.token) {
+        response = await fetch(url, {
+          ...options,
+          headers: {
+            ...this.getHeaders(),
+            ...((options?.headers as Record<string, string>) || {}),
+          },
+        });
+      }
+    }
 
     if (!response.ok) {
       if (response.status === 401) {
@@ -295,42 +320,46 @@ export class ApiDataService implements PhantomTraceDataService {
     const res = await this.safeFetch<{ scans: any[] }>("/scans");
     const scans = res.scans || [];
 
-    return scans.map((s: any) => ({
-      id: s.scanId,
-      startedAt: s.timestamp,
-      durationMs: s.durationMs,
-      status:
-        (s.counts?.critical || 0) + (s.counts?.high || 0) > 0
-          ? "Investigation Flags"
-          : "Verified Clean",
-      totalProcesses: Number(s.totalProcesses ?? 0),
-      totalAlerts:
-        (s.counts?.critical || 0) +
-        (s.counts?.high || 0) +
-        (s.counts?.medium || 0) +
-        (s.counts?.low || 0),
-      highestScore: Number(s.highestScore ?? 0),
-      highestThreatLevel:
-        s.highestScore >= 80
-          ? "CRITICAL"
-          : s.highestScore >= 60
-          ? "HIGH"
-          : s.highestScore >= 40
-          ? "MEDIUM"
-          : s.highestScore >= 20
-          ? "LOW"
-          : "NORMAL",
-      scannerVersion: s.scannerVersion || "PhantomTrace",
-      scanDate: s.timestamp ? formatScanDate(s.timestamp) : s.timestamp,
-      processes: Number(s.totalProcesses ?? 0),
-      alerts: (s.counts?.critical || 0) + (s.counts?.high || 0),
-      critical: Number(s.counts?.critical || 0),
-      high: Number(s.counts?.high || 0),
-      medium: Number(s.counts?.medium || 0),
-      low: Number(s.counts?.low || 0),
-      highestThreatScore: Number(s.highestScore ?? 0),
-      duration: s.durationMs ? `${(s.durationMs / 1000).toFixed(1)}s` : "0.0s",
-    }));
+    return scans.map((s: any) => {
+      const crit = Number(s.counts?.critical ?? 0);
+      const high = Number(s.counts?.high ?? 0);
+      const med = Number(s.counts?.medium ?? 0);
+      const low = Number(s.counts?.low ?? 0);
+      const totalAlerts = crit + high + med + low;
+
+      return {
+        id: s.scanId,
+        startedAt: s.timestamp,
+        durationMs: s.durationMs,
+        status:
+          crit + high > 0
+            ? "Investigation Flags"
+            : "Verified Clean",
+        totalProcesses: Number(s.totalProcesses ?? 0),
+        totalAlerts,
+        alerts: totalAlerts,
+        highestScore: Number(s.highestScore ?? 0),
+        highestThreatLevel:
+          s.highestScore >= 80
+            ? "CRITICAL"
+            : s.highestScore >= 60
+            ? "HIGH"
+            : s.highestScore >= 40
+            ? "MEDIUM"
+            : s.highestScore >= 20
+            ? "LOW"
+            : "NORMAL",
+        scannerVersion: s.scannerVersion || "PhantomTrace",
+        scanDate: s.timestamp ? formatScanDate(s.timestamp) : s.timestamp,
+        processes: Number(s.totalProcesses ?? 0),
+        critical: crit,
+        high,
+        medium: med,
+        low,
+        highestThreatScore: Number(s.highestScore ?? 0),
+        duration: s.durationMs ? `${(s.durationMs / 1000).toFixed(1)}s` : "0.0s",
+      };
+    });
   }
 
   /**
@@ -486,10 +515,10 @@ export class ApiDataService implements PhantomTraceDataService {
       lowCount,
       normalCount,
       highestThreatScore: Number(latestScan.highestScore ?? 0),
-      scanTime: latestScan.timestamp ? formatScanDate(latestScan.timestamp) : "05 October 2026, 5:18 PM",
-      duration: latestScan.durationMs ? `${(latestScan.durationMs / 1000).toFixed(1)}s` : "4.0s",
-      memoryInspectedMb: Number(latestScan.memoryScanned ?? 17495),
-      engineVersion: latestScan.scannerVersion || "PhantomTrace Windows Release 1.0",
+      scanTime: latestScan.timestamp ? formatScanDate(latestScan.timestamp) : "No scan timestamp recorded",
+      duration: latestScan.durationMs ? `${(latestScan.durationMs / 1000).toFixed(1)}s` : "0.0s",
+      memoryInspectedMb: Number(latestScan.memoryScanned ?? 0),
+      engineVersion: latestScan.scannerVersion || "PhantomTrace Scanner",
       scanMode: "Memory & Behavioral Heuristics (Windows Ingested)",
       readOnlyEngineEnforced: true,
       scanId: latestScan.scanId,
@@ -559,11 +588,23 @@ export class ApiDataService implements PhantomTraceDataService {
       const response = await fetch(targetUrl);
       const latencyMs = Math.round(performance.now() - start);
 
+      let data: any = null;
+      try {
+        data = await response.json();
+      } catch {}
+
       if (response.ok) {
-        const data = await response.json();
         return {
           success: true,
-          message: `Connected to ${data.service || "PhantomTrace API"} (Status: ${data.status}, Version: ${data.version || "1.0.0"})`,
+          message: `Connected to ${data?.service || "PhantomTrace API"} (Status: ${data?.status || "ok"}, Version: ${data?.version || "1.0.0"})`,
+          latencyMs,
+        };
+      }
+
+      if (response.status === 503 && data && data.service) {
+        return {
+          success: true,
+          message: `Connected to ${data.service} (Status: ${data.status} — Database offline, in-memory fallback active)`,
           latencyMs,
         };
       }
@@ -606,6 +647,19 @@ export class ApiDataService implements PhantomTraceDataService {
       clearTimeout(timeoutId);
 
       if (!response.ok) {
+        let healthData: any = null;
+        try {
+          healthData = await response.json();
+        } catch {}
+
+        if (healthData && healthData.service) {
+          return {
+            status: "Cloud Not Configured",
+            firebaseConfigured: false,
+            message: "API online (database connection offline).",
+          };
+        }
+
         return {
           status: "API Offline",
           firebaseConfigured: false,
@@ -751,7 +805,9 @@ export class ApiDataService implements PhantomTraceDataService {
       const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ displayName: "Security Analyst" }),
+        body: JSON.stringify({
+          displayName: "Security Analyst",
+        }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -764,6 +820,30 @@ export class ApiDataService implements PhantomTraceDataService {
       console.warn("[ApiDataService] Could not establish public session:", err);
     }
     return "";
+  }
+
+  /**
+   * Authenticates as the system administrator using the master API key.
+   * Exchanges the key for a secure, scoped session token tied to 'phantomtrace-owner'.
+   */
+  public async loginWithApiKey(apiKey: string): Promise<{ success: boolean; message?: string }> {
+    try {
+      const url = `${this.baseUrl}/auth/login`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey: apiKey.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok && data.sessionToken) {
+        this.setAuthToken(data.sessionToken);
+        return { success: true };
+      }
+      return { success: false, message: data.message || "Invalid administrator credentials" };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Network error";
+      return { success: false, message: msg };
+    }
   }
 
   /**
@@ -873,4 +953,120 @@ export class ApiDataService implements PhantomTraceDataService {
       return false;
     }
   }
+
+  /**
+   * =====================================================================
+   * PHASE 4: DOMAIN POLICY & CROSS-VECTOR THREAT MANAGEMENT
+   * =====================================================================
+   */
+  public async getDomainPolicies(): Promise<DomainPolicy[]> {
+    try {
+      const res = await this.safeFetch<{ policies: DomainPolicy[] }>("/web-threats/policies");
+      return res.policies || [];
+    } catch {
+      return [];
+    }
+  }
+
+  public async addDomainPolicy(domain: string, policyType: "ALLOW" | "BLOCK", reason?: string): Promise<DomainPolicy> {
+    const res = await this.safeFetch<{ success: boolean; policy: DomainPolicy }>(
+      "/web-threats/policies",
+      {
+        method: "POST",
+        body: JSON.stringify({ domain, policyType, reason }),
+      }
+    );
+    return res.policy;
+  }
+
+  public async deleteDomainPolicy(policyId: string): Promise<boolean> {
+    try {
+      const res = await this.safeFetch<{ success: boolean }>(
+        `/web-threats/policies/${encodeURIComponent(policyId)}`,
+        { method: "DELETE" }
+      );
+      return res.success === true;
+    } catch {
+      return false;
+    }
+  }
+
+  public async updateWebThreatStatus(eventId: string, status: string, notes?: string): Promise<boolean> {
+    try {
+      const res = await this.safeFetch<{ success: boolean }>(
+        `/web-threats/events/${encodeURIComponent(eventId)}/status`,
+        {
+          method: "POST",
+          body: JSON.stringify({ status, notes }),
+        }
+      );
+      return res.success === true;
+    } catch {
+      return false;
+    }
+  }
+
+  public async getUnifiedThreatAlerts(): Promise<UnifiedThreatAlert[]> {
+    try {
+      const res = await this.safeFetch<{ alerts: UnifiedThreatAlert[] }>("/alerts/unified");
+      return res.alerts || [];
+    } catch {
+      return [];
+    }
+  }
+
+  public async getCorrelatedThreatEvents(): Promise<CorrelatedThreatEvent[]> {
+    try {
+      const res = await this.safeFetch<{ correlatedEvents: CorrelatedThreatEvent[] }>("/web-threats/correlated");
+      return res.correlatedEvents || [];
+    } catch {
+      return [];
+    }
+  }
+
+  public async generateUnifiedSocReport(): Promise<Report> {
+    const res = await this.safeFetch<{ success: boolean; report: Report }>(
+      "/reports/generate-unified",
+      { method: "POST" }
+    );
+    return res.report;
+  }
+
+  /**
+   * Phase 5: Retrieve real-time aggregated security overview.
+   */
+  public async getDashboardOverview(): Promise<DashboardSecurityOverview> {
+    const res = await this.safeFetch<{ overview: DashboardSecurityOverview }>("/dashboard/overview");
+    return res.overview;
+  }
+
+  /**
+   * Phase 5: Retrieve unified chronological security event timeline.
+   */
+  public async getSecurityTimeline(
+    type?: string,
+    severity?: string,
+    limit = 25,
+    offset = 0
+  ): Promise<{ events: SecurityTimelineEvent[]; total: number }> {
+    const params = new URLSearchParams();
+    if (type && type !== "ALL") params.append("type", type);
+    if (severity && severity !== "ALL") params.append("severity", severity);
+    params.append("limit", String(limit));
+    params.append("offset", String(offset));
+
+    const res = await this.safeFetch<{ events: SecurityTimelineEvent[]; total: number }>(
+      `/dashboard/timeline?${params.toString()}`
+    );
+    return res;
+  }
+
+  /**
+   * Phase 5: Retrieve system health and telemetry freshness status.
+   */
+  public async getSystemHealth(): Promise<SystemHealthStatus> {
+    const res = await this.safeFetch<{ health: SystemHealthStatus }>("/dashboard/system-health");
+    return res.health;
+  }
+
 }

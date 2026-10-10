@@ -9,6 +9,14 @@ import type {
   ThreatLevel,
   ScoreMode,
 } from "../types";
+import type {
+  DomainPolicy,
+  UnifiedThreatAlert,
+  CorrelatedThreatEvent,
+  DashboardSecurityOverview,
+  SecurityTimelineEvent,
+  SystemHealthStatus,
+} from "../types";
 import type { PhantomTraceDataService } from "./dataService";
 import {
   mockOverview,
@@ -384,5 +392,146 @@ export class LocalDataService implements PhantomTraceDataService {
       message: "Cloud sync is not configured yet.",
       timestamp: new Date().toLocaleTimeString(),
     };
+  }
+
+  async getDomainPolicies(): Promise<DomainPolicy[]> {
+    return [];
+  }
+
+  async addDomainPolicy(domain: string, policyType: "ALLOW" | "BLOCK", reason?: string): Promise<DomainPolicy> {
+    return {
+      policyId: `pol-${Date.now()}`,
+      domain,
+      policyType,
+      reason,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+  }
+
+  async deleteDomainPolicy(_policyId: string): Promise<boolean> {
+    return true;
+  }
+
+  async getUnifiedThreatAlerts(): Promise<UnifiedThreatAlert[]> {
+    const alerts = await this.getThreatAlerts();
+    return alerts.map((a) => ({
+      id: a.id,
+      vector: "ENDPOINT_MEMORY",
+      title: a.title || `Memory Anomaly: ${a.processName} (PID ${a.pid})`,
+      targetName: a.processName,
+      targetDetail: `PID ${a.pid} • Score ${a.score}/100`,
+      level: a.level,
+      score: a.score,
+      status: (a.status as any) || "NEW",
+      timestamp: a.detectedAt,
+      indicators: [
+        ...(a.memoryEvidence?.indicators || []),
+        ...(a.behaviorEvidence?.indicators || []),
+      ],
+      explanation: a.description,
+      rawAlert: a,
+    }));
+  }
+
+  async getCorrelatedThreatEvents(): Promise<CorrelatedThreatEvent[]> {
+    return [];
+  }
+
+  async generateUnifiedSocReport(): Promise<Report> {
+    const reports = await this.getReports();
+    return reports[0];
+  }
+
+  async updateWebThreatStatus(_eventId: string, _status: string, _notes?: string): Promise<boolean> {
+    return true;
+  }
+
+  async getDashboardOverview(): Promise<DashboardSecurityOverview> {
+    const alerts = await this.getUnifiedThreatAlerts();
+    return {
+      totalScans: 1,
+      registeredEndpoints: 1,
+      processFindings: {
+        totalAnalyzed: mockOverview.totalProcesses,
+        cleanProcesses: mockOverview.totalProcesses - mockOverview.threatAlertsCount,
+        elevatedProcesses: mockOverview.threatAlertsCount,
+        highestThreatScore: mockOverview.highestThreatScore,
+        memoryInspectedMb: mockOverview.memoryInspectedMb,
+      },
+      threatAlertsDistribution: {
+        total: alerts.length,
+        critical: mockOverview.criticalCount,
+        high: mockOverview.highCount,
+        medium: mockOverview.mediumCount,
+        low: mockOverview.lowCount,
+        byStatus: {
+          new: alerts.length,
+          investigating: 0,
+          contained: 0,
+          resolved: 0,
+          dismissed: 0,
+        },
+        byVector: {
+          memory: alerts.length,
+          web: 0,
+        },
+      },
+      recentSecurityEventsCount: alerts.length,
+      lastSuccessfulScanUpload: mockOverview.scanTime,
+      lastSuccessfulRefresh: new Date().toISOString(),
+      telemetryFreshness: "RECENT",
+      telemetryMode: "PERIODIC_SCAN_SNAPSHOT",
+      isRealScannerData: false,
+    };
+  }
+
+  async getSecurityTimeline(
+    _type?: string,
+    _severity?: string,
+    _limit = 25,
+    _offset = 0
+  ): Promise<{ events: SecurityTimelineEvent[]; total: number }> {
+    const alerts = await this.getUnifiedThreatAlerts();
+    const events: SecurityTimelineEvent[] = alerts.map((a) => ({
+      id: `local-event-${a.id}`,
+      timestamp: a.timestamp,
+      eventType: "SCAN_FINDING",
+      severity: (a.level as any) || "MEDIUM",
+      title: a.title,
+      description: a.explanation || `Elevated risk: Score ${a.score}/100`,
+      target: a.targetName,
+      status: a.status,
+      evidenceSummary: a.indicators,
+      source: "Endpoint Memory Heuristics",
+    }));
+
+    return { events, total: events.length };
+  }
+
+  async getSystemHealth(): Promise<SystemHealthStatus> {
+    return {
+      apiStatus: "ONLINE",
+      apiVersion: "1.0.0",
+      apiLatencyMs: 12,
+      database: {
+        engine: "PostgreSQL",
+        connected: true,
+        verifiedAt: new Date().toISOString(),
+      },
+      lastScanUpload: mockOverview.scanTime,
+      lastDataRefresh: new Date().toISOString(),
+      endpointTelemetryFreshness: {
+        status: "RECENT",
+        lastSeenAt: mockOverview.scanTime,
+        description: "Local mock telemetry active.",
+      },
+      monitoringNotice:
+        "Endpoint telemetry is derived from periodic scan snapshots (PhantomTrace Windows Engine). Continuous real-time process monitoring requires the active background Agent Service.",
+    };
+  }
+
+  async loginWithApiKey(apiKey: string): Promise<{ success: boolean; message?: string }> {
+    return { success: apiKey.trim().length > 0 };
   }
 }

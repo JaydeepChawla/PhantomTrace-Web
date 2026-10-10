@@ -196,7 +196,8 @@ function handleVerdict(result, details) {
     result.verdict === "PHISHING" ||
     result.verdict === "MALWARE" ||
     result.verdict === "UNWANTED_SOFTWARE" ||
-    result.verdict === "SUSPICIOUS_HEURISTIC";
+    result.verdict === "SUSPICIOUS_HEURISTIC" ||
+    result.verdict === "POLICY_VIOLATION";
 
   if (!isThreat) return;
 
