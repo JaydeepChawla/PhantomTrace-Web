@@ -11,11 +11,15 @@ import {
   ShieldCheck,
   CheckCircle2,
   Key,
-  Lock
+  Lock,
+  Download,
+  FolderCheck
 } from 'lucide-react';
 
 export const ChromeExtensionInstallationSection: React.FC = () => {
   const [copiedUrl, setCopiedUrl] = useState(false);
+  const [copiedChecksum, setCopiedChecksum] = useState(false);
+  const sha256Checksum = '00dc47fc4acaeb647577660155a1cdf5a755cd71624c6a923b1368658128e426';
 
   const handleCopyChromeUrl = async () => {
     try {
@@ -37,60 +41,80 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
     }
   };
 
+  const handleCopyChecksum = async () => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(sha256Checksum);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = sha256Checksum;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      setCopiedChecksum(true);
+      setTimeout(() => setCopiedChecksum(false), 3000);
+    } catch {
+      setCopiedChecksum(true);
+      setTimeout(() => setCopiedChecksum(false), 3000);
+    }
+  };
+
   const steps = [
     {
       step: '01',
-      title: 'Get the Extension',
-      badge: 'Developer Installation — Store Publication Pending',
-      badgeColor: '#f59e0b',
-      icon: <Globe size={22} style={{ color: '#38bdf8' }} />,
-      desc: 'Official Chrome Web Store and Microsoft Edge Add-ons publication is currently pending review. Access the authentic extension files directly in the repository under the browser-extension/ directory.',
-      detail: 'Contains verified Manifest V3 configuration (manifest.json), service worker (background.js), popup console (popup.html/js), and icons.'
+      title: 'Download Extension ZIP',
+      badge: 'PhantomTrace-Chrome-Extension.zip',
+      badgeColor: '#38bdf8',
+      icon: <Download size={22} style={{ color: '#38bdf8' }} />,
+      desc: 'Download the official PhantomTrace-Chrome-Extension.zip package directly from the PhantomTrace website using the download button above.',
+      detail: 'Verified distribution package containing manifest.json, background service worker, popup UI, warning interstitials, and required icons.'
     },
     {
       step: '02',
-      title: 'Extract Extension Files',
+      title: 'Extract to Permanent Folder',
       badge: 'Direct manifest.json Location',
       badgeColor: '#00e5ff',
       icon: <FolderArchive size={22} style={{ color: '#00e5ff' }} />,
-      desc: 'Ensure the extension folder is placed in a permanent local location (e.g., C:\\PhantomTrace\\browser-extension\\). The selected folder must directly contain manifest.json without extra nested directory levels.',
-      detail: 'Note: No public ZIP distribution is hosted on a public CDN; use the authentic repository directory containing manifest.json directly.'
+      desc: 'Extract the downloaded ZIP package to a permanent directory on your machine (e.g., C:\\PhantomTrace\\browser-extension\\ or your Documents folder). Do not delete this folder after installation.',
+      detail: 'Confirm that manifest.json is directly inside the selected folder without extra nested folders (PhantomTrace-Chrome-Extension/manifest.json).'
     },
     {
       step: '03',
-      title: 'Open Chrome Extensions',
+      title: 'Open chrome://extensions',
       badge: 'chrome://extensions',
       badgeColor: '#a78bfa',
       icon: <Terminal size={22} style={{ color: '#a78bfa' }} />,
-      desc: 'Open Google Chrome (or Microsoft Edge). Navigate to chrome://extensions (or edge://extensions) in your address bar, then enable the Developer mode toggle switch in the upper-right corner.',
-      detail: 'Click "Open Chrome Extensions" below to copy the internal address, then paste it into your browser address bar.'
+      desc: 'Open Google Chrome (or Microsoft Edge). Navigate to chrome://extensions (or edge://extensions) in your address bar. Use the Copy button above for quick access.',
+      detail: 'Web browsers restrict websites from opening internal chrome:// URLs automatically, so paste the copied address into your browser address bar.'
     },
     {
       step: '04',
-      title: 'Load PhantomTrace',
-      badge: 'Load Unpacked',
+      title: 'Enable Developer Mode & Click Load Unpacked',
+      badge: 'Developer Mode Toggle',
       badgeColor: '#34d399',
       icon: <CheckCircle2 size={22} style={{ color: '#34d399' }} />,
-      desc: 'Click "Load unpacked" in the top toolbar and select the browser-extension/ folder. Confirm that "PhantomTrace Web Threat Monitor" (v1.0.0) appears in your extensions list. Pin it to the toolbar for rapid access.',
-      detail: 'Operates in user mode with declarativeNetRequest dynamic rules and zero invasive DOM content-script injection.'
+      desc: 'Toggle the "Developer mode" switch to ON in the upper-right corner of the Extensions page. Once enabled, the "Load unpacked" button will appear in the top-left toolbar.',
+      detail: 'Developer mode allows installing verified local Manifest V3 packages prior to Chrome Web Store general availability.'
     },
     {
       step: '05',
-      title: 'Connect to PhantomTrace',
-      badge: 'Scoped Extension Token',
-      badgeColor: '#38bdf8',
-      icon: <Key size={22} style={{ color: '#38bdf8' }} />,
-      desc: 'Open the extension popup in your browser toolbar. The default production backend is https://phantomtrace-web.onrender.com. Obtain a scoped extension token from the Dashboard (Domain Policies > Connect Extension) and paste it into EXTENSION SYNC TOKEN.',
-      detail: 'Scoped token (pt_ext_... or pt_usr_...) authenticates policy synchronization without exposing database secrets or master keys.'
+      title: 'Select Extracted Folder',
+      badge: 'Select Unpacked Folder',
+      badgeColor: '#f59e0b',
+      icon: <FolderCheck size={22} style={{ color: '#f59e0b' }} />,
+      desc: 'In the file dialog, navigate to and select the extracted folder directly containing manifest.json. Confirm that "PhantomTrace Web Threat Monitor" (v1.0.0) appears in your extensions list, then pin it to your browser toolbar.',
+      detail: 'Chrome validates the Manifest V3 service worker and dynamic declarativeNetRequest rules without requiring a browser restart.'
     },
     {
       step: '06',
-      title: 'Verify Browser Protection',
-      badge: 'Active & Enforcing',
+      title: 'Configure Authentication & Sync',
+      badge: 'Scoped Extension Token',
       badgeColor: '#10b981',
       icon: <ShieldCheck size={22} style={{ color: '#10b981' }} />,
-      desc: 'Toggle Active Web Monitoring to ON (toolbar badge turns green "ON"). Verify Backend Connection shows "Connected" and click "Sync Policies". Visited blocked domains trigger warning interstitials (warning.html) with zero password or query logging.',
-      detail: '100% hostname-only inspection. Query strings, passwords, form fields, and browsing history are never collected.'
+      desc: 'Open the extension popup in your browser toolbar. The default production backend is https://phantomtrace-web.onrender.com. Enter your scoped token (pt_ext_... or pt_usr_...) and click "Sync Policies".',
+      detail: 'Toggle Active Web Monitoring to ON. Visited domains are evaluated against threat policies with 100% hostname-only inspection and zero browsing history logging.'
     }
   ];
 
@@ -217,7 +241,7 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
                 </div>
                 <div style={{ fontSize: '0.78rem', color: '#cbd5e1', lineHeight: 1.5 }}>
                   The official Chrome Web Store and Microsoft Edge Add-ons listings are currently pending review.
-                  Follow the 6-step developer guide below to load the authentic unpacked extension from the repository.
+                  Download the verified extension ZIP package and follow the 6-step developer guide below to load the unpacked extension in Chrome.
                 </div>
               </div>
             </div>
@@ -257,10 +281,90 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
           >
             <div>
               <div style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.45rem', fontWeight: 600 }}>
-                Browser Extension Setup
+                Browser Extension Package
               </div>
               <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#ffffff' }}>
-                Unpacked Developer Deployment
+                Verified ZIP Distribution
+              </div>
+            </div>
+
+            {/* Prominent Download Button */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <a
+                href="/downloads/PhantomTrace-Chrome-Extension.zip"
+                download="PhantomTrace-Chrome-Extension.zip"
+                id="btn-download-chrome-extension-zip"
+                className="pt-btn pt-btn-primary"
+                style={{
+                  width: '100%',
+                  justifyContent: 'center',
+                  padding: '0.9rem 1.4rem',
+                  fontSize: '0.96rem',
+                  fontWeight: 800,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.65rem',
+                  background: 'linear-gradient(135deg, #00e5ff 0%, #0284c7 100%)',
+                  color: '#050911',
+                  boxShadow: '0 0 20px rgba(0, 229, 255, 0.35)',
+                  textDecoration: 'none'
+                }}
+                title="Download verified PhantomTrace Chrome Extension ZIP"
+              >
+                <Download size={20} />
+                <span>Download Chrome Extension ZIP</span>
+              </a>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.74rem', color: '#94a3b8', padding: '0 0.25rem' }}>
+                <span>📦 ZIP Archive (125 KB)</span>
+                <span style={{ color: '#34d399', fontWeight: 600 }}>✓ Verified MV3 Bundle</span>
+              </div>
+            </div>
+
+            {/* Checksum Box */}
+            <div
+              style={{
+                background: '#040711',
+                border: '1px solid rgba(56, 189, 248, 0.2)',
+                borderRadius: '6px',
+                padding: '0.65rem 0.85rem'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                <span style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
+                  SHA-256 Checksum
+                </span>
+                <button
+                  type="button"
+                  onClick={handleCopyChecksum}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: copiedChecksum ? '#10b981' : '#38bdf8',
+                    cursor: 'pointer',
+                    fontSize: '0.72rem',
+                    fontWeight: 600,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                    padding: 0
+                  }}
+                  title="Copy SHA-256 Checksum"
+                >
+                  {copiedChecksum ? <Check size={12} /> : <Copy size={12} />}
+                  <span>{copiedChecksum ? 'Copied' : 'Copy'}</span>
+                </button>
+              </div>
+              <div
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '0.7rem',
+                  color: '#cbd5e1',
+                  wordBreak: 'break-all',
+                  lineHeight: 1.3
+                }}
+              >
+                {sha256Checksum}
               </div>
             </div>
 
@@ -270,25 +374,25 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
                 type="button"
                 id="btn-open-chrome-extensions"
                 onClick={handleCopyChromeUrl}
-                className="pt-btn pt-btn-primary"
+                className="pt-btn pt-btn-secondary"
                 style={{
                   width: '100%',
                   justifyContent: 'center',
-                  padding: '0.85rem 1.5rem',
-                  fontSize: '0.95rem',
+                  padding: '0.75rem 1.25rem',
+                  fontSize: '0.88rem',
                   fontWeight: 700
                 }}
                 title="Copy chrome://extensions to clipboard"
               >
                 {copiedUrl ? (
                   <>
-                    <Check size={18} style={{ color: '#10b981' }} />
+                    <Check size={16} style={{ color: '#10b981' }} />
                     <span>chrome://extensions Copied!</span>
                   </>
                 ) : (
                   <>
-                    <Copy size={18} />
-                    <span>Open Chrome Extensions</span>
+                    <Copy size={16} />
+                    <span>Copy chrome://extensions</span>
                   </>
                 )}
               </button>
@@ -306,71 +410,76 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
                     lineHeight: 1.4
                   }}
                 >
-                  ✓ <strong>chrome://extensions</strong> copied to clipboard! Paste it into your Chrome address bar (browsers restrict websites from opening internal chrome:// URLs directly).
+                  ✓ <strong>chrome://extensions</strong> copied to clipboard! Paste it into your Chrome address bar.
                 </div>
               ) : (
                 <div style={{ fontSize: '0.74rem', color: '#64748b', textAlign: 'center' }}>
-                  Copies <code style={{ color: '#00e5ff', background: '#040711', padding: '0.1rem 0.3rem', borderRadius: '3px' }}>chrome://extensions</code> to your clipboard for quick pasting.
+                  Copies <code style={{ color: '#00e5ff', background: '#040711', padding: '0.1rem 0.3rem', borderRadius: '3px' }}>chrome://extensions</code> for quick pasting.
                 </div>
               )}
             </div>
 
-            {/* Official Chrome Documentation Link */}
-            <a
-              href="https://developer.chrome.com/docs/extensions/get-started/tutorial/hello-world"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="pt-btn pt-btn-secondary"
-              style={{
-                width: '100%',
-                justifyContent: 'center',
-                padding: '0.65rem 1.25rem',
-                fontSize: '0.86rem',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.45rem'
-              }}
-              title="Official Chrome Extension Developer Documentation"
-            >
-              <ExternalLink size={15} style={{ color: '#38bdf8' }} />
-              <span>Official Chrome Extension Guide</span>
-            </a>
+            {/* Action Links */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {/* Official Chrome Documentation Link */}
+              <a
+                href="https://developer.chrome.com/docs/extensions/get-started/tutorial/hello-world"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="pt-btn pt-btn-cyber"
+                style={{
+                  width: '100%',
+                  justifyContent: 'center',
+                  padding: '0.6rem 1rem',
+                  fontSize: '0.82rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.45rem'
+                }}
+                title="Official Chrome Extension Developer Documentation"
+              >
+                <ExternalLink size={14} style={{ color: '#38bdf8' }} />
+                <span>Official Chrome Extension Guide</span>
+              </a>
 
-            {/* Connect Extension via Dashboard Link */}
-            <Link
-              to="/settings"
-              className="pt-btn pt-btn-cyber"
-              style={{
-                width: '100%',
-                justifyContent: 'center',
-                padding: '0.65rem 1.25rem',
-                fontSize: '0.86rem',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.45rem'
-              }}
-              title="Generate Scoped Extension Sync Token"
-            >
-              <Key size={15} />
-              <span>Generate Extension Sync Token</span>
-            </Link>
+              {/* Connect Extension via Dashboard Link */}
+              <Link
+                to="/settings"
+                className="pt-btn pt-btn-cyber"
+                style={{
+                  width: '100%',
+                  justifyContent: 'center',
+                  padding: '0.6rem 1rem',
+                  fontSize: '0.82rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.45rem'
+                }}
+                title="Generate Scoped Extension Sync Token"
+              >
+                <Key size={14} />
+                <span>Generate Extension Sync Token</span>
+              </Link>
+            </div>
 
-            {/* Status Information */}
+            {/* Honest Notice */}
             <div
               style={{
                 background: '#040711',
                 border: '1px solid var(--pt-border-subtle)',
                 borderRadius: '6px',
                 padding: '0.65rem 0.85rem',
-                fontSize: '0.78rem',
+                fontSize: '0.76rem',
                 color: '#94a3b8',
                 display: 'flex',
-                alignItems: 'center',
+                alignItems: 'flex-start',
                 gap: '0.5rem'
               }}
             >
-              <Lock size={15} style={{ color: '#00e5ff', flexShrink: 0 }} />
-              <span>Separate component: Windows Agent and Browser Protection operate independently.</span>
+              <Lock size={14} style={{ color: '#00e5ff', flexShrink: 0, marginTop: '2px' }} />
+              <span>
+                Manual install: Downloading the ZIP does not automatically install the extension into Chrome. Follow the 6 steps below to extract and Load unpacked.
+              </span>
             </div>
           </div>
         </div>
