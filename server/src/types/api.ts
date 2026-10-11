@@ -24,7 +24,7 @@ export interface AuthenticatedRequest extends Request {
   user?: AuthenticatedUser;
   ownerUid?: string;
   deviceId?: string;
-  authType?: "owner" | "device" | "user";
+  authType?: "owner" | "device" | "user" | "extension";
 }
 
 export interface UserDocument {

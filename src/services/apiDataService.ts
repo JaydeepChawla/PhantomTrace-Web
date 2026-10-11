@@ -847,6 +847,145 @@ export class ApiDataService implements PhantomTraceDataService {
   }
 
   /**
+   * Retrieves active Bearer token.
+   */
+  public getAuthToken(): string | null {
+    return this.token || (typeof window !== "undefined" ? localStorage.getItem("phantomtrace_auth_token") : null);
+  }
+
+  /**
+   * Retrieves saved scoped extension token.
+   */
+  public getExtensionToken(): string | null {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("phantomtrace_extension_token") || null;
+    }
+    return null;
+  }
+
+  /**
+   * Generates or retrieves a dedicated, scoped extension token (pt_ext_...)
+   * issued specifically by the backend endpoint /auth/extension-token.
+   * Preserves least privilege: Never substitutes or exposes full user-session credentials (pt_usr_...).
+   * Strictly verifies policy retrieval before displaying success.
+   */
+  public async generateExtensionToken(forceFresh = false): Promise<{ success: boolean; extensionToken: string; message?: string }> {
+    // 1. If not forcing a fresh token, reuse already verified pt_ext_ token if present
+    if (!forceFresh) {
+      const existing = this.getExtensionToken();
+      if (existing && existing.startsWith("pt_ext_")) {
+        const verification = await this.verifyExtensionCredential(existing);
+        if (verification.valid) {
+          return {
+            success: true,
+            extensionToken: existing,
+            message: `Scoped extension credential verified with backend (${verification.policyCount} policy rule(s) active).`,
+          };
+        }
+      }
+    }
+
+    // 2. Ensure an authenticated session exists to authorize the request
+    const sessionToken = await this.ensureAuthenticatedSession();
+    if (!sessionToken) {
+      return {
+        success: false,
+        extensionToken: "",
+        message: "Authentication required. Please sign in or connect to backend before generating an extension credential.",
+      };
+    }
+
+    // 3. Issue dedicated extension token from backend
+    try {
+      const res = await this.safeFetch<{ success: boolean; extensionToken: string; message?: string }>(
+        "/auth/extension-token",
+        { method: "POST" }
+      );
+
+      if (res?.extensionToken && res.extensionToken.startsWith("pt_ext_")) {
+        // 4. Verify the newly issued extension credential can retrieve policies
+        const verification = await this.verifyExtensionCredential(res.extensionToken);
+        if (!verification.valid) {
+          return {
+            success: false,
+            extensionToken: "",
+            message: verification.error || "Backend rejected the newly issued extension credential.",
+          };
+        }
+
+        // Store scoped extension token separately from web user session
+        if (typeof window !== "undefined") {
+          localStorage.setItem("phantomtrace_extension_token", res.extensionToken);
+        }
+
+        return {
+          success: true,
+          extensionToken: res.extensionToken,
+          message: `Scoped extension sync credential generated and verified with backend (${verification.policyCount} policy rule(s) active).`,
+        };
+      }
+
+      return {
+        success: false,
+        extensionToken: "",
+        message: res?.message || "Backend did not return a valid extension token.",
+      };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Network error";
+      return {
+        success: false,
+        extensionToken: "",
+        message: `Extension credential generation failed: ${msg}. Please ensure backend service is running latest release.`,
+      };
+    }
+  }
+
+  /**
+   * Verifies that the credential is accepted by the backend API and can
+   * successfully retrieve that tenant's domain security policies.
+   */
+  public async verifyExtensionCredential(
+    token: string
+  ): Promise<{ valid: boolean; policyCount: number; error?: string }> {
+    if (!token) {
+      return { valid: false, policyCount: 0, error: "Token is empty." };
+    }
+    try {
+      const res = await fetch(`${this.baseUrl}/web-threats/policies`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const policyCount = Array.isArray(data.policies) ? data.policies.length : 0;
+        return { valid: true, policyCount };
+      }
+      if (res.status === 401 || res.status === 403) {
+        return {
+          valid: false,
+          policyCount: 0,
+          error: `Credential rejected by server (HTTP ${res.status}: Unauthorized).`,
+        };
+      }
+      return {
+        valid: false,
+        policyCount: 0,
+        error: `Server responded with status HTTP ${res.status}.`,
+      };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Network error";
+      return {
+        valid: false,
+        policyCount: 0,
+        error: `Backend unreachable at ${this.baseUrl}: ${msg}`,
+      };
+    }
+  }
+
+  /**
    * Initiates a short-lived device pairing request.
    */
   public async startDevicePairing(): Promise<{ pairingId: string; pairingCode: string; expiresAt: string }> {

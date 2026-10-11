@@ -534,4 +534,65 @@ export class LocalDataService implements PhantomTraceDataService {
   async loginWithApiKey(apiKey: string): Promise<{ success: boolean; message?: string }> {
     return { success: apiKey.trim().length > 0 };
   }
+
+  getAuthToken(): string | null {
+    const isProd =
+      typeof window !== "undefined" &&
+      window.location.hostname !== "localhost" &&
+      window.location.hostname !== "127.0.0.1";
+    if (isProd) return null;
+    return "dev-analyst-phase3";
+  }
+
+  getExtensionToken(): string | null {
+    const isProd =
+      typeof window !== "undefined" &&
+      window.location.hostname !== "localhost" &&
+      window.location.hostname !== "127.0.0.1";
+    if (isProd) return null;
+    return "pt_ext_dev_local_test";
+  }
+
+  async generateExtensionToken(_forceFresh?: boolean): Promise<{ success: boolean; extensionToken: string; message?: string }> {
+    const isProd =
+      typeof window !== "undefined" &&
+      window.location.hostname !== "localhost" &&
+      window.location.hostname !== "127.0.0.1";
+
+    if (isProd) {
+      return {
+        success: false,
+        extensionToken: "",
+        message: "Local mock service cannot issue production credentials. Real backend connection required.",
+      };
+    }
+
+    return {
+      success: true,
+      extensionToken: "pt_ext_dev_local_test",
+      message: "Scoped extension credential ready for local test synchronization.",
+    };
+  }
+
+  async verifyExtensionCredential(
+    token: string
+  ): Promise<{ valid: boolean; policyCount: number; error?: string }> {
+    const isProd =
+      typeof window !== "undefined" &&
+      window.location.hostname !== "localhost" &&
+      window.location.hostname !== "127.0.0.1";
+
+    if (isProd) {
+      return {
+        valid: false,
+        policyCount: 0,
+        error: "Cannot verify development mock credential against production environment.",
+      };
+    }
+
+    return {
+      valid: Boolean(token && token.trim().length > 0),
+      policyCount: 2,
+    };
+  }
 }

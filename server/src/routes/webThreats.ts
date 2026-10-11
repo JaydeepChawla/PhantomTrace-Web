@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import crypto from "crypto";
-import { authMiddleware } from "../middleware/auth";
+import { authMiddleware, resolveOwnerUidFromToken } from "../middleware/auth";
 import { threatIntelService } from "../services/threatIntel/threatIntelService";
 import { normalizeUrlSafely } from "../services/threatIntel/urlNormalizer";
 import { postgresService } from "../services/postgresService";
@@ -40,7 +40,15 @@ webThreatsRouter.post("/check", async (req: Request, res: Response): Promise<voi
       return;
     }
 
-    const ownerUid = (req.body?.ownerUid as string | undefined) || ((req as any).ownerUid as string | undefined);
+    let ownerUid = (req.body?.ownerUid as string | undefined) || ((req as any).ownerUid as string | undefined);
+    if (!ownerUid && req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
+      const token = req.headers.authorization.slice("Bearer ".length).trim();
+      const resolved = await resolveOwnerUidFromToken(token);
+      if (resolved) {
+        ownerUid = resolved;
+      }
+    }
+
     const result = await threatIntelService.check(rawTarget, ownerUid);
     res.status(200).json({ result });
   } catch (err: any) {

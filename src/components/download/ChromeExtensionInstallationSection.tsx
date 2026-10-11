@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Globe,
@@ -19,37 +19,25 @@ import {
 } from 'lucide-react';
 import { dataService } from '../../services';
 
-declare module '../../services' {
-  interface PhantomTraceDataService {
-    getAuthToken?(): string | null;
-    generateExtensionToken?(forceFresh?: boolean): Promise<{ success: boolean; extensionToken?: string; message?: string }>;
-  }
-}
-
 export const ChromeExtensionInstallationSection: React.FC = () => {
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [copiedChecksum, setCopiedChecksum] = useState(false);
-  const [extensionToken, setExtensionToken] = useState<string | null>(null);
+  const [extensionToken, setExtensionToken] = useState<string | null>(() => {
+    try {
+      if (dataService.getExtensionToken) {
+        return dataService.getExtensionToken();
+      }
+      return typeof window !== 'undefined' ? localStorage.getItem('phantomtrace_extension_token') : null;
+    } catch {
+      return null;
+    }
+  });
   const [loadingExtensionToken, setLoadingExtensionToken] = useState(false);
   const [copiedToken, setCopiedToken] = useState(false);
   const [extensionTokenStatus, setExtensionTokenStatus] = useState<string | null>(null);
   const [extensionTokenError, setExtensionTokenError] = useState<string | null>(null);
   const [showTokenCard, setShowTokenCard] = useState(false);
   const [isTokenMasked, setIsTokenMasked] = useState(false);
-
-  useEffect(() => {
-    try {
-      if (dataService.getAuthToken) {
-        const existing = dataService.getAuthToken();
-
-        if (existing) {
-          setExtensionToken(existing);
-        }
-      }
-    } catch {
-      // Ignore initial token read errors
-    }
-  }, []);
 
   const sha256Checksum = '30023946c337837bc5500d37cfcb667fad2d547ecebe6d238069e09023168ef2';
 
@@ -70,15 +58,7 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
           return;
         }
       }
-      if (dataService.getAuthToken) {
-        const token = dataService.getAuthToken();
-        if (token) {
-          setExtensionToken(token);
-          setExtensionTokenStatus('Active tenant credential ready for extension connection.');
-          return;
-        }
-      }
-      setExtensionTokenError('Unable to generate extension credential. Please verify backend connection.');
+      setExtensionTokenError('Unable to generate extension credential. Please verify backend connection or sign in via Settings.');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to establish extension token with backend API.';
       setExtensionTokenError(msg);

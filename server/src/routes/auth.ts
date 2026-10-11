@@ -144,3 +144,58 @@ authRouter.get("/me", authMiddleware, async (req: AuthenticatedRequest, res: Res
     deviceId: req.deviceId,
   });
 });
+
+/**
+ * POST /api/auth/extension-token
+ * Issues a scoped browser extension token tied to the authenticated user's tenant UID.
+ * Valid for 90 days. Does not expose master keys or server secrets.
+ */
+authRouter.post("/extension-token", authMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const ownerUid = req.ownerUid;
+    if (!ownerUid) {
+      res.status(401).json({
+        error: "Unauthorized",
+        message: "Authentication required to generate extension token.",
+      });
+      return;
+    }
+
+    if (req.authType !== "user" && req.authType !== "owner") {
+      res.status(403).json({
+        error: "Forbidden",
+        message: "Extension tokens cannot mint extension credentials. An authenticated user or administrator session is required.",
+      });
+      return;
+    }
+
+    const rawExtensionToken = `pt_ext_${crypto.randomBytes(32).toString("hex")}`;
+    const tokenHash = crypto.createHash("sha256").update(rawExtensionToken).digest("hex");
+    const expiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(); // 90 days
+
+    const session: UserSessionDocument = {
+      tokenHash,
+      uid: ownerUid,
+      email: req.user?.email || `${ownerUid}@phantomtrace.local`,
+      displayName: `Browser Extension (${req.user?.displayName || "Analyst"})`,
+      createdAt: new Date().toISOString(),
+      expiresAt,
+    };
+
+    await postgresService.createUserSession(session);
+
+    res.status(200).json({
+      success: true,
+      extensionToken: rawExtensionToken,
+      uid: ownerUid,
+      expiresAt,
+      message: "Browser extension token generated. Paste this token into your Chrome/Edge extension popup.",
+    });
+  } catch (err) {
+    console.error("[Auth Route] Error issuing extension token:", err);
+    res.status(500).json({
+      error: "InternalServerError",
+      message: "Failed to generate extension token",
+    });
+  }
+});
