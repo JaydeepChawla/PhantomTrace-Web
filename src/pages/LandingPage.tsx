@@ -11,10 +11,12 @@ import {
   FileCheck2,
   Database,
   Server,
-  Download
+  Download,
+  Globe
 } from 'lucide-react';
 import { Logo } from '../components/common/Logo';
 import { WindowsDownloadSection } from '../components/download/WindowsDownloadSection';
+import { ChromeExtensionInstallationSection } from '../components/download/ChromeExtensionInstallationSection';
 
 export const LandingPage: React.FC = () => {
   const features = [
@@ -64,7 +66,11 @@ export const LandingPage: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
           <a href="#download" style={{ fontSize: '0.86rem', color: '#00e5ff', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
             <Download size={14} />
-            <span>Download</span>
+            <span>Windows Agent</span>
+          </a>
+          <a href="#browser-protection" style={{ fontSize: '0.86rem', color: '#38bdf8', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <Globe size={14} />
+            <span>Chrome Extension</span>
           </a>
           <Link to="/alerts" style={{ fontSize: '0.86rem', color: '#94a3b8', fontWeight: 500 }}>
             Threat Alerts
@@ -165,7 +171,22 @@ export const LandingPage: React.FC = () => {
             }}
           >
             <Download size={17} style={{ color: '#00e5ff' }} />
-            <span>Download for Windows</span>
+            <span>Windows Agent</span>
+          </a>
+          <a
+            href="#browser-protection"
+            className="pt-btn pt-btn-secondary"
+            style={{
+              padding: '0.75rem 1.5rem',
+              fontSize: '0.95rem',
+              border: '1px solid rgba(56, 189, 248, 0.35)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}
+          >
+            <Globe size={17} style={{ color: '#38bdf8' }} />
+            <span>Chrome Extension Guide</span>
           </a>
           <Link
             to="/alerts"
@@ -221,8 +242,11 @@ export const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Windows Scanner Download Experience (Phase 7.2) */}
+      {/* Windows Agent Installation & PC Protection */}
       <WindowsDownloadSection />
+
+      {/* Chrome Extension Installation & Browser Protection */}
+      <ChromeExtensionInstallationSection />
 
       {/* Architecture Flow Diagram with Windows Icon */}
       <section

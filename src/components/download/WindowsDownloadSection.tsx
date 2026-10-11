@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import {
   Download,
   ShieldCheck,
@@ -7,7 +8,9 @@ import {
   UploadCloud,
   CheckCircle2,
   Lock,
-  Info
+  Info,
+  ExternalLink,
+  ArrowRight
 } from 'lucide-react';
 import { Logo } from '../common/Logo';
 import { DownloadAgentButton } from '../agent/DownloadAgentButton';
@@ -16,39 +19,57 @@ export const WindowsDownloadSection: React.FC = () => {
   const steps = [
     {
       step: '01',
-      title: 'Download',
-      desc: 'Download the verified PhantomTrace Windows Agent with one click.',
-      icon: <Download size={20} style={{ color: '#00e5ff' }} />
+      title: 'Download Agent',
+      badge: 'Signed Executable & Backend API',
+      badgeColor: '#00e5ff',
+      icon: <Download size={22} style={{ color: '#00e5ff' }} />,
+      desc: 'Download the verified PhantomTrace Windows Agent installer (PhantomTrace_Agent_Setup.exe) or standalone binary (PhantomTrace-Agent.exe) using the verified backend endpoint. Zero Python runtime or terminal dependencies required.',
+      detail: 'Available directly via the download button below or via GET /api/agent/download?installer=true from the backend.'
     },
     {
       step: '02',
-      title: 'Install',
-      desc: 'Run the standalone setup EXE. Installs automatically with zero Python or dependencies needed.',
-      icon: <CheckCircle2 size={20} style={{ color: '#38bdf8' }} />
+      title: 'Install Agent',
+      badge: 'Authenticode SHA-256 Inno Setup',
+      badgeColor: '#38bdf8',
+      icon: <CheckCircle2 size={22} style={{ color: '#38bdf8' }} />,
+      desc: 'Run the standalone setup executable. Installs standard user-mode files into %LocalAppData%\\PhantomTraceAgent with zero system file mutation. If prompted by Windows SmartScreen, click "More info" then "Run anyway".',
+      detail: 'No intrusive kernel drivers or risky hooks installed. Preserves full system integrity and compliance.'
     },
     {
       step: '03',
-      title: 'Agent Starts',
-      desc: 'The agent service starts automatically in the background on 127.0.0.1:49152.',
-      icon: <Terminal size={20} style={{ color: '#818cf8' }} />
+      title: 'Start Protection',
+      badge: 'Localhost Service: 127.0.0.1:49152',
+      badgeColor: '#818cf8',
+      icon: <Terminal size={22} style={{ color: '#818cf8' }} />,
+      desc: 'The agent service launches in the background and listens exclusively on localhost (http://127.0.0.1:49152). Verify active operational status via the built-in HTTP diagnostic probe at /api/status or using the console status monitor.',
+      detail: 'Zero network exposure to external interfaces. Operates strictly in passive diagnostic mode.'
     },
     {
       step: '04',
-      title: 'Pair PC',
-      desc: 'Click "Connect This PC" on the dashboard for instant local pairing.',
-      icon: <Cpu size={20} style={{ color: '#a78bfa' }} />
+      title: 'Connect Your PC',
+      badge: 'Short-Lived 6-Digit Pairing Code',
+      badgeColor: '#a78bfa',
+      icon: <Cpu size={22} style={{ color: '#a78bfa' }} />,
+      desc: 'Navigate to the Operations Dashboard, open the "Scan My PC" panel, and click "Connect This PC". The backend issues a short-lived pairing code (/api/devices/pair) that enrolls your device to your cloud analyst account.',
+      detail: 'Pairing generates an authenticated cloud device token without hardcoded passwords or master server keys.'
     },
     {
       step: '05',
-      title: 'Scan',
-      desc: 'Click "SCAN MY PC" to trigger the read-only memory and process analysis engine.',
-      icon: <UploadCloud size={20} style={{ color: '#f43f5e' }} />
+      title: 'Scan Your PC',
+      badge: '100% Read-Only Forensic Analysis',
+      badgeColor: '#f43f5e',
+      icon: <UploadCloud size={22} style={{ color: '#f43f5e' }} />,
+      desc: 'Trigger the real Windows scanner by clicking "SCAN MY PC" on the web dashboard (or via POST /api/scan/start on localhost). Evaluates unbacked executable memory regions, PAGE_EXECUTE_READWRITE permissions, and anomalous process trees.',
+      detail: 'Passive memory scanning only. Never alters RAM, terminates active processes, or modifies filesystem records.'
     },
     {
       step: '06',
-      title: 'Review',
-      desc: 'Inspect real telemetry, process inspections, and threat alerts in the dashboard.',
-      icon: <CheckCircle2 size={20} style={{ color: '#34d399' }} />
+      title: 'Review Results',
+      badge: 'Unified SOC Telemetry & Triage',
+      badgeColor: '#34d399',
+      icon: <ShieldCheck size={22} style={{ color: '#34d399' }} />,
+      desc: 'Completed scan telemetry (scan_results.json) syncs to your console. Review fileless indicators in Threat Alerts (/alerts), inspect memory maps in Processes (/processes), examine history in (/history), and export reports in (/reports).',
+      detail: 'Full evidence preservation for incident response, malware classification, and compliance audits.'
     }
   ];
 
@@ -82,16 +103,19 @@ export const WindowsDownloadSection: React.FC = () => {
           }}
         >
           <Lock size={12} />
-          <span>Standalone Endpoint Scanner</span>
+          <span>Endpoint Protection • Windows x64</span>
         </div>
+
         <h2 style={{ fontSize: '2.2rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em', marginBottom: '0.5rem' }}>
-          PHANTOMTRACE FOR WINDOWS
+          WINDOWS AGENT INSTALLATION &amp; PC PROTECTION
         </h2>
+
         <p style={{ fontSize: '1.1rem', color: '#00e5ff', fontStyle: 'italic', fontWeight: 500, marginBottom: '0.85rem' }}>
           "Trace what others can't see."
         </p>
+
         <p style={{ fontSize: '0.98rem', color: '#94a3b8', maxWidth: '720px', margin: '0 auto', lineHeight: 1.6 }}>
-          Download the PhantomTrace Windows scanner and perform a read-only security analysis of your Windows endpoint.
+          Download the verified PhantomTrace Windows scanner and perform read-only security analysis of your Windows endpoint.
           It analyzes running processes and memory for suspicious indicators without modifying your files.
         </p>
       </div>
@@ -123,10 +147,10 @@ export const WindowsDownloadSection: React.FC = () => {
               <Logo variant="windows" height={48} />
               <div>
                 <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#ffffff', margin: 0 }}>
-                  PhantomTrace Windows Scanner
+                  PhantomTrace Windows Agent
                 </h3>
                 <div style={{ fontSize: '0.8rem', color: '#38bdf8', fontWeight: 600 }}>
-                  PhantomTrace Windows Release 1.0
+                  PhantomTrace Windows Release 1.0 (x64)
                 </div>
               </div>
             </div>
@@ -136,32 +160,32 @@ export const WindowsDownloadSection: React.FC = () => {
             </p>
 
             {/* Specification Badges Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem', marginBottom: '1.75rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem', marginBottom: '1.5rem' }}>
               <div style={{ background: 'rgba(5, 9, 17, 0.6)', border: '1px solid var(--pt-border-subtle)', borderRadius: '6px', padding: '0.65rem 0.85rem' }}>
                 <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Version</div>
-                <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#f8fafc' }}>Release 1.0</div>
+                <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#f8fafc' }}>Release 1.0 (Signed)</div>
               </div>
               <div style={{ background: 'rgba(5, 9, 17, 0.6)', border: '1px solid var(--pt-border-subtle)', borderRadius: '6px', padding: '0.65rem 0.85rem' }}>
                 <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Platform</div>
-                <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#f8fafc' }}>Windows (x64)</div>
+                <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#f8fafc' }}>Windows 10 / 11 (x64)</div>
               </div>
               <div style={{ background: 'rgba(5, 9, 17, 0.6)', border: '1px solid var(--pt-border-subtle)', borderRadius: '6px', padding: '0.65rem 0.85rem' }}>
                 <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Operation Mode</div>
-                <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#34d399' }}>Read-only analysis</div>
+                <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#34d399' }}>100% Read-Only Mode</div>
               </div>
               <div style={{ background: 'rgba(5, 9, 17, 0.6)', border: '1px solid var(--pt-border-subtle)', borderRadius: '6px', padding: '0.65rem 0.85rem' }}>
-                <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>System Impact</div>
-                <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#38bdf8' }}>No file modification</div>
+                <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Local Service</div>
+                <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#38bdf8' }}>127.0.0.1:49152</div>
               </div>
             </div>
 
             <div style={{ fontSize: '0.82rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
               <Info size={14} style={{ color: '#00e5ff', flexShrink: 0 }} />
-              <span>After scanning, results can be synchronized with the PhantomTrace dashboard.</span>
+              <span>After scanning, telemetry can be synchronized with the PhantomTrace operations dashboard.</span>
             </div>
           </div>
 
-          {/* Right Column: Download Actions & CLI Quickstart */}
+          {/* Right Column: Download Actions & Quickstart */}
           <div
             style={{
               background: 'rgba(9, 15, 26, 0.75)',
@@ -175,19 +199,44 @@ export const WindowsDownloadSection: React.FC = () => {
           >
             <div>
               <div style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.45rem', fontWeight: 600 }}>
-                Windows Agent
+                Verified Windows Release
               </div>
               <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#ffffff' }}>
-                Windows 10 / 11 (64-bit)
+                PhantomTrace_Agent_Setup.exe
               </div>
             </div>
 
-            {/* Download CTA Button */}
+            {/* Preserved Official Download CTA Button */}
             <DownloadAgentButton
               variant="primary"
               size="lg"
               style={{ width: '100%', justifyContent: 'center' }}
             />
+
+            {/* Secondary Links: Releases & Setup */}
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <a
+                href="https://github.com/JaydeepChawla/PhantomTrace-Web/releases"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="pt-btn pt-btn-secondary"
+                style={{ flex: 1, justifyContent: 'center', padding: '0.55rem 0.75rem', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                title="View verified GitHub releases"
+              >
+                <ExternalLink size={13} />
+                <span>GitHub Releases</span>
+              </a>
+
+              <Link
+                to="/dashboard"
+                className="pt-btn pt-btn-cyber"
+                style={{ flex: 1, justifyContent: 'center', padding: '0.55rem 0.75rem', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                title="Go to Operations Dashboard"
+              >
+                <span>Console Dashboard</span>
+                <ArrowRight size={13} />
+              </Link>
+            </div>
 
             {/* Quickstart Notice */}
             <div
@@ -210,22 +259,22 @@ export const WindowsDownloadSection: React.FC = () => {
         </div>
       </div>
 
-      {/* "How It Works" 5-Step Pipeline */}
+      {/* Six Numbered Step Cards */}
       <div style={{ marginBottom: '3.5rem' }}>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <h3 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#ffffff', letterSpacing: '-0.01em' }}>
-            How It Works: End-to-End Analysis Lifecycle
+            Windows Agent Installation Guide
           </h3>
           <p style={{ fontSize: '0.86rem', color: '#94a3b8', marginTop: '0.35rem' }}>
-            5 simple steps from local Windows execution to unified cloud SOC triage
+            6 numbered steps from standalone download to unified cloud threat triage
           </p>
         </div>
 
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: '1rem'
+            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+            gap: '1.25rem'
           }}
         >
           {steps.map((s) => (
@@ -233,51 +282,88 @@ export const WindowsDownloadSection: React.FC = () => {
               key={s.step}
               className="pt-card pt-card-cyber"
               style={{
-                padding: '1.25rem',
+                padding: '1.5rem',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '0.65rem',
-                position: 'relative'
+                justifyContent: 'space-between',
+                position: 'relative',
+                background: 'rgba(10, 18, 34, 0.75)',
+                border: '1px solid rgba(0, 229, 255, 0.18)',
+                borderRadius: '10px'
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
+                  <div
+                    style={{
+                      width: '42px',
+                      height: '42px',
+                      borderRadius: '8px',
+                      background: 'rgba(0, 229, 255, 0.08)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: '1px solid rgba(0, 229, 255, 0.2)'
+                    }}
+                  >
+                    {s.icon}
+                  </div>
+                  <span
+                    style={{
+                      fontSize: '0.78rem',
+                      fontFamily: 'var(--font-mono)',
+                      color: '#64748b',
+                      fontWeight: 700
+                    }}
+                  >
+                    STEP {s.step}
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', marginBottom: '0.45rem', flexWrap: 'wrap' }}>
+                  <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#ffffff', margin: 0 }}>
+                    {s.title}
+                  </h4>
+                </div>
+
                 <div
                   style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '6px',
-                    background: 'rgba(0, 229, 255, 0.08)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: '1px solid rgba(0, 229, 255, 0.2)'
+                    display: 'inline-block',
+                    fontSize: '0.7rem',
+                    fontWeight: 700,
+                    color: s.badgeColor,
+                    background: `${s.badgeColor}18`,
+                    border: `1px solid ${s.badgeColor}40`,
+                    padding: '0.15rem 0.5rem',
+                    borderRadius: '4px',
+                    marginBottom: '0.75rem'
                   }}
                 >
-                  {s.icon}
+                  {s.badge}
                 </div>
-                <span
-                  style={{
-                    fontSize: '0.75rem',
-                    fontFamily: 'var(--font-mono)',
-                    color: '#64748b',
-                    fontWeight: 700
-                  }}
-                >
-                  STEP {s.step}
-                </span>
+
+                <p style={{ fontSize: '0.84rem', color: '#cbd5e1', lineHeight: 1.55, margin: 0, marginBottom: '0.75rem' }}>
+                  {s.desc}
+                </p>
               </div>
-              <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#ffffff', margin: 0 }}>
-                {s.title}
-              </h4>
-              <p style={{ fontSize: '0.82rem', color: '#94a3b8', lineHeight: 1.5, margin: 0 }}>
-                {s.desc}
-              </p>
+
+              <div
+                style={{
+                  borderTop: '1px solid rgba(255, 255, 255, 0.06)',
+                  paddingTop: '0.65rem',
+                  fontSize: '0.75rem',
+                  color: '#64748b',
+                  lineHeight: 1.45
+                }}
+              >
+                {s.detail}
+              </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Safety & Architecture Guarantees Section */}
+      {/* Forensic Integrity & Operational Safety Guarantees */}
       <div
         style={{
           background: 'rgba(9, 15, 26, 0.65)',
