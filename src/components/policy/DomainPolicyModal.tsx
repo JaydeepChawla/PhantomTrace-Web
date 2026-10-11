@@ -176,19 +176,6 @@ export const DomainPolicyModal: React.FC<DomainPolicyModalProps> = ({
                 <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#ffffff' }}>
                   Domain Security Policies
                 </h3>
-                <span
-                  style={{
-                    fontSize: '0.68rem',
-                    fontWeight: 700,
-                    padding: '0.15rem 0.5rem',
-                    borderRadius: '4px',
-                    background: 'rgba(6, 182, 212, 0.15)',
-                    color: '#38bdf8',
-                    border: '1px solid rgba(6, 182, 212, 0.3)',
-                  }}
-                >
-                  PHASE 4
-                </span>
               </div>
               <p style={{ margin: 0, fontSize: '0.78rem', color: '#94a3b8', marginTop: '2px' }}>
                 Enforce custom domain Allowlist &amp; Blocklist rules synchronized with browser extension

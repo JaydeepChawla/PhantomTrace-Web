@@ -190,6 +190,7 @@ npm run lint
 
 ## Documentation References
 
-- [Production Deployment Guide](./PHANTOMTRACE_PHASE6_DEPLOYMENT_GUIDE.md)
-- [Deployment Readiness Audit](./PHANTOMTRACE_PHASE6_DEPLOYMENT_READINESS.md)
-- [Phase 5 Security & Validation Report](./PHANTOMTRACE_PHASE5_SECURITY_VALIDATION.md)
+- [Production Deployment Guide](./PRODUCTION_DEPLOYMENT_GUIDE.md)
+- [Deployment Readiness Audit](./PRODUCTION_DEPLOYMENT_READINESS_AUDIT.md)
+- [Security Validation Report](./PHANTOMTRACE_SECURITY_VALIDATION_REPORT.md)
+- [Domain Security Policy Implementation](./DOMAIN_SECURITY_POLICY_IMPLEMENTATION.md)

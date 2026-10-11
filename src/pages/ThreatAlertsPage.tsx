@@ -160,19 +160,6 @@ export const ThreatAlertsPage: React.FC = () => {
             <h2 style={{ fontSize: '1.35rem', fontWeight: 700, color: '#ffffff', letterSpacing: '-0.01em', margin: 0 }}>
               Unified Threat Alerts
             </h2>
-            <span
-              style={{
-                fontSize: '0.68rem',
-                fontWeight: 700,
-                padding: '0.15rem 0.5rem',
-                borderRadius: '4px',
-                background: 'rgba(6, 182, 212, 0.15)',
-                color: '#38bdf8',
-                border: '1px solid rgba(6, 182, 212, 0.3)',
-              }}
-            >
-              PHASE 4 UNIFIED
-            </span>
           </div>
           <p style={{ fontSize: '0.82rem', color: '#94a3b8', marginTop: '0.2rem' }}>
             Correlated triage stream combining Endpoint Memory anomalies and Web Threat Monitor detections

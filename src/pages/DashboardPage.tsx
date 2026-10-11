@@ -29,7 +29,7 @@ export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const { overview, alerts, activityTimeline, loading, error, refreshData } = useThreatData();
 
-  // Phase 5 Dashboard Security Monitor state
+  // Dashboard Security Monitor state
   const [securityOverview, setSecurityOverview] = useState<DashboardSecurityOverview | null>(null);
   const [timelineEvents, setTimelineEvents] = useState<SecurityTimelineEvent[]>([]);
   const [timelineTotal, setTimelineTotal] = useState<number>(0);
@@ -37,8 +37,8 @@ export const DashboardPage: React.FC = () => {
   const [systemHealth, setSystemHealth] = useState<SystemHealthStatus | null>(null);
   const [healthLoading, setHealthLoading] = useState<boolean>(true);
 
-  // Fetch Phase 5 Security Monitor data
-  const loadPhase5Data = useCallback(async () => {
+  // Fetch Security Monitor data
+  const loadSecurityMonitorData = useCallback(async () => {
     try {
       setHealthLoading(true);
       if (dataService.getSystemHealth) {
@@ -95,12 +95,12 @@ export const DashboardPage: React.FC = () => {
   };
 
   const handleCombinedRefresh = async () => {
-    await Promise.all([refreshData(), loadPhase5Data()]);
+    await Promise.all([refreshData(), loadSecurityMonitorData()]);
   };
 
   useEffect(() => {
-    loadPhase5Data();
-  }, [loadPhase5Data]);
+    loadSecurityMonitorData();
+  }, [loadSecurityMonitorData]);
 
   if (loading && !overview && !securityOverview) {
     return (
@@ -129,7 +129,7 @@ export const DashboardPage: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      {/* Phase 5: System Health & Diagnostic Probes Banner */}
+      {/* System Health & Diagnostic Probes Banner */}
       <SystemHealthMonitor
         health={systemHealth}
         loading={healthLoading}
@@ -157,7 +157,7 @@ export const DashboardPage: React.FC = () => {
                 Security Dashboard
               </h2>
               <span className="pt-badge pt-badge-low" style={{ fontSize: '0.7rem' }}>
-                Phase 5 Security Monitor
+                Security Monitor
               </span>
             </div>
             <p style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '0.2rem' }}>
@@ -192,7 +192,7 @@ export const DashboardPage: React.FC = () => {
         onScanCompleted={handleCombinedRefresh}
       />
 
-      {/* Phase 5: Security Overview Grid (Actual backend data without fake fallbacks) */}
+      {/* Security Overview Grid (Actual backend data without fake fallbacks) */}
       <SecurityOverviewGrid
         overview={securityOverview}
         loading={loading}
@@ -209,7 +209,7 @@ export const DashboardPage: React.FC = () => {
         </div>
       )}
 
-      {/* Phase 5: Security Event Timeline (Multi-vector chronological audit) */}
+      {/* Security Event Timeline (Multi-vector chronological audit) */}
       <SecurityEventTimeline
         events={timelineEvents}
         total={timelineTotal}
@@ -313,7 +313,7 @@ export const DashboardPage: React.FC = () => {
         </div>
       </Card>
 
-      {/* Phase 3 & 4 Web Threat Monitor & Domain Policies Section */}
+      {/* Web Threat Monitor & Domain Policies Section */}
       <WebThreatMonitorSection />
 
       {/* Enrolled Devices Management */}

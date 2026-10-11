@@ -1,5 +1,6 @@
-# PhantomTrace — Production Deployment Guide (Phase 6)
+# PhantomTrace — Production Deployment Guide
 
+**Document:** `PRODUCTION_DEPLOYMENT_GUIDE.md`
 **Target System:** PhantomTrace Enterprise Detection & Triage Platform  
 **Architecture:** Windows Scanner (Read-Only) -> Node.js Express API -> Firebase Firestore -> React/TypeScript Dashboard on Vercel  
 **Security Posture:** Strictly Read-Only. Zero process termination, zero memory alteration, zero automated file deletion.

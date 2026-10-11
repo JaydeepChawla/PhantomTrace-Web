@@ -111,18 +111,6 @@ export const WebThreatMonitorSection: React.FC<WebThreatMonitorSectionProps> = (
               <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#ffffff', margin: 0 }}>
                 Web Threat Monitor
               </h3>
-              <span style={{
-                fontSize: '0.68rem',
-                fontWeight: 700,
-                padding: '0.15rem 0.5rem',
-                borderRadius: '4px',
-                background: 'rgba(6, 182, 212, 0.15)',
-                color: '#38bdf8',
-                border: '1px solid rgba(6, 182, 212, 0.3)',
-                letterSpacing: '0.5px'
-              }}>
-                PHASE 3
-              </span>
             </div>
             <p style={{ fontSize: '0.78rem', color: '#94a3b8', margin: 0, marginTop: '2px' }}>
               Browser navigation reputation verification & threat intelligence integration
@@ -171,7 +159,7 @@ export const WebThreatMonitorSection: React.FC<WebThreatMonitorSectionProps> = (
             onClick={() => setIsPolicyModalOpen(true)}
             className="pt-btn pt-btn-secondary"
             style={{ padding: '0.35rem 0.65rem', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-            title="Manage Domain Allowlist & Blocklist Policies (Phase 4)"
+            title="Manage Domain Allowlist & Blocklist Policies"
           >
             <Shield size={13} style={{ color: '#00e5ff' }} />
             Domain Policies
