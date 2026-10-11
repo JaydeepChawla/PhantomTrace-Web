@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Globe,
   Copy,
   Check,
-  ExternalLink,
   AlertCircle,
   FolderArchive,
   Terminal,
@@ -13,13 +12,101 @@ import {
   Key,
   Lock,
   Download,
-  FolderCheck
+  FolderCheck,
+  RefreshCw,
+  Eye,
+  EyeOff
 } from 'lucide-react';
+import { dataService } from '../../services';
+
+declare module '../../services' {
+  interface PhantomTraceDataService {
+    getAuthToken?(): string | null;
+    generateExtensionToken?(forceFresh?: boolean): Promise<{ success: boolean; extensionToken?: string; message?: string }>;
+  }
+}
 
 export const ChromeExtensionInstallationSection: React.FC = () => {
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [copiedChecksum, setCopiedChecksum] = useState(false);
-  const sha256Checksum = '00dc47fc4acaeb647577660155a1cdf5a755cd71624c6a923b1368658128e426';
+  const [extensionToken, setExtensionToken] = useState<string | null>(null);
+  const [loadingExtensionToken, setLoadingExtensionToken] = useState(false);
+  const [copiedToken, setCopiedToken] = useState(false);
+  const [extensionTokenStatus, setExtensionTokenStatus] = useState<string | null>(null);
+  const [extensionTokenError, setExtensionTokenError] = useState<string | null>(null);
+  const [showTokenCard, setShowTokenCard] = useState(false);
+  const [isTokenMasked, setIsTokenMasked] = useState(false);
+
+  useEffect(() => {
+    try {
+      if (dataService.getAuthToken) {
+        const existing = dataService.getAuthToken();
+
+        if (existing) {
+          setExtensionToken(existing);
+        }
+      }
+    } catch {
+      // Ignore initial token read errors
+    }
+  }, []);
+
+  const sha256Checksum = '30023946c337837bc5500d37cfcb667fad2d547ecebe6d238069e09023168ef2';
+
+  const handleGenerateExtensionToken = async (forceFresh = false) => {
+    setLoadingExtensionToken(true);
+    setExtensionTokenError(null);
+    setExtensionTokenStatus(null);
+    setShowTokenCard(true);
+    try {
+      if (dataService.generateExtensionToken) {
+        const res = await dataService.generateExtensionToken(forceFresh);
+        if (res && res.success && res.extensionToken) {
+          setExtensionToken(res.extensionToken);
+          setExtensionTokenStatus(res.message || 'Scoped extension sync credential generated and verified with backend.');
+          return;
+        } else if (res && !res.success) {
+          setExtensionTokenError(res.message || 'Backend rejected credential generation. Authentication required.');
+          return;
+        }
+      }
+      if (dataService.getAuthToken) {
+        const token = dataService.getAuthToken();
+        if (token) {
+          setExtensionToken(token);
+          setExtensionTokenStatus('Active tenant credential ready for extension connection.');
+          return;
+        }
+      }
+      setExtensionTokenError('Unable to generate extension credential. Please verify backend connection.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to establish extension token with backend API.';
+      setExtensionTokenError(msg);
+    } finally {
+      setLoadingExtensionToken(false);
+    }
+  };
+
+  const handleCopyExtensionToken = async () => {
+    if (!extensionToken) return;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(extensionToken);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = extensionToken;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      setCopiedToken(true);
+      setTimeout(() => setCopiedToken(false), 3000);
+    } catch {
+      setCopiedToken(true);
+      setTimeout(() => setCopiedToken(false), 3000);
+    }
+  };
 
   const handleCopyChromeUrl = async () => {
     try {
@@ -419,48 +506,254 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
               )}
             </div>
 
-            {/* Action Links */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {/* Official Chrome Documentation Link */}
-              <a
-                href="https://developer.chrome.com/docs/extensions/get-started/tutorial/hello-world"
-                target="_blank"
-                rel="noopener noreferrer"
+            {/* Generate Extension Sync Token Button */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+              <button
+                type="button"
+                id="btn-generate-extension-token"
+                onClick={() => handleGenerateExtensionToken(Boolean(extensionToken))}
+                disabled={loadingExtensionToken}
                 className="pt-btn pt-btn-cyber"
                 style={{
                   width: '100%',
                   justifyContent: 'center',
-                  padding: '0.6rem 1rem',
-                  fontSize: '0.82rem',
+                  padding: '0.75rem 1.25rem',
+                  fontSize: '0.88rem',
+                  fontWeight: 700,
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '0.45rem'
+                  gap: '0.5rem',
+                  background: 'rgba(56, 189, 248, 0.1)',
+                  border: '1px solid rgba(56, 189, 248, 0.35)',
+                  color: '#38bdf8',
+                  cursor: loadingExtensionToken ? 'not-allowed' : 'pointer'
                 }}
-                title="Official Chrome Extension Developer Documentation"
+                title="Generate or retrieve scoped Extension Sync Token"
               >
-                <ExternalLink size={14} style={{ color: '#38bdf8' }} />
-                <span>Official Chrome Extension Guide</span>
-              </a>
-
-              {/* Connect Extension via Dashboard Link */}
-              <Link
-                to="/settings"
-                className="pt-btn pt-btn-cyber"
-                style={{
-                  width: '100%',
-                  justifyContent: 'center',
-                  padding: '0.6rem 1rem',
-                  fontSize: '0.82rem',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.45rem'
-                }}
-                title="Generate Scoped Extension Sync Token"
-              >
-                <Key size={14} />
-                <span>Generate Extension Sync Token</span>
-              </Link>
+                {loadingExtensionToken ? (
+                  <RefreshCw size={15} className="pt-spin" style={{ color: '#00e5ff' }} />
+                ) : (
+                  <Key size={15} style={{ color: '#00e5ff' }} />
+                )}
+                <span>
+                  {loadingExtensionToken
+                    ? 'Verifying with Backend...'
+                    : extensionToken
+                    ? 'Regenerate Extension Sync Token'
+                    : 'Generate Extension Sync Token'}
+                </span>
+              </button>
             </div>
+
+            {/* Scoped Extension Sync Token Display Card */}
+            {(showTokenCard || extensionToken || extensionTokenError) && (
+              <div
+                id="extension-token-card"
+                style={{
+                  background: 'rgba(5, 9, 17, 0.95)',
+                  border: '1px solid rgba(56, 189, 248, 0.35)',
+                  borderRadius: '8px',
+                  padding: '1.25rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.85rem',
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5), 0 0 15px rgba(56, 189, 248, 0.1)'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                    <Key size={15} style={{ color: '#00e5ff' }} />
+                    <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#f8fafc' }}>
+                      Extension Sync Credential
+                    </span>
+                  </div>
+                  <span
+                    style={{
+                      fontSize: '0.68rem',
+                      fontFamily: 'var(--font-mono)',
+                      color: '#38bdf8',
+                      background: 'rgba(56, 189, 248, 0.1)',
+                      border: '1px solid rgba(56, 189, 248, 0.25)',
+                      padding: '0.15rem 0.45rem',
+                      borderRadius: '4px'
+                    }}
+                  >
+                    Target: onrender.com
+                  </span>
+                </div>
+
+                {extensionToken ? (
+                  <div>
+                    <label style={{ fontSize: '0.72rem', color: '#94a3b8', display: 'block', marginBottom: '0.35rem', fontWeight: 600 }}>
+                      Scoped Token (Paste into Extension Popup)
+                    </label>
+                    <div style={{ display: 'flex', gap: '0.45rem', alignItems: 'center' }}>
+                      <div style={{ position: 'relative', flex: 1 }}>
+                        <input
+                          type={isTokenMasked ? 'password' : 'text'}
+                          readOnly
+                          value={extensionToken}
+                          onClick={(e) => (e.target as HTMLInputElement).select()}
+                          className="pt-input text-mono"
+                          style={{
+                            width: '100%',
+                            fontSize: '0.78rem',
+                            color: '#38bdf8',
+                            background: '#030712',
+                            border: '1px solid rgba(56, 189, 248, 0.3)',
+                            paddingRight: '2rem'
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setIsTokenMasked(!isTokenMasked)}
+                          style={{
+                            position: 'absolute',
+                            right: '0.5rem',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            background: 'transparent',
+                            border: 'none',
+                            color: '#64748b',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            padding: 0
+                          }}
+                          title={isTokenMasked ? 'Reveal token' : 'Mask token'}
+                        >
+                          {isTokenMasked ? <Eye size={13} /> : <EyeOff size={13} />}
+                        </button>
+                      </div>
+
+                      <button
+                        type="button"
+                        id="btn-copy-install-extension-token"
+                        onClick={handleCopyExtensionToken}
+                        className="pt-btn pt-btn-primary"
+                        style={{
+                          padding: '0.45rem 0.85rem',
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                          whiteSpace: 'nowrap',
+                          background: copiedToken ? '#10b981' : undefined,
+                          borderColor: copiedToken ? '#10b981' : undefined
+                        }}
+                        title="Copy extension sync token to clipboard"
+                      >
+                        {copiedToken ? <Check size={14} /> : <Copy size={14} />}
+                        <span>{copiedToken ? 'Copied!' : 'Copy Token'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        id="btn-regenerate-install-extension-token"
+                        onClick={() => handleGenerateExtensionToken(true)}
+                        disabled={loadingExtensionToken}
+                        className="pt-btn pt-btn-cyber"
+                        style={{
+                          padding: '0.45rem 0.65rem',
+                          fontSize: '0.78rem'
+                        }}
+                        title="Regenerate fresh scoped token"
+                      >
+                        <RefreshCw size={13} className={loadingExtensionToken ? 'pt-spin' : ''} />
+                        <span>Regenerate</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+
+                {/* Visible Success Message */}
+                {extensionTokenStatus && (
+                  <div
+                    id="extension-token-success-msg"
+                    style={{
+                      background: 'rgba(16, 185, 129, 0.1)',
+                      border: '1px solid rgba(16, 185, 129, 0.3)',
+                      borderRadius: '6px',
+                      padding: '0.65rem 0.85rem',
+                      fontSize: '0.78rem',
+                      color: '#34d399',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '0.5rem',
+                      lineHeight: 1.45
+                    }}
+                  >
+                    <CheckCircle2 size={15} style={{ flexShrink: 0, marginTop: '2px', color: '#10b981' }} />
+                    <span>{extensionTokenStatus}</span>
+                  </div>
+                )}
+
+                {/* Visible Error Message */}
+                {extensionTokenError && (
+                  <div
+                    id="extension-token-error-msg"
+                    style={{
+                      background: 'rgba(239, 68, 68, 0.1)',
+                      border: '1px solid rgba(239, 68, 68, 0.3)',
+                      borderRadius: '6px',
+                      padding: '0.65rem 0.85rem',
+                      fontSize: '0.78rem',
+                      color: '#fca5a5',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '0.5rem',
+                      lineHeight: 1.45
+                    }}
+                  >
+                    <AlertCircle size={15} style={{ flexShrink: 0, marginTop: '2px', color: '#ef4444' }} />
+                    <div>
+                      <div style={{ fontWeight: 700, marginBottom: '0.2rem' }}>Authentication Required / Connection Issue</div>
+                      <div>{extensionTokenError}</div>
+                      <div style={{ marginTop: '0.35rem' }}>
+                        <Link to="/settings" style={{ color: '#38bdf8', textDecoration: 'underline' }}>
+                          Open Settings to sign in or reconnect →
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 3-Step Setup Hint */}
+                <div
+                  style={{
+                    background: '#040711',
+                    border: '1px solid var(--pt-border-subtle)',
+                    borderRadius: '6px',
+                    padding: '0.65rem 0.85rem',
+                    fontSize: '0.74rem',
+                    color: '#94a3b8',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.25rem'
+                  }}
+                >
+                  <div style={{ color: '#e2e8f0', fontWeight: 600 }}>Next Steps in Chrome / Edge:</div>
+                  <div>1. Open the PhantomTrace shield icon in your browser extensions toolbar.</div>
+                  <div>2. Paste the copied token into <strong>Extension Sync Token</strong> and click <strong>Set</strong>.</div>
+                  <div>3. Click <strong>Sync Policies</strong> to authenticate and load your custom rules.</div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <Link
+                    to="/settings"
+                    style={{
+                      fontSize: '0.75rem',
+                      color: '#38bdf8',
+                      textDecoration: 'none',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.3rem',
+                      fontWeight: 600
+                    }}
+                  >
+                    <span>Manage Custom Domain Policies in Settings →</span>
+                  </Link>
+                </div>
+              </div>
+            )}
 
             {/* Honest Notice */}
             <div
