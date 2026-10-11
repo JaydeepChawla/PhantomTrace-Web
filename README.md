@@ -6,7 +6,7 @@
 [![Production Backend](https://img.shields.io/badge/Backend-Render%20API-46e3b7?style=flat-square)](https://phantomtrace-web.onrender.com/api/health)
 [![Database](https://img.shields.io/badge/Database-PostgreSQL%20%2F%20Supabase-38bdf8?style=flat-square)](https://supabase.com/)
 [![Windows Scanner](https://img.shields.io/badge/Scanner-Windows%20Release%201.0-818cf8?style=flat-square)](https://github.com/JaydeepChawla/PhantomTrace-Web/releases)
-[![Operation Mode](https://img.shields.io/badge/Mode-100%25%20Read--Only-10b981?style=flat-square)]()
+[![Operation Mode](https://img.shields.io/badge/Mode-100%25%20Read--Only-10b981?style=flat-square)](https://phantom-trace-web.vercel.app/#download)
 
 PhantomTrace is an enterprise memory and fileless threat detection platform. The web console connects to the read-only Windows detection engine (`PhantomTrace_Windows_Release_1.0.exe`) to provide security operations center (SOC) analysts with telemetry triage, memory region analysis, process tree visualization, and threat alert investigation.
 
@@ -69,6 +69,36 @@ Follow these 6 simple steps to run an endpoint scan and review forensic results:
      --file scan_results.json
    ```
 6. **Open Dashboard & Review:** Navigate to [https://phantom-trace-web.vercel.app/dashboard](https://phantom-trace-web.vercel.app/dashboard) to inspect detected anomalies, unbacked memory segments, behavioral indicators, and threat alerts.
+
+---
+
+## PhantomTrace Installation Guides
+
+Comprehensive visual installation and verification workflows are hosted directly on the [PhantomTrace Website](https://phantom-trace-web.vercel.app/):
+
+- **Windows Agent Installation & PC Protection:** [https://phantom-trace-web.vercel.app/#download](https://phantom-trace-web.vercel.app/#download)
+- **Chrome Extension Installation & Browser Protection:** [https://phantom-trace-web.vercel.app/#browser-protection](https://phantom-trace-web.vercel.app/#browser-protection)
+- **PhantomTrace Web Console:** [https://phantom-trace-web.vercel.app/](https://phantom-trace-web.vercel.app/)
+
+> **Important Note:** Visiting the website provides the visual instructions and configuration parameters; it does **not** automatically install either application. Both the Windows Agent and Chrome Extension must be downloaded, extracted, and configured independently using their verified procedures below.
+
+### Windows Agent Installation
+The Windows Agent provides passive, read-only endpoint memory and process inspection:
+1. **Download Agent:** Use the official **Download Agent** button on the website at [https://phantom-trace-web.vercel.app/#download](https://phantom-trace-web.vercel.app/#download) (or the verified backend endpoint `GET /api/agent/download?installer=true`) to save `PhantomTrace_Agent_Setup.exe`. Zero Python runtime or terminal setup required.
+2. **Install Agent:** Run the Authenticode SHA-256 signed installer executable (`PhantomTrace_Agent_Setup.exe`). Files are installed to `%LocalAppData%\PhantomTraceAgent`. If prompted by Windows Defender SmartScreen (*"Windows protected your PC"*), click **More info** then **Run anyway**.
+3. **Start Protection:** The background agent service starts automatically on `127.0.0.1:49152`. Operational status can be verified via the local HTTP diagnostic check at `http://127.0.0.1:49152/api/status`.
+4. **Connect Your PC:** In the web console ([Dashboard](https://phantom-trace-web.vercel.app/dashboard)), navigate to the **Scan My PC** panel and click **Connect This PC**. The cloud backend generates a short-lived 6-digit pairing code (`/api/devices/pair`) to enroll your workstation.
+5. **Scan Your PC:** Trigger the passive forensic inspection by clicking **SCAN MY PC** in the web dashboard (or via `POST /api/scan/start` on localhost). Operates in 100% read-only mode with zero process termination and zero file alteration.
+6. **Review Results:** Inspect volatile memory telemetry in [Threat Alerts](https://phantom-trace-web.vercel.app/alerts), [Processes](https://phantom-trace-web.vercel.app/processes), [Scan History](https://phantom-trace-web.vercel.app/history), and [Reports](https://phantom-trace-web.vercel.app/reports).
+
+### Chrome Extension Installation
+The Chrome Extension provides real-time web threat detection and domain policy enforcement:
+1. **Get the Extension (Developer Installation — Store Publication Pending):** Official listings on the Chrome Web Store and Microsoft Edge Add-ons are currently under review. The verified extension code is distributed directly in the repository's `browser-extension/` directory.
+2. **Extract / Locate Extension Files:** Ensure the `browser-extension/` folder is placed in a permanent location on your PC. The selected folder must directly contain `manifest.json`, `background.js`, `popup.html`, `popup.js`, and `icons/` (without nested directory levels). *(Note: No public ZIP distribution is hosted on CDN; use the authentic repository directory).*
+3. **Open Chrome Extensions:** Open Google Chrome and enter `chrome://extensions` in the address bar (or click the **Open Chrome Extensions** button on the website guide at [https://phantom-trace-web.vercel.app/#browser-protection](https://phantom-trace-web.vercel.app/#browser-protection) to copy the internal address to your clipboard). Toggle on **Developer mode** in the upper-right corner.
+4. **Load PhantomTrace:** Click **Load unpacked** in the top-left toolbar and select the permanent `browser-extension/` folder. Confirm that **PhantomTrace Web Threat Monitor (v1.0.0)** appears in your list and pin it to your toolbar.
+5. **Connect to PhantomTrace:** Open the extension popup. It defaults to the production backend `https://phantomtrace-web.onrender.com`. Generate a scoped extension sync token (`pt_ext_...`) from the web console under **Domain Policies > Connect Extension** or **Settings**, paste it into **EXTENSION SYNC TOKEN**, and click **Set**.
+6. **Verify Browser Protection:** Flip **Active Web Monitoring** to ON (badge displays green **ON**), confirm backend connection shows **Connected**, and click **Sync Policies**. Visited blocked domains trigger non-destructive warning interstitials (`warning.html`) with zero logging of passwords, search queries, or form data.
 
 ---
 
