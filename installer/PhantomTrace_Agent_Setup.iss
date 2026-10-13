@@ -5,16 +5,23 @@
 ; Packages:
 ;   1. Standalone PhantomTrace Agent service (PyInstaller bundled runtime)
 ;   2. Existing untouched Windows Release 1.0 Scanner binary
-;   3. Automatic background service startup (127.0.0.1:49152)
-;   4. Configuration directory creation in LocalAppData
-;   5. Full uninstall integration
+;   3. PhantomTrace Desktop shortcut for explicit manual launching
+;   4. Start Menu shortcuts (Launch, Stop, Uninstall)
+;   5. Manual launch only (Automatic startup feature removed)
+;   6. Configuration directory creation in LocalAppData (Preserved on uninstall)
+;   7. Full uninstall integration
 ; =====================================================================
 
 #define MyAppName "PhantomTrace Windows Agent"
+#define MyAppDesktopName "PhantomTrace"
 #define MyAppVersion "1.0.0"
 #define MyAppPublisher "PhantomTrace Security"
 #define MyAppURL "https://phantom-trace-web.vercel.app"
 #define MyAppExeName "PhantomTraceAgent.exe"
+
+#ifndef ScannerDir
+#define ScannerDir "D:\Phantom Trace\release\PhantomTrace_Windows_Release_1.0"
+#endif
 
 [Setup]
 AppId={{D41D8CD9-8F00-B204-E980-0998ECF8427E}
@@ -35,14 +42,16 @@ PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog commandline
 CloseApplications=yes
 RestartApplications=no
-UninstallDisplayIcon={app}\{#MyAppExeName}
+SetupIconFile=phantomtrace.ico
+UninstallDisplayIcon={app}\phantomtrace.ico
+WizardImageFile=wizard.bmp
+WizardSmallImageFile=wizardsmall.bmp
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
-Name: "autostart"; Description: "Start PhantomTrace Agent automatically when Windows starts"; GroupDescription: "Startup Options:"
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 
 [Dirs]
 Name: "{localappdata}\PhantomTraceAgent"; Flags: uninsneveruninstall
@@ -50,23 +59,63 @@ Name: "{localappdata}\PhantomTraceAgent\scans"; Flags: uninsneveruninstall
 Name: "{app}\scanner"
 
 [Files]
+; Official PhantomTrace Application & Desktop Icon
+Source: "phantomtrace.ico"; DestDir: "{app}"; Flags: ignoreversion
 ; Standalone Agent executable and all bundled Python runtime dependencies
 Source: "..\phantomtrace-agent\dist\PhantomTraceAgent\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; Existing untouched Windows Release 1.0 Scanner binary and its runtime dependencies
-Source: "D:\Phantom Trace\release\PhantomTrace_Windows_Release_1.0\PhantomTrace_Windows_Release_1.0.exe"; DestDir: "{app}\scanner"; Flags: ignoreversion
-Source: "D:\Phantom Trace\release\PhantomTrace_Windows_Release_1.0\_internal\*"; DestDir: "{app}\scanner\_internal"; Flags: ignoreversion recursesubdirs createallsubdirs
-; Documentation
+Source: "{#ScannerDir}\PhantomTrace_Windows_Release_1.0.exe"; DestDir: "{app}\scanner"; Flags: ignoreversion
+Source: "{#ScannerDir}\_internal\*"; DestDir: "{app}\scanner\_internal"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Documentation & Control Utilities
 Source: "..\phantomtrace-agent\README.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\phantomtrace-agent\installer\stop_agent.ps1"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\phantomtrace-agent\installer\stop_agent.bat"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\phantomtrace-agent\installer\uninstall_agent.ps1"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"; Tasks: desktopicon
-Name: "{userstartup}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"; Tasks: autostart
+; Start Menu shortcuts
+Name: "{autoprograms}\PhantomTrace\{#MyAppDesktopName}"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"; IconFilename: "{app}\phantomtrace.ico"
+Name: "{autoprograms}\PhantomTrace\Stop PhantomTrace Agent"; Filename: "{app}\{#MyAppExeName}"; Parameters: "--stop"; WorkingDir: "{app}"; IconFilename: "{app}\phantomtrace.ico"
+Name: "{autoprograms}\PhantomTrace\Uninstall PhantomTrace Agent"; Filename: "{uninstallexe}"; IconFilename: "{app}\phantomtrace.ico"
+; Desktop shortcut (Checked by default for manual double-click launch)
+Name: "{autodesktop}\{#MyAppDesktopName}"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"; IconFilename: "{app}\phantomtrace.ico"; Tasks: desktopicon
+
+[InstallDelete]
+; When upgrading or reinstalling, cleanly remove legacy desktop shortcut and any unwanted automatic startup shortcuts
+Type: files; Name: "{autodesktop}\{#MyAppName}.lnk"
+Type: files; Name: "{userstartup}\{#MyAppDesktopName}.lnk"
+Type: files; Name: "{userstartup}\{#MyAppName}.lnk"
+Type: files; Name: "{userstartup}\PhantomTraceAgent.lnk"
+Type: files; Name: "{commonstartup}\{#MyAppDesktopName}.lnk"
+Type: files; Name: "{commonstartup}\{#MyAppName}.lnk"
+Type: files; Name: "{commonstartup}\PhantomTraceAgent.lnk"
 
 [Run]
-; Automatically start the Agent service in background after installation
-Filename: "{app}\{#MyAppExeName}"; Description: "Launch PhantomTrace Agent now"; Flags: nowait runhidden
+; Never run the agent automatically upon installation.
+; Manual launch via Desktop shortcut is the primary workflow.
+; Optional checkbox on finish page is unchecked by default and skipped during silent install.
+Filename: "{app}\{#MyAppExeName}"; Description: "Launch PhantomTrace Agent now"; Flags: nowait postinstall skipifsilent unchecked
 
 [UninstallRun]
 ; Terminate any running Agent service prior to removing files
 Filename: "taskkill.exe"; Parameters: "/F /IM {#MyAppExeName}"; Flags: runhidden; RunOnceId: "KillPhantomTraceAgent"
+Filename: "taskkill.exe"; Parameters: "/F /IM PhantomTrace-Agent.exe"; Flags: runhidden; RunOnceId: "KillPhantomTraceAgentDash"
+
+[UninstallDelete]
+; Remove desktop and Start Menu shortcuts
+Type: files; Name: "{autodesktop}\{#MyAppDesktopName}.lnk"
+Type: files; Name: "{autodesktop}\{#MyAppName}.lnk"
+Type: files; Name: "{userstartup}\{#MyAppDesktopName}.lnk"
+Type: files; Name: "{userstartup}\{#MyAppName}.lnk"
+Type: files; Name: "{userstartup}\PhantomTraceAgent.lnk"
+Type: files; Name: "{commonstartup}\{#MyAppDesktopName}.lnk"
+Type: files; Name: "{commonstartup}\{#MyAppName}.lnk"
+Type: files; Name: "{commonstartup}\PhantomTraceAgent.lnk"
+Type: filesandordirs; Name: "{autoprograms}\PhantomTrace"
+Type: filesandordirs; Name: "{autoprograms}\{#MyAppName}"
+
+[Registry]
+; Clean up any registry Run entries on install/upgrade and uninstall without creating them on install
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueName: "PhantomTrace"; Flags: dontcreatekey uninsdeletevalue deletevalue
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueName: "PhantomTraceAgent"; Flags: dontcreatekey uninsdeletevalue deletevalue
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueName: "PhantomTrace Windows Agent"; Flags: dontcreatekey uninsdeletevalue deletevalue
