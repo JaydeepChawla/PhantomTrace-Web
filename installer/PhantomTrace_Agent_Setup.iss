@@ -20,7 +20,15 @@
 #define MyAppExeName "PhantomTraceAgent.exe"
 
 #ifndef ScannerDir
-#define ScannerDir "D:\Phantom Trace\release\PhantomTrace_Windows_Release_1.0"
+  #if DirExists(SourcePath + "\..\scanner_staged")
+    #define ScannerDir SourcePath + "\..\scanner_staged"
+  #elif DirExists(SourcePath + "\..\phantomtrace-agent\scanner")
+    #define ScannerDir SourcePath + "\..\phantomtrace-agent\scanner"
+  #elif DirExists(SourcePath + "\..\release_bin")
+    #define ScannerDir SourcePath + "\..\release_bin"
+  #else
+    #define ScannerDir SourcePath + "\..\scanner_staged"
+  #endif
 #endif
 
 [Setup]
@@ -65,7 +73,7 @@ Source: "phantomtrace.ico"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\phantomtrace-agent\dist\PhantomTraceAgent\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; Existing untouched Windows Release 1.0 Scanner binary and its runtime dependencies
 Source: "{#ScannerDir}\PhantomTrace_Windows_Release_1.0.exe"; DestDir: "{app}\scanner"; Flags: ignoreversion
-Source: "{#ScannerDir}\_internal\*"; DestDir: "{app}\scanner\_internal"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#ScannerDir}\_internal\*"; DestDir: "{app}\scanner\_internal"; Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist
 ; Documentation & Control Utilities
 Source: "..\phantomtrace-agent\README.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\phantomtrace-agent\installer\stop_agent.ps1"; DestDir: "{app}"; Flags: ignoreversion

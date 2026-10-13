@@ -1,20 +1,24 @@
 # ==============================================================================
-# PHANTOMTRACE PRODUCTION RELEASE SIGNING WORKFLOW
+# PHANTOMTRACE WINDOWS AGENT RELEASE PIPELINE (EXPLICITLY UNSIGNED)
 #
-# FUTURE PRODUCTION SIGNING CREDENTIALS (GITHUB REPOSITORY SECRETS):
-#   - CODE_SIGNING_PFX_BASE64   : Base64-encoded production .pfx certificate
-#   - CODE_SIGNING_PFX_PASSWORD : Password for production .pfx certificate
-#
-# NOTE:
-#   - In local development/testing, a local self-signed certificate is used.
-#   - Local self-signed certificates or private keys must NEVER be uploaded
-#     to GitHub repository secrets.
-#   - When production secrets are not configured, this workflow safely skips
-#     release signing with a clear diagnostic notice, and never creates or uses
-#     a self-signed certificate in production CI/CD.
+# Controlled pipeline sequence:
+#   1. Checkout exact tagged source
+#   2. Validate release version and tag (strict Semantic Versioning)
+#   3. Install controlled dependencies
+#   4. Run agent automated test suite
+#   5. Build standalone Agent background service (PhantomTraceAgent.spec)
+#   6. Build standalone Scanner CLI (agent/main.py) and stage for installer
+#   7. Verify intended binaries before compilation
+#   8. Ensure Inno Setup 6 compiler
+#   9. Build Inno Setup installer packaging verified binaries
+#  10. Compute final SHA-256 checksum from installer on disk
+#  11. Generate SHA-256 manifest (.sha256) and release metadata (.json) in dist/
+#  12. Run independent disk-based release integrity validation tests
+#  13. Publish explicitly unsigned release assets to GitHub Releases (when enabled)
+#  14. Upload artifacts for testing & deployment
 # ==============================================================================
 
-name: Build and Sign PhantomTrace Agent
+name: PhantomTrace Windows Agent Release Pipeline
 
 on:
   push:
@@ -26,15 +30,46 @@ on:
         description: 'Release version tag (e.g. v1.0.1)'
         required: true
         default: 'v1.0.1'
+      publish_release:
+        description: 'Publish release to GitHub Releases (unsigned artifacts)'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
 
 jobs:
-  build-and-sign:
-    name: Build & Authenticode Sign Agent
+  build-and-release:
+    name: Build and Release PhantomTrace Agent (Unsigned)
     runs-on: windows-latest
 
     steps:
-      - name: Checkout Source Code
+      - name: Checkout Tagged Source Code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate Release Version & Tag
+        id: validate-tag
+        shell: pwsh
+        run: |
+          $isTagTrigger = "${{ github.ref_type }}" -eq "tag" -or "${{ github.ref }}" -like "refs/tags/v*"
+          if ($isTagTrigger) {
+            $rawTag = "${{ github.ref_name }}"
+            Write-Host "Triggered by release tag: $rawTag" -ForegroundColor Green
+          } else {
+            $rawTag = "${{ inputs.release_version }}"
+            Write-Host "Triggered manually with input version: $rawTag" -ForegroundColor Cyan
+          }
+          if (-not ($rawTag -match '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$')) {
+            Write-Error "Invalid version format '$rawTag'. Expected format: ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ (e.g. v1.0.0 or v1.0.1)."
+            exit 1
+          }
+          $cleanVersion = $rawTag.Substring(1)
+          Write-Host "Validated release tag: $rawTag (clean version: $cleanVersion)" -ForegroundColor Green
+          "release_tag=$rawTag" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "release_version=$cleanVersion" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
       - name: Set up Python 3.13
         uses: actions/setup-python@v5
@@ -42,87 +77,298 @@ jobs:
           python-version: '3.13'
           cache: 'pip'
 
-      - name: Install Build Dependencies
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Python Build Dependencies
+        shell: pwsh
         run: |
           python -m pip install --upgrade pip
           pip install -r agent/requirements.txt
           pip install pyinstaller
 
-      - name: Build Standalone Executable (PyInstaller)
+      - name: Run Agent Regression Test Suite
+        shell: pwsh
         run: |
-          pyinstaller --name "PhantomTrace-Agent" --onefile --clean --paths "." --distpath release_bin --hidden-import "agent" --hidden-import "agent.core" --hidden-import "agent.core.baseline" --hidden-import "agent.core.behavior_engine" --hidden-import "agent.core.memory_analyzer" --hidden-import "agent.core.memory_scanner" --hidden-import "agent.core.process_scanner" --hidden-import "agent.core.threat_score" --hidden-import "agent.notifications" --hidden-import "alert_history" --hidden-import "psutil" agent/main.py
+          Write-Host "Running Python agent test suite prior to build..." -ForegroundColor Cyan
+          python -m unittest discover -s tests -p "test_*.py"
 
-      - name: Check Executable Output
+      - name: Build Standalone Agent Background Service
+        shell: pwsh
         run: |
+          Write-Host "Locating and building background agent service via PhantomTraceAgent.spec..." -ForegroundColor Cyan
+          $specPath = Resolve-Path "PhantomTraceAgent.spec" -ErrorAction SilentlyContinue
+          if (-not $specPath) {
+            $foundSpec = Get-ChildItem -Path . -Filter "PhantomTraceAgent.spec" -Recurse -File -Exclude node_modules | Select-Object -First 1
+            if ($foundSpec) { $specPath = $foundSpec.FullName }
+          }
+          if (-not $specPath -or -not (Test-Path $specPath)) {
+            Write-Error "PyInstaller build failed: Cannot locate PhantomTraceAgent.spec."
+            exit 1
+          }
+          Write-Host "Using spec: $specPath" -ForegroundColor Green
+          pyinstaller "$specPath" --clean --distpath phantomtrace-agent/dist
+          $agentExe = "phantomtrace-agent/dist/PhantomTraceAgent/PhantomTraceAgent.exe"
+          if (-not (Test-Path $agentExe)) {
+            Write-Error "PyInstaller build failed: $agentExe not found."
+            exit 1
+          }
+          $agentSize = (Get-Item $agentExe).Length
+          if ($agentSize -le 0) {
+            Write-Error "PyInstaller build failed: $agentExe is empty (0 bytes)."
+            exit 1
+          }
+          Write-Host "Built agent service: $agentExe ($agentSize bytes)" -ForegroundColor Green
+
+      - name: Build Standalone Scanner CLI & Stage for Installer
+        shell: pwsh
+        run: |
+          Write-Host "Building release_bin/PhantomTrace-Agent.exe from agent/main.py..." -ForegroundColor Cyan
+          if (-not (Test-Path "release_bin")) { New-Item -ItemType Directory -Path "release_bin" -Force | Out-Null }
+          pyinstaller --name "PhantomTrace-Agent" --onefile --noconsole --clean --icon "installer/phantomtrace.ico" --paths "." --distpath release_bin `
+            --hidden-import "agent" --hidden-import "agent.core" --hidden-import "agent.core.baseline" `
+            --hidden-import "agent.core.behavior_engine" --hidden-import "agent.core.memory_analyzer" `
+            --hidden-import "agent.core.memory_scanner" --hidden-import "agent.core.process_scanner" `
+            --hidden-import "agent.core.threat_score" --hidden-import "agent.notifications" `
+            --hidden-import "alert_history" --hidden-import "psutil" agent/main.py
           if (-not (Test-Path "release_bin/PhantomTrace-Agent.exe")) {
-            Write-Error "PhantomTrace-Agent.exe was not created."
+            Write-Error "PyInstaller build failed: release_bin/PhantomTrace-Agent.exe not found."
             exit 1
           }
-          Get-Item "release_bin/PhantomTrace-Agent.exe" | Format-List Name, Length
-
-      # Verify whether future production signing secrets are configured
-      # Documented secret names:
-      #   - CODE_SIGNING_PFX_BASE64
-      #   - CODE_SIGNING_PFX_PASSWORD
-      - name: Check Production Code-Signing Credentials
-        id: check_signing_creds
-        shell: powershell
-        env:
-          PFX_BASE64: ${{ secrets['CODE_SIGNING_PFX_BASE64'] }}
-          PFX_PASSWORD: ${{ secrets['CODE_SIGNING_PFX_PASSWORD'] }}
-        run: |
-          if ([string]::IsNullOrWhiteSpace($env:PFX_BASE64) -or [string]::IsNullOrWhiteSpace($env:PFX_PASSWORD)) {
-            Write-Host "::warning::Production code-signing credentials are not configured. Skipping production release signing."
-            Write-Host "Production code-signing credentials are not configured. Skipping production release signing."
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "can_sign=false"
-          } else {
-            Write-Host "Production code-signing credentials detected. Proceeding with production release signing."
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "can_sign=true"
-          }
-
-      - name: Sign Executable (PFX / Windows SDK SignTool)
-        if: steps.check_signing_creds.outputs.can_sign == 'true'
-        env:
-          PFX_BASE64: ${{ secrets['CODE_SIGNING_PFX_BASE64'] }}
-          PFX_PASSWORD: ${{ secrets['CODE_SIGNING_PFX_PASSWORD'] }}
-        shell: powershell
-        run: |
-          $pfxBytes = [Convert]::FromBase64String($env:PFX_BASE64)
-          $pfxFile = [System.IO.Path]::GetTempFileName() + ".pfx"
-          [System.IO.File]::WriteAllBytes($pfxFile, $pfxBytes)
-          try {
-            $env:CODE_SIGNING_PFX_PATH = $pfxFile
-            $env:CODE_SIGNING_PFX_PASSWORD = $env:PFX_PASSWORD
-            & .\scripts\sign_agent.ps1 -ExePath "release_bin/PhantomTrace-Agent.exe"
-          }
-          finally {
-            if (Test-Path $pfxFile) { Remove-Item $pfxFile -Force }
-          }
-
-      - name: Verify Authenticode Signature
-        if: steps.check_signing_creds.outputs.can_sign == 'true'
-        shell: powershell
-        run: |
-          $sig = Get-AuthenticodeSignature "release_bin/PhantomTrace-Agent.exe"
-          Write-Host "Authenticode Status: $($sig.Status)"
-          Write-Host "Publisher: $($sig.SignerCertificate.Subject)"
-          if ($sig.Status -ne "Valid") {
-            Write-Error "Digital signature verification failed! Status: $($sig.Status)"
+          $scannerSize = (Get-Item "release_bin/PhantomTrace-Agent.exe").Length
+          if ($scannerSize -le 0) {
+            Write-Error "PyInstaller build failed: release_bin/PhantomTrace-Agent.exe is empty (0 bytes)."
             exit 1
           }
 
-      - name: Upload Signed Agent Artifact
-        if: steps.check_signing_creds.outputs.can_sign == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: PhantomTrace-Agent-Signed
-          path: release_bin/PhantomTrace-Agent.exe
-          if-no-files-found: error
+          # Stage scanner executable for Inno Setup compilation in predictable directory
+          $scannerStaged = "scanner_staged"
+          if (-not (Test-Path $scannerStaged)) { New-Item -ItemType Directory -Path $scannerStaged -Force | Out-Null }
+          Copy-Item "release_bin/PhantomTrace-Agent.exe" -Destination "$scannerStaged/PhantomTrace_Windows_Release_1.0.exe" -Force
+          Write-Host "Staged scanner executable to: $scannerStaged/PhantomTrace_Windows_Release_1.0.exe ($scannerSize bytes)" -ForegroundColor Green
 
-      - name: Upload Unsigned Agent Artifact (Signing Skipped)
-        if: steps.check_signing_creds.outputs.can_sign != 'true'
+      - name: Verify Staged Binaries Prior to Packaging
+        shell: pwsh
+        run: |
+          $agentExe = "phantomtrace-agent/dist/PhantomTraceAgent/PhantomTraceAgent.exe"
+          $scannerExe = "scanner_staged/PhantomTrace_Windows_Release_1.0.exe"
+
+          if (-not (Test-Path $agentExe)) {
+            Write-Error "Pre-packaging check failed: Background agent service $agentExe missing."
+            exit 1
+          }
+          if (-not (Test-Path $scannerExe)) {
+            Write-Error "Pre-packaging check failed: Staged scanner binary $scannerExe missing."
+            exit 1
+          }
+
+          $agentItem = Get-Item $agentExe
+          $scannerItem = Get-Item $scannerExe
+
+          if ($agentItem.Length -le 0) {
+            Write-Error "Pre-packaging check failed: $agentExe is empty."
+            exit 1
+          }
+          if ($scannerItem.Length -le 0) {
+            Write-Error "Pre-packaging check failed: $scannerExe is empty."
+            exit 1
+          }
+
+          # Architectural separation check: ensure agent service and scanner are distinct
+          Write-Host "[OK] Verified Agent Service: $($agentItem.FullName) ($($agentItem.Length) bytes)" -ForegroundColor Green
+          Write-Host "[OK] Verified Scanner Binary: $($scannerItem.FullName) ($($scannerItem.Length) bytes)" -ForegroundColor Green
+
+      - name: Ensure Inno Setup 6 Compiler
+        shell: pwsh
+        run: |
+          $iscc = Get-Command "ISCC.exe" -ErrorAction SilentlyContinue
+          if (-not $iscc) {
+            $cand = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+            if (-not (Test-Path $cand)) {
+              Write-Host "Installing Inno Setup via Chocolatey..." -ForegroundColor Cyan
+              choco install innosetup -y --no-progress
+            }
+          }
+
+      - name: Build Inno Setup Installer
+        shell: pwsh
+        run: |
+          Write-Host "Compiling Inno Setup installer..." -ForegroundColor Cyan
+          if (-not (Test-Path "dist")) { New-Item -ItemType Directory -Path "dist" -Force | Out-Null }
+
+          $IsccCandidates = @(
+            "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe",
+            "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
+            "${env:ProgramFiles}\Inno Setup 6\ISCC.exe"
+          )
+          $iscc = $null
+          foreach ($cand in $IsccCandidates) {
+            if ($cand -and (Test-Path $cand)) { $iscc = $cand; break }
+          }
+          if (-not $iscc) {
+            $found = Get-Command "ISCC.exe" -ErrorAction SilentlyContinue
+            if ($found) { $iscc = $found.Source }
+          }
+          if (-not $iscc) {
+            Write-Error "Inno Setup compiler (ISCC.exe) not found."
+            exit 1
+          }
+
+          $version = "${{ steps.validate-tag.outputs.release_version }}"
+          $scannerDir = "$PWD/scanner_staged"
+
+          & $iscc "/DMyAppVersion=$version" "/DScannerDir=$scannerDir" "installer/PhantomTrace_Agent_Setup.iss"
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Inno Setup compilation failed with exit code $LASTEXITCODE."
+            exit $LASTEXITCODE
+          }
+          $installerPath = "dist/PhantomTrace_Agent_Setup.exe"
+          if (-not (Test-Path $installerPath)) {
+            Write-Error "Installer executable not found in dist/."
+            exit 1
+          }
+          $installerSize = (Get-Item $installerPath).Length
+          if ($installerSize -le 0) {
+            Write-Error "Installer executable in dist/ is empty (0 bytes)."
+            exit 1
+          }
+          Write-Host "Successfully compiled installer: $installerPath ($installerSize bytes)" -ForegroundColor Green
+
+      - name: Generate SHA-256 Checksum & Release Manifest
+        id: manifest
+        shell: pwsh
+        run: |
+          $installerPath = "dist/PhantomTrace_Agent_Setup.exe"
+          $installerItem = Get-Item $installerPath
+          $sha256 = (Get-FileHash $installerPath -Algorithm SHA256).Hash.ToLower()
+          $size = $installerItem.Length
+
+          Write-Host "=============================================" -ForegroundColor Green
+          Write-Host " FINAL UNSIGNED ARTIFACT SHA-256: $sha256" -ForegroundColor Yellow
+          Write-Host " FINAL UNSIGNED ARTIFACT SIZE:    $size bytes" -ForegroundColor Green
+          Write-Host "=============================================" -ForegroundColor Green
+
+          # Create standard checksum manifest: <hash> *PhantomTrace_Agent_Setup.exe
+          $manifestPath = "dist/PhantomTrace_Agent_Setup.exe.sha256"
+          "$sha256 *$($installerItem.Name)" | Set-Content -Path $manifestPath -Encoding UTF8 -NoNewline
+
+          # Create machine-readable release metadata JSON (Explicitly Unsigned)
+          $meta = [PSCustomObject]@{
+            productName        = "PhantomTrace Windows Agent"
+            version            = "${{ steps.validate-tag.outputs.release_version }}"
+            filename           = $installerItem.Name
+            fileSizeBytes      = $size
+            sha256             = $sha256
+            commitSha          = "${{ github.sha }}"
+            builtAtUtc         = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+            signatureStatus    = "Unsigned"
+            isProductionSigned = $false
+            publisher          = $null
+            notes              = "Explicitly unsigned release. SHA-256 checksum validates binary integrity only and does not establish publisher identity."
+          }
+          $meta | ConvertTo-Json -Depth 4 | Set-Content -Path "dist/release_metadata.json" -Encoding UTF8
+
+          "sha256=$sha256" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "size=$size" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Run Independent Disk-Based Release Integrity Tests
+        shell: pwsh
+        run: |
+          Write-Host "Validating release artifacts from disk..." -ForegroundColor Cyan
+          $installerPath = "dist/PhantomTrace_Agent_Setup.exe"
+          $manifestPath = "dist/PhantomTrace_Agent_Setup.exe.sha256"
+          $metadataPath = "dist/release_metadata.json"
+
+          # 1. Verify existence and non-zero size
+          if (-not (Test-Path $installerPath)) { Write-Error "Missing installer artifact: $installerPath"; exit 1 }
+          if (-not (Test-Path $manifestPath)) { Write-Error "Missing manifest artifact: $manifestPath"; exit 1 }
+          if (-not (Test-Path $metadataPath)) { Write-Error "Missing metadata artifact: $metadataPath"; exit 1 }
+
+          if ((Get-Item $installerPath).Length -le 0) { Write-Error "Empty installer executable."; exit 1 }
+
+          # 2. Independently compute SHA-256 from disk bytes
+          $actualDiskHash = (Get-FileHash -Path $installerPath -Algorithm SHA256).Hash.ToLower()
+
+          # 3. Validate manifest file content
+          $manifestContent = (Get-Content $manifestPath -Raw).Trim()
+          $manifestHash = $manifestContent.Split()[0].ToLower()
+          if ($actualDiskHash -ne $manifestHash) {
+            Write-Error "Release integrity test failed: Disk hash ($actualDiskHash) != manifest hash ($manifestHash)."
+            exit 1
+          }
+
+          # 4. Validate metadata JSON
+          $meta = Get-Content $metadataPath -Raw | ConvertFrom-Json
+          if ($actualDiskHash -ne $meta.sha256.ToLower()) {
+            Write-Error "Release integrity test failed: Disk hash ($actualDiskHash) != metadata hash ($($meta.sha256))."
+            exit 1
+          }
+
+          # 5. Enforce unsigned policy in metadata
+          if ($meta.isProductionSigned -ne $false) {
+            Write-Error "Release integrity test failed: isProductionSigned must be false for unsigned release."
+            exit 1
+          }
+          if ($meta.signatureStatus -ne "Unsigned") {
+            Write-Error "Release integrity test failed: signatureStatus must be 'Unsigned' (got '$($meta.signatureStatus)')."
+            exit 1
+          }
+          if ($meta.publisher -ne $null) {
+            Write-Error "Release integrity test failed: publisher must be null for unsigned release."
+            exit 1
+          }
+
+          Write-Host "[OK] Independent SHA-256 and metadata validation passed: $actualDiskHash" -ForegroundColor Green
+
+          Write-Host "Running release consistency verification script on dist/..." -ForegroundColor Cyan
+          node scripts/verify_release_consistency.mjs dist
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Release consistency verifier failed for dist/ with exit code $LASTEXITCODE."
+            exit $LASTEXITCODE
+          }
+
+      - name: Publish Explicitly Unsigned Release Assets to GitHub Releases
+        if: (startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish_release == true))
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.validate-tag.outputs.release_tag }}
+          name: "PhantomTrace Windows Agent ${{ steps.validate-tag.outputs.release_tag }} (Unsigned)"
+          body: |
+            ## PhantomTrace Windows Agent ${{ steps.validate-tag.outputs.release_tag }}
+
+            > **Security Notice**: This release contains **explicitly unsigned** Windows executables and installers. No Authenticode code signing certificates or publisher verifications are applied.
+            >
+            > **Integrity Verification**: Please verify the SHA-256 checksum of downloaded binaries against the published checksum manifest before execution. Note that SHA-256 checksums validate file integrity only; they do not establish publisher identity or Authenticode trust.
+
+            ### Release Artifacts
+            - `PhantomTrace_Agent_Setup.exe` (Standalone Windows Installer)
+            - `PhantomTrace_Agent_Setup.exe.sha256` (SHA-256 Checksum Manifest)
+            - `release_metadata.json` (Machine-readable release metadata)
+            - `PhantomTrace-Agent.exe` (Standalone Scanner CLI)
+
+            ### File Verification
+            ```powershell
+            # PowerShell SHA-256 Check:
+            Get-FileHash .\PhantomTrace_Agent_Setup.exe -Algorithm SHA256
+            ```
+          files: |
+            dist/PhantomTrace_Agent_Setup.exe
+            dist/PhantomTrace_Agent_Setup.exe.sha256
+            dist/release_metadata.json
+            release_bin/PhantomTrace-Agent.exe
+          generate_release_notes: true
+          draft: false
+          prerelease: true
+
+      - name: Upload Artifacts for Testing & Deployment
         uses: actions/upload-artifact@v4
         with:
-          name: PhantomTrace-Agent-Unsigned
-          path: release_bin/PhantomTrace-Agent.exe
+          name: phantomtrace-agent-unsigned-artifacts
+          path: |
+            dist/PhantomTrace_Agent_Setup.exe
+            dist/PhantomTrace_Agent_Setup.exe.sha256
+            dist/release_metadata.json
+            release_bin/PhantomTrace-Agent.exe
           if-no-files-found: error

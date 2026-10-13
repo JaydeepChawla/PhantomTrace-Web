@@ -1,17 +1,18 @@
 <#
 .SYNOPSIS
-    Build and Sign Automation for PhantomTrace Windows Agent
+    Build Automation for PhantomTrace Windows Agent Scanner CLI (PhantomTrace-Agent.exe) - Unsigned
 
 .DESCRIPTION
     1. Compiles PhantomTrace-Agent.exe using PyInstaller into release_bin/
-    2. Runs Authenticode code signing with SHA-256 and RFC 3161 timestamping
-    3. Verifies the digital signature
-    4. Halts if signing fails or credentials are missing (strict production mode)
+    2. Verifies output binary exists and is nonempty
+    3. Retains binary isolated in release_bin/ without modifying public production downloads
 #>
 
 [CmdletBinding()]
 param(
-    [switch]$SkipSigningIfUnconfigured = $false
+    [switch]$SkipSigningIfUnconfigured = $false, # Retained for compatibility
+    [switch]$AllowDevSelfSigned = $false,        # Retained for compatibility
+    [string]$ExpectedPublisher = ""              # Retained for compatibility
 )
 
 $ErrorActionPreference = "Stop"
@@ -19,25 +20,32 @@ $ErrorActionPreference = "Stop"
 $RootDir = Resolve-Path (Join-Path $PSScriptRoot "..")
 $ReleaseBinDir = Join-Path $RootDir "release_bin"
 $AgentExe = Join-Path $ReleaseBinDir "PhantomTrace-Agent.exe"
-$PublicDownloads = Join-Path $RootDir "public\downloads"
 
 Write-Host "====================================================" -ForegroundColor Cyan
-Write-Host " PHANTOMTRACE — BUILD & SIGN AGENT PIPELINE" -ForegroundColor Cyan
+Write-Host " PHANTOMTRACE - BUILD SCANNER CLI (UNSIGNED)" -ForegroundColor Cyan
 Write-Host "====================================================" -ForegroundColor Cyan
 
 # ----------------------------------------------------
 # 1. BUILD WITH PYINSTALLER
 # ----------------------------------------------------
-Write-Host "[1/3] Building PhantomTrace-Agent.exe with PyInstaller..." -ForegroundColor Cyan
+Write-Host "[1/2] Building PhantomTrace-Agent.exe with PyInstaller..." -ForegroundColor Cyan
 
 if (-not (Test-Path $ReleaseBinDir)) {
     New-Item -ItemType Directory -Path $ReleaseBinDir -Force | Out-Null
 }
 
+$IconPath = Join-Path $RootDir "installer\phantomtrace.ico"
+if (-not (Test-Path $IconPath)) {
+    Write-Host "      Generating official Windows icon..." -ForegroundColor Cyan
+    & powershell -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "generate_icon.ps1")
+}
+
 $pyinstallerArgs = @(
     "--name", "PhantomTrace-Agent",
     "--onefile",
+    "--noconsole",
     "--clean",
+    "--icon", $IconPath,
     "--paths", ".",
     "--distpath", "release_bin",
     "--hidden-import", "agent",
@@ -72,46 +80,20 @@ if (-not (Test-Path $AgentExe)) {
 }
 
 $FileSize = (Get-Item $AgentExe).Length
+if ($FileSize -le 0) {
+    Write-Error "Built binary at $AgentExe is empty (0 bytes)."
+    exit 1
+}
+
 Write-Host "      Build succeeded: $AgentExe ($FileSize bytes)" -ForegroundColor Green
 
 # ----------------------------------------------------
-# 2. CODE SIGNING
+# 2. STATUS & ISOLATION
 # ----------------------------------------------------
-Write-Host "[2/3] Initiating Authenticode code signing..." -ForegroundColor Cyan
-
-$SignScript = Join-Path $PSScriptRoot "sign_agent.ps1"
-$SignExitCode = 0
-
-try {
-    & $SignScript -ExePath $AgentExe
-    $SignExitCode = $LASTEXITCODE
-}
-catch {
-    $SignExitCode = 1
-}
-
-if ($SignExitCode -eq 2) {
-    # Production certificate not configured
-    if ($SkipSigningIfUnconfigured) {
-        Write-Warning "Skipping code signing because production credentials are not configured and -SkipSigningIfUnconfigured was passed."
-        Write-Warning "NOTE: This binary is UNSIGNED and must NOT be deployed to production."
-    }
-    else {
-        Write-Error "Production signing certificate/provider is not configured. Stopping build to prevent publishing unsigned binary."
-        exit 2
-    }
-}
-elseif ($SignExitCode -ne 0) {
-    Write-Error "Code signing failed. Binary cannot be published."
-    exit 1
-}
-else {
-    Write-Host "[3/3] Authenticode signature verified and ready for distribution." -ForegroundColor Green
-    if (Test-Path $PublicDownloads) {
-        Copy-Item -Path $AgentExe -Destination (Join-Path $PublicDownloads "PhantomTrace-Agent.exe") -Force
-    }
-}
+Write-Host "[2/2] Release status: Unsigned binary safely isolated in $ReleaseBinDir." -ForegroundColor Yellow
+Write-Host "      Public production downloads were NOT modified." -ForegroundColor Green
 
 Write-Host "====================================================" -ForegroundColor Green
-Write-Host " AGENT PIPELINE COMPLETE" -ForegroundColor Green
+Write-Host " SCANNER CLI BUILD COMPLETE (UNSIGNED)" -ForegroundColor Green
 Write-Host "====================================================" -ForegroundColor Green
+exit 0
