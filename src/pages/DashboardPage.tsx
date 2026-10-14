@@ -3,6 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import {
   ShieldAlert,
   ExternalLink,
+  Server,
+  AlertCircle
 } from 'lucide-react';
 import { useThreatData } from '../hooks/useThreatData';
 import { dataService } from '../services';
@@ -10,6 +12,8 @@ import { Logo } from '../components/common/Logo';
 import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
 import { ScorePill } from '../components/common/ScorePill';
+import { LoadingSpinner } from '../components/common/LoadingSpinner';
+import { EmptyState } from '../components/common/EmptyState';
 import { ThreatActivityChart } from '../components/charts/ThreatActivityChart';
 import { ThreatDistributionChart } from '../components/charts/ThreatDistributionChart';
 import { ScanMyPcCard } from '../components/agent/ScanMyPcCard';
@@ -104,16 +108,43 @@ export const DashboardPage: React.FC = () => {
 
   if (loading && !overview && !securityOverview) {
     return (
-      <div style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>
-        Loading PhantomTrace data...
-      </div>
+      <LoadingSpinner
+        label="Loading PhantomTrace Unified Threat Telemetry..."
+        size="lg"
+        fullHeight
+      />
     );
   }
 
   if (error && !overview && !securityOverview) {
     return (
-      <div style={{ padding: '2rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', borderRadius: '8px', color: '#fca5a5', textAlign: 'center' }}>
-        Unable to load PhantomTrace data.
+      <div
+        className="pt-card"
+        style={{
+          padding: '2.5rem',
+          border: '1px solid var(--pt-critical-border)',
+          background: 'var(--pt-critical-bg)',
+          textAlign: 'center',
+          color: '#fca5a5'
+        }}
+        role="alert"
+      >
+        <div style={{ display: 'inline-flex', padding: '0.75rem', borderRadius: '50%', background: 'rgba(239, 68, 68, 0.2)', marginBottom: '1rem' }}>
+          <AlertCircle size={32} className="text-critical" />
+        </div>
+        <h3 style={{ color: '#ffffff', fontSize: '1.2rem', marginBottom: '0.5rem', fontWeight: 700 }}>
+          Unable to Load PhantomTrace Telemetry
+        </h3>
+        <p style={{ color: 'var(--pt-text-secondary)', marginBottom: '1.5rem', maxWidth: '480px', margin: '0 auto 1.5rem auto' }}>
+          {error || 'Unable to establish connection with the PhantomTrace backend API. Please verify backend service status.'}
+        </p>
+        <button
+          type="button"
+          onClick={handleCombinedRefresh}
+          className="pt-btn pt-btn-secondary"
+        >
+          <span>Retry Connection</span>
+        </button>
       </div>
     );
   }
@@ -140,48 +171,58 @@ export const DashboardPage: React.FC = () => {
       <div
         className="pt-card pt-card-cyber"
         style={{
-          padding: '1.15rem 1.5rem',
+          padding: '1.25rem 1.75rem',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           flexWrap: 'wrap',
           gap: '1rem',
-          background: 'linear-gradient(135deg, rgba(16, 26, 46, 0.85) 0%, rgba(9, 15, 26, 0.95) 100%)',
+          background: 'linear-gradient(135deg, rgba(16, 26, 46, 0.9) 0%, rgba(9, 15, 26, 0.98) 100%)',
+          border: '1px solid var(--pt-border-cyan)'
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.15rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
           <Logo variant="dashboard" height={48} />
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.01em', margin: 0 }}>
-                Security Dashboard
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.015em', margin: 0 }}>
+                Security Operations Dashboard
               </h2>
-              <span className="pt-badge pt-badge-low" style={{ fontSize: '0.7rem' }}>
-                Security Monitor
-              </span>
+              <Badge level="low" size="sm">
+                Live Console
+              </Badge>
             </div>
-            <p style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '0.2rem' }}>
-              "Trace what others can't see." • Live Production Telemetry
+            <p style={{ fontSize: '0.82rem', color: 'var(--pt-text-muted)', marginTop: '0.25rem' }}>
+              &ldquo;Trace what others can&apos;t see.&rdquo; &bull; Memory &amp; Behavioral Threat Telemetry
             </p>
           </div>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Telemetry Source</div>
-            <div style={{ fontSize: '0.82rem', color: isRealScannerData ? '#10b981' : '#f59e0b', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem', justifyContent: 'flex-end' }}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: isRealScannerData ? '#10b981' : '#f59e0b', display: 'inline-block' }} />
+            <div style={{ fontSize: '0.7rem', color: 'var(--pt-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              Telemetry Source
+            </div>
+            <div style={{ fontSize: '0.84rem', color: isRealScannerData ? 'var(--pt-status-success)' : 'var(--pt-status-warning)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem', justifyContent: 'flex-end' }}>
+              <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: isRealScannerData ? 'var(--pt-status-success)' : 'var(--pt-status-warning)', display: 'inline-block' }} />
               {isRealScannerData ? 'Windows Scanner (Cloud)' : 'Cloud Connected'}
             </div>
           </div>
-          <div style={{ height: '28px', width: '1px', background: 'var(--pt-border-subtle)' }} />
+
+          <div style={{ height: '32px', width: '1px', background: 'var(--pt-border-subtle)' }} />
+
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Endpoint</div>
-            <div style={{ fontSize: '0.82rem', color: '#ffffff', fontWeight: 600 }}>
-              Windows PC
+            <div style={{ fontSize: '0.7rem', color: 'var(--pt-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              Endpoint
+            </div>
+            <div style={{ fontSize: '0.84rem', color: '#ffffff', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <Server size={13} className="text-cyan" />
+              <span>Windows PC</span>
             </div>
           </div>
-          <div style={{ height: '28px', width: '1px', background: 'var(--pt-border-subtle)' }} />
+
+          <div style={{ height: '32px', width: '1px', background: 'var(--pt-border-subtle)' }} />
+
           <DownloadAgentButton variant="cyber" size="sm" />
         </div>
       </div>
@@ -220,14 +261,14 @@ export const DashboardPage: React.FC = () => {
       {/* Recent Threat Alerts Summary Table */}
       <Card
         title={
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <ShieldAlert size={18} style={{ color: 'var(--pt-critical)' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <ShieldAlert size={18} className="text-critical" />
             <span>Recent Threat Alerts</span>
           </div>
         }
         subtitle="Click any alert to inspect memory structures, behavior lineage, and recommended investigation steps"
         action={
-          <Link to="/alerts" className="pt-btn pt-btn-cyber" style={{ padding: '0.35rem 0.85rem', fontSize: '0.78rem' }}>
+          <Link to="/alerts" className="pt-btn pt-btn-cyber pt-btn-sm">
             <span>View All Alerts ({alerts.length})</span>
             <ExternalLink size={13} />
           </Link>
@@ -252,8 +293,12 @@ export const DashboardPage: React.FC = () => {
             <tbody>
               {alerts.length === 0 ? (
                 <tr>
-                  <td colSpan={10} style={{ textAlign: 'center', padding: '2.5rem', color: '#64748b' }}>
-                    No elevated threat alerts detected in latest scan.
+                  <td colSpan={10} style={{ padding: '2rem 1rem' }}>
+                    <EmptyState
+                      variant="clean"
+                      title="No elevated threat alerts detected"
+                      description="All monitored processes and volatile memory regions are operating within verified forensic baselines."
+                    />
                   </td>
                 </tr>
               ) : (
@@ -263,7 +308,7 @@ export const DashboardPage: React.FC = () => {
                     className="clickable-row"
                     onClick={() => navigate(`/alerts/${alert.id}`)}
                   >
-                    <td className="text-mono" style={{ fontWeight: 600, color: '#00e5ff' }}>
+                    <td className="text-mono" style={{ fontWeight: 600, color: 'var(--pt-cyan)' }}>
                       {alert.pid}
                     </td>
                     <td style={{ fontWeight: 600, color: '#ffffff' }}>
@@ -278,16 +323,16 @@ export const DashboardPage: React.FC = () => {
                     <td>
                       <Badge level="neutral">{alert.application}</Badge>
                     </td>
-                    <td style={{ fontSize: '0.78rem', color: '#cbd5e1' }}>
+                    <td style={{ fontSize: '0.78rem', color: 'var(--pt-text-secondary)' }}>
                       {alert.scoreMode}
                     </td>
-                    <td className="text-mono" style={{ color: '#f97316', fontWeight: 600 }}>
+                    <td className="text-mono" style={{ color: 'var(--pt-status-high)', fontWeight: 600 }}>
                       {alert.behaviorScore ?? 0}
                     </td>
-                    <td className="text-mono" style={{ color: '#00e5ff', fontWeight: 600 }}>
+                    <td className="text-mono" style={{ color: 'var(--pt-cyan)', fontWeight: 600 }}>
                       {alert.memoryScore ?? 0}
                     </td>
-                    <td style={{ maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.78rem', color: '#94a3b8' }}>
+                    <td style={{ maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.78rem', color: 'var(--pt-text-muted)' }}>
                       {typeof alert.memoryEvidence === 'string'
                         ? alert.memoryEvidence
                         : alert.memoryEvidence?.details?.[0] || alert.memoryEvidence?.indicators?.[0] || 'None'}
@@ -299,7 +344,7 @@ export const DashboardPage: React.FC = () => {
                           e.stopPropagation();
                           navigate(`/alerts/${alert.id}`);
                         }}
-                        className="pt-btn pt-btn-cyber"
+                        className="pt-btn pt-btn-cyber pt-btn-sm"
                         style={{ padding: '0.25rem 0.6rem', fontSize: '0.72rem' }}
                       >
                         Investigate
@@ -321,3 +366,5 @@ export const DashboardPage: React.FC = () => {
     </div>
   );
 };
+
+export default DashboardPage;

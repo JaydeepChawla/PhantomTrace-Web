@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -8,139 +8,165 @@ import {
   FileText,
   Settings,
   ExternalLink,
-  Lock
+  Lock,
+  ShieldCheck,
+  X
 } from 'lucide-react';
 import { Logo } from '../common/Logo';
 
-interface SidebarProps {
+export interface SidebarProps {
   threatAlertsCount?: number;
+  isOpenMobile?: boolean;
+  onCloseMobile?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ threatAlertsCount = 6 }) => {
+export const Sidebar: React.FC<SidebarProps> = ({
+  threatAlertsCount = 6,
+  isOpenMobile = false,
+  onCloseMobile,
+}) => {
   const navItems = [
     { to: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
     {
       to: '/alerts',
       label: 'Threat Alerts',
       icon: <AlertTriangle size={18} />,
-      badge: threatAlertsCount > 0 ? threatAlertsCount : undefined
+      badge: threatAlertsCount > 0 ? threatAlertsCount : undefined,
     },
     { to: '/processes', label: 'Processes', icon: <Cpu size={18} /> },
     { to: '/history', label: 'Scan History', icon: <History size={18} /> },
     { to: '/reports', label: 'Reports', icon: <FileText size={18} /> },
+    { to: '/setup', label: 'Setup & Install', icon: <ShieldCheck size={18} /> },
     { to: '/settings', label: 'Settings', icon: <Settings size={18} /> },
   ];
 
+  // Close mobile drawer on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpenMobile && onCloseMobile) {
+        onCloseMobile();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpenMobile, onCloseMobile]);
+
+  const handleNavClick = () => {
+    if (isOpenMobile && onCloseMobile) {
+      onCloseMobile();
+    }
+  };
+
   return (
-    <aside className="pt-sidebar">
-      {/* Brand Header with Official Navbar Logo (Desktop) and App Icon (Mobile/Collapsed) */}
-      <div style={{ padding: '1.25rem 1.25rem 1rem 1.25rem', borderBottom: '1px solid var(--pt-border-subtle)' }}>
-        <NavLink to="/dashboard" style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column' }}>
-          <div className="pt-desktop-logo">
-            <Logo variant="navbar" height={36} />
-          </div>
-          <div className="pt-mobile-icon" style={{ display: 'none' }}>
-            <Logo variant="app" height={32} />
-          </div>
-        </NavLink>
-        <div
-          className="sidebar-tagline"
-          style={{
-            fontSize: '0.72rem',
-            color: '#64748b',
-            fontStyle: 'italic',
-            marginTop: '0.65rem',
-            paddingLeft: '0.2rem'
-          }}
-        >
-          "Trace what others can't see."
+    <aside
+      className={`pt-sidebar ${isOpenMobile ? 'pt-sidebar-mobile-open' : ''}`}
+      aria-label="Primary Navigation"
+    >
+      {/* Brand Header with Official Logo */}
+      <div className="pt-sidebar-header">
+        <div className="pt-sidebar-brand-row">
+          <NavLink
+            to="/dashboard"
+            onClick={handleNavClick}
+            className="pt-sidebar-brand-link"
+            title="PhantomTrace Dashboard"
+          >
+            <div className="pt-desktop-logo">
+              <Logo variant="navbar" height={34} />
+            </div>
+            <div className="pt-mobile-icon">
+              <Logo variant="app" height={32} />
+            </div>
+          </NavLink>
+
+          {/* Close button for mobile drawer */}
+          {isOpenMobile && onCloseMobile && (
+            <button
+              type="button"
+              className="pt-sidebar-close-btn"
+              onClick={onCloseMobile}
+              aria-label="Close navigation menu"
+            >
+              <X size={18} />
+            </button>
+          )}
+        </div>
+
+        <div className="sidebar-tagline pt-sidebar-tagline">
+          &ldquo;Trace what others can&apos;t see.&rdquo;
         </div>
       </div>
 
       {/* Navigation Links */}
-      <nav style={{ flex: 1, padding: '1rem 0.75rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-        <div style={{ fontSize: '0.68rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '0.5rem 0.75rem', fontWeight: 600 }}>
+      <nav className="pt-sidebar-nav" aria-label="Investigation Console Links">
+        <div className="pt-nav-section-title">
           Investigation Console
         </div>
 
-        {navItems.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            style={({ isActive }) => ({
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '0.65rem 0.85rem',
-              borderRadius: '6px',
-              fontSize: '0.86rem',
-              fontWeight: isActive ? 600 : 500,
-              color: isActive ? '#00e5ff' : '#94a3b8',
-              background: isActive ? 'rgba(0, 229, 255, 0.08)' : 'transparent',
-              border: isActive ? '1px solid rgba(0, 229, 255, 0.25)' : '1px solid transparent',
-              transition: 'all 0.15s ease',
-            })}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <span>{item.icon}</span>
-              <span className="nav-text">{item.label}</span>
-            </div>
-            {item.badge !== undefined && (
-              <span
-                style={{
-                  background: 'rgba(239, 68, 68, 0.2)',
-                  color: '#f87171',
-                  border: '1px solid rgba(239, 68, 68, 0.4)',
-                  fontSize: '0.7rem',
-                  fontWeight: 700,
-                  padding: '0.1rem 0.45rem',
-                  borderRadius: '10px',
-                  fontFamily: 'var(--font-mono)'
-                }}
+        <div className="pt-nav-list" role="list">
+          {navItems.map((item) => (
+            <div key={item.to} role="listitem">
+              <NavLink
+                to={item.to}
+                onClick={handleNavClick}
+                title={item.label}
+                aria-label={
+                  item.badge !== undefined
+                    ? `${item.label} (${item.badge} active alerts)`
+                    : item.label
+                }
+                className={({ isActive }) =>
+                  `pt-nav-item ${isActive ? 'pt-nav-item-active' : ''}`
+                }
               >
-                {item.badge}
-              </span>
-            )}
-          </NavLink>
-        ))}
+                <div className="pt-nav-item-content">
+                  <span className="pt-nav-icon" aria-hidden="true">
+                    {item.icon}
+                  </span>
+                  <span className="nav-text pt-nav-text">{item.label}</span>
+                </div>
 
-        <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid var(--pt-border-subtle)' }}>
+                {item.badge !== undefined && (
+                  <span
+                    className="pt-nav-badge"
+                    aria-label={`${item.badge} alerts`}
+                  >
+                    <span className="pt-nav-badge-pill">{item.badge}</span>
+                    <span className="pt-nav-badge-dot" aria-hidden="true" />
+                  </span>
+                )}
+              </NavLink>
+            </div>
+          ))}
+        </div>
+
+        {/* Secondary Navigation Section */}
+        <div className="pt-nav-secondary">
           <NavLink
             to="/"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-              padding: '0.65rem 0.85rem',
-              borderRadius: '6px',
-              fontSize: '0.82rem',
-              color: '#64748b',
-              transition: 'color 0.15s ease',
-            }}
+            onClick={handleNavClick}
+            className="pt-nav-secondary-item"
+            title="PhantomTrace Product Landing Page"
           >
-            <ExternalLink size={16} />
-            <span className="nav-text">Product Landing Page</span>
+            <ExternalLink size={16} aria-hidden="true" />
+            <span className="nav-text pt-nav-text">Product Landing Page</span>
           </NavLink>
         </div>
       </nav>
 
       {/* Read-Only Engine Status Footer */}
-      <div
-        style={{
-          padding: '1rem 1.15rem',
-          background: 'rgba(5, 9, 17, 0.7)',
-          borderTop: '1px solid var(--pt-border-subtle)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.45rem'
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', color: '#38bdf8', fontWeight: 600 }}>
-          <Lock size={13} style={{ color: '#00e5ff' }} />
-          <span className="sidebar-footer-text">Read-Only Engine: Active</span>
+      <div className="pt-sidebar-footer" title="Read-Only Security Engine Active">
+        <div className="pt-sidebar-footer-heading">
+          <span className="pt-sidebar-footer-icon" aria-hidden="true">
+            <Lock size={13} />
+          </span>
+          <span className="sidebar-footer-text pt-sidebar-footer-title">
+            Read-Only Engine: Active
+          </span>
         </div>
-        <div className="sidebar-footer-text" style={{ fontSize: '0.7rem', color: '#64748b' }}>
-          Zero state mutation • Forensic integrity preserved
+        <div className="sidebar-footer-text pt-sidebar-footer-subtext">
+          Zero state mutation &bull; Forensic integrity preserved
         </div>
       </div>
     </aside>

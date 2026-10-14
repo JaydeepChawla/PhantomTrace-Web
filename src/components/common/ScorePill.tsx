@@ -1,15 +1,17 @@
 import React from 'react';
 
-interface ScorePillProps {
+export interface ScorePillProps {
   score: number;
   size?: 'sm' | 'md' | 'lg';
   showLabel?: boolean;
+  className?: string;
 }
 
 export const ScorePill: React.FC<ScorePillProps> = ({
   score,
   size = 'md',
   showLabel = false,
+  className = '',
 }) => {
   let scoreClass = 'pt-score-clean';
   let label = 'Clean';
@@ -28,19 +30,19 @@ export const ScorePill: React.FC<ScorePillProps> = ({
     label = 'Low';
   }
 
-  const sizeStyles = {
-    sm: { fontSize: '0.75rem', padding: '0.12rem 0.45rem' },
-    md: { fontSize: '0.85rem', padding: '0.2rem 0.6rem' },
-    lg: { fontSize: '1.05rem', padding: '0.35rem 0.85rem' },
+  const sizeClass = {
+    sm: 'pt-score-sm',
+    md: 'pt-score-md',
+    lg: 'pt-score-lg',
   }[size];
 
   return (
-    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
-      <span className={`pt-score-pill ${scoreClass}`} style={sizeStyles}>
+    <div className={`pt-score-container ${className}`}>
+      <span className={`pt-score-pill ${scoreClass} ${sizeClass}`} aria-label={`Threat score: ${score} (${label})`}>
         {score}
       </span>
       {showLabel && (
-        <span style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>
+        <span className="pt-score-label">
           {label}
         </span>
       )}

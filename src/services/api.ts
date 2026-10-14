@@ -47,6 +47,13 @@ export const API_CONFIG = {
 };
 
 class PhantomTraceApiService {
+  getWebThreatStatus(): any {
+    throw new Error('Method not implemented.');
+  }
+  getWebThreatEvents(): any {
+    throw new Error('Method not implemented.');
+  }
+  dismissWebThreatEvent: any;
   /**
    * Fetch current scan overview metrics and global system risk state.
    */

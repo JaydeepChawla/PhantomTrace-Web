@@ -2,12 +2,17 @@ import React, { useState, useEffect } from 'react';
 import {
   Search,
   Calendar,
-  Lock
+  Lock,
+  History,
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react';
 import { dataService } from '../services';
 import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
 import { ScorePill } from '../components/common/ScorePill';
+import { LoadingSpinner } from '../components/common/LoadingSpinner';
+import { EmptyState } from '../components/common/EmptyState';
 import type { ScanHistory } from '../types';
 
 export const ScanHistoryPage: React.FC = () => {
@@ -17,10 +22,23 @@ export const ScanHistoryPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
 
+  const loadHistory = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await dataService.getScanHistory();
+      setHistory(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to load scan history');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     let cancelled = false;
 
-    async function loadHistory() {
+    async function initialLoad() {
       try {
         setLoading(true);
         setError(null);
@@ -39,7 +57,7 @@ export const ScanHistoryPage: React.FC = () => {
       }
     }
 
-    loadHistory();
+    initialLoad();
 
     return () => {
       cancelled = true;
@@ -69,24 +87,44 @@ export const ScanHistoryPage: React.FC = () => {
 
   if (loading && history.length === 0) {
     return (
-      <div style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>
-        Loading PhantomTrace data...
+      <div style={{ padding: '3rem 1rem' }}>
+        <LoadingSpinner message="Retrieving endpoint scan audit history..." size="lg" fullHeight />
       </div>
     );
   }
 
   if (error && history.length === 0) {
     return (
-      <div style={{ padding: '2rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', borderRadius: '8px', color: '#fca5a5', textAlign: 'center' }}>
-        Unable to load PhantomTrace data.
+      <div style={{ padding: '2rem 1rem' }}>
+        <EmptyState
+          icon={<AlertCircle size={44} style={{ color: 'var(--pt-critical)' }} />}
+          title="Unable to Load Scan History"
+          description={error}
+          action={
+            <button type="button" onClick={loadHistory} className="pt-btn pt-btn-primary">
+              <RefreshCw size={14} />
+              <span>Retry Query</span>
+            </button>
+          }
+        />
       </div>
     );
   }
 
   if (!loading && !error && history.length === 0) {
     return (
-      <div style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>
-        No scan data available.
+      <div style={{ padding: '2rem 1rem' }}>
+        <EmptyState
+          icon={<History size={44} style={{ color: 'var(--pt-text-muted)' }} />}
+          title="No Scan History Records"
+          description="Historical scan logs will populate here once the Windows agent completes memory inspection cycles."
+          action={
+            <button type="button" onClick={loadHistory} className="pt-btn pt-btn-secondary">
+              <RefreshCw size={14} />
+              <span>Refresh History</span>
+            </button>
+          }
+        />
       </div>
     );
   }
@@ -168,7 +206,25 @@ export const ScanHistoryPage: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredHistory.map((item) => (
+              {filteredHistory.length === 0 ? (
+                <tr>
+                  <td colSpan={10} style={{ padding: '2.5rem', textAlign: 'center' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                      <Search size={28} style={{ color: 'var(--pt-text-muted)' }} />
+                      <div style={{ color: 'var(--pt-text-secondary)', fontWeight: 600 }}>No scan cycles match current search or status filters</div>
+                      <button
+                        type="button"
+                        onClick={() => { setSearchTerm(''); setStatusFilter('ALL'); }}
+                        className="pt-btn pt-btn-secondary"
+                        style={{ marginTop: '0.5rem', fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}
+                      >
+                        Reset Filter
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredHistory.map((item) => (
                 <tr key={item.id}>
                   <td className="text-mono" style={{ fontWeight: 600, color: '#ffffff' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -213,7 +269,7 @@ export const ScanHistoryPage: React.FC = () => {
                     {getStatusBadge(item.status)}
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>

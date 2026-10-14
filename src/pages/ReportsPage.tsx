@@ -8,12 +8,15 @@ import {
   Layers,
   Lock,
   ShieldAlert,
-  RefreshCw
+  RefreshCw,
+  AlertCircle
 } from 'lucide-react';
 import { dataService } from '../services';
 import type { Report } from '../types';
 import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
+import { LoadingSpinner } from '../components/common/LoadingSpinner';
+import { EmptyState } from '../components/common/EmptyState';
 
 export const ReportsPage: React.FC = () => {
   const [reports, setReports] = useState<Report[]>([]);
@@ -38,10 +41,26 @@ export const ReportsPage: React.FC = () => {
     }
   };
 
+  const loadReports = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await dataService.getReports();
+      setReports(result);
+      if (result.length > 0) {
+        setSelectedReportId((prev) => (prev && result.some((r) => r.id === prev) ? prev : result[0].id));
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to load telemetry reports');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     let cancelled = false;
 
-    async function loadReports() {
+    async function initialLoad() {
       try {
         setLoading(true);
         setError(null);
@@ -63,7 +82,7 @@ export const ReportsPage: React.FC = () => {
       }
     }
 
-    loadReports();
+    initialLoad();
 
     return () => {
       cancelled = true;
@@ -96,24 +115,44 @@ export const ReportsPage: React.FC = () => {
 
   if (loading && reports.length === 0) {
     return (
-      <div style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>
-        Loading PhantomTrace data...
+      <div style={{ padding: '3rem 1rem' }}>
+        <LoadingSpinner message="Compiling forensic reports & artifact archives..." size="lg" fullHeight />
       </div>
     );
   }
 
   if (error && reports.length === 0) {
     return (
-      <div style={{ padding: '2rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', borderRadius: '8px', color: '#fca5a5', textAlign: 'center' }}>
-        Unable to load PhantomTrace data.
+      <div style={{ padding: '2rem 1rem' }}>
+        <EmptyState
+          icon={<AlertCircle size={44} style={{ color: 'var(--pt-critical)' }} />}
+          title="Unable to Load Telemetry Reports"
+          description={error}
+          action={
+            <button type="button" onClick={loadReports} className="pt-btn pt-btn-primary">
+              <RefreshCw size={14} />
+              <span>Retry Query</span>
+            </button>
+          }
+        />
       </div>
     );
   }
 
   if (!loading && !error && reports.length === 0) {
     return (
-      <div style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>
-        No scan data available.
+      <div style={{ padding: '2rem 1rem' }}>
+        <EmptyState
+          icon={<FileText size={44} style={{ color: 'var(--pt-text-muted)' }} />}
+          title="No Reports Generated Yet"
+          description="Reports will appear once scans are completed or when you trigger a unified SOC audit report."
+          action={
+            <button type="button" onClick={handleGenerateUnifiedReport} className="pt-btn pt-btn-primary">
+              <ShieldAlert size={14} />
+              <span>Generate Unified SOC Report</span>
+            </button>
+          }
+        />
       </div>
     );
   }

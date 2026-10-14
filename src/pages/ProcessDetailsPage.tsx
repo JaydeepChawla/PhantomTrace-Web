@@ -10,12 +10,15 @@ import {
   ShieldAlert,
   Lock,
   Copy,
-  Check
+  Check,
+  AlertCircle
 } from 'lucide-react';
 import { dataService } from '../services';
 import type { Process } from '../types';
 import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
+import { LoadingSpinner } from '../components/common/LoadingSpinner';
+import { EmptyState } from '../components/common/EmptyState';
 import { RecommendedResponseGuide } from '../components/response/RecommendedResponseGuide';
 
 export const ProcessDetailsPage: React.FC = () => {
@@ -64,33 +67,45 @@ export const ProcessDetailsPage: React.FC = () => {
   }, [numericPid]);
 
   if (loading && !currentProcess) {
-    return <div style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>Loading PhantomTrace data...</div>;
+    return (
+      <div style={{ padding: '3rem 1rem' }}>
+        <LoadingSpinner message={`Inspecting process memory space (PID ${pid || '...'})`} size="lg" fullHeight />
+      </div>
+    );
   }
 
   if (error) {
     return (
-      <div style={{ padding: '3rem', textAlign: 'center' }}>
-        <h3 style={{ color: '#ef4444', marginBottom: '1rem' }}>Unable to load PhantomTrace data.</h3>
-        <p style={{ color: '#94a3b8', marginBottom: '1.5rem' }}>{error}</p>
-        <Link to="/processes" className="pt-btn pt-btn-secondary">
-          <ArrowLeft size={16} />
-          <span>Back to Process Explorer</span>
-        </Link>
+      <div style={{ padding: '2rem 1rem' }}>
+        <EmptyState
+          icon={<AlertCircle size={44} style={{ color: 'var(--pt-critical)' }} />}
+          title="Unable to Load Process Telemetry"
+          description={error}
+          action={
+            <Link to="/processes" className="pt-btn pt-btn-secondary">
+              <ArrowLeft size={14} />
+              <span>Back to Process Explorer</span>
+            </Link>
+          }
+        />
       </div>
     );
   }
 
   if (!currentProcess) {
     return (
-      <div style={{ padding: '3rem', textAlign: 'center' }}>
-        <h3 style={{ color: '#ffffff', marginBottom: '1rem' }}>Process Not Found</h3>
-        <p style={{ color: '#94a3b8', marginBottom: '1.5rem' }}>
-          No active telemetry for PID {pid} was located in the current scan results.
-        </p>
-        <Link to="/processes" className="pt-btn pt-btn-secondary">
-          <ArrowLeft size={16} />
-          <span>Back to Process Explorer</span>
-        </Link>
+      <div style={{ padding: '2rem 1rem' }}>
+        <EmptyState
+          icon={<Cpu size={44} style={{ color: 'var(--pt-text-muted)' }} />}
+          title={`Process (PID: ${pid}) Not Found`}
+          description={`No active telemetry for PID ${pid} was located in the current host scan cycle.`}
+          action={
+            <Link to="/processes" className="pt-btn pt-btn-secondary">
+              <ArrowLeft size={14} />
+              <span>Back to Process Explorer</span>
+            </Link>
+          }
+        />
       </div>
     );
   }

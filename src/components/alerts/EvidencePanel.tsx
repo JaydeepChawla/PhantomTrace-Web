@@ -9,7 +9,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { Badge } from '../common/Badge';
-import { Card } from '../components/../common/Card';
+import { Card } from '../common/Card';
 import type {
   MemoryEvidence,
   BehaviorEvidence,

@@ -10,18 +10,26 @@ import {
   AlertTriangle,
   AlertCircle,
   CheckCircle2,
-  X
+  X,
+  Menu
 } from 'lucide-react';
 import { Logo } from '../common/Logo';
 import { dataService } from '../../services';
 import type { CloudConnectionStatus } from '../../services';
 
-interface HeaderProps {
+export interface HeaderProps {
   onRefresh?: () => Promise<void> | void;
   isRefreshing?: boolean;
+  isMobileNavOpen?: boolean;
+  onToggleMobileNav?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onRefresh, isRefreshing = false }) => {
+export const Header: React.FC<HeaderProps> = ({
+  onRefresh,
+  isRefreshing = false,
+  isMobileNavOpen = false,
+  onToggleMobileNav,
+}) => {
   const location = useLocation();
   const [currentTime, setCurrentTime] = useState<Date>(() => new Date());
   const [cloudStatus, setCloudStatus] = useState<CloudConnectionStatus>("API Offline");
@@ -76,10 +84,11 @@ export const Header: React.FC<HeaderProps> = ({ onRefresh, isRefreshing = false 
     if (pathname === '/alerts') return 'Threat Alerts & Detections';
     if (pathname.startsWith('/processes/')) return 'Forensic Process Inspection';
     if (pathname === '/processes') return 'Active Process Explorer';
-    if (pathname === '/history') return 'Historical Scan Cycles';
+    if (pathname === '/history' || pathname === '/scan-history') return 'Historical Scan Cycles';
     if (pathname === '/reports') return 'Telemetry Reports & Export';
     if (pathname === '/settings') return 'Platform & Scanner Configuration';
-    return 'Console';
+    if (pathname === '/setup' || pathname === '/onboarding' || pathname === '/download') return 'Agent Installation & Setup';
+    return 'Investigation Console';
   };
 
   const handleSync = async () => {
@@ -125,47 +134,46 @@ export const Header: React.FC<HeaderProps> = ({ onRefresh, isRefreshing = false 
   };
 
   return (
-    <div style={{ position: 'sticky', top: 0, zIndex: 30, width: '100%' }}>
-      <header className="pt-header">
-        {/* Page Title & Breadcrumb */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <h1 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#ffffff', letterSpacing: '-0.01em', margin: 0 }}>
-            {getPageTitle(location.pathname)}
-          </h1>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(0, 229, 255, 0.06)', padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.74rem', color: '#38bdf8', border: '1px solid rgba(0, 229, 255, 0.15)' }}>
-            <Server size={12} style={{ color: '#00e5ff' }} />
-            <span>Windows PC</span>
+    <div className="pt-header-sticky-wrapper">
+      <header className="pt-header" aria-label="Console Application Header">
+        {/* Left Section: Mobile Menu Button + Page Title + Context Chip */}
+        <div className="pt-header-left">
+          {onToggleMobileNav && (
+            <button
+              type="button"
+              className="pt-header-menu-btn"
+              onClick={onToggleMobileNav}
+              aria-label={isMobileNavOpen ? "Close navigation menu" : "Open navigation menu"}
+              aria-expanded={isMobileNavOpen}
+              aria-controls="primary-navigation"
+            >
+              {isMobileNavOpen ? <X size={20} aria-hidden="true" /> : <Menu size={20} aria-hidden="true" />}
+            </button>
+          )}
+
+          <div className="pt-header-title-group">
+            <h1 className="pt-header-title">
+              {getPageTitle(location.pathname)}
+            </h1>
+
+            <div className="pt-header-endpoint-chip" title="Active Target Endpoint">
+              <Server size={12} className="text-cyan" aria-hidden="true" />
+              <span>Windows PC</span>
+            </div>
           </div>
         </div>
 
-        {/* Header Badges & Actions */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+        {/* Right Section: Badges, Live Clock, Sync, Endpoint Identity */}
+        <div className="pt-header-actions">
           {/* Cloud Status Indicator */}
           <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              padding: '0.22rem 0.55rem',
-              borderRadius: '4px',
-              background: cloudStatus === 'Cloud Connected'
-                ? 'rgba(16, 185, 129, 0.08)'
+            className={`pt-cloud-badge pt-cloud-badge-${
+              cloudStatus === 'Cloud Connected'
+                ? 'connected'
                 : cloudStatus === 'Cloud Not Configured'
-                ? 'rgba(245, 158, 11, 0.08)'
-                : 'rgba(239, 68, 68, 0.08)',
-              border: cloudStatus === 'Cloud Connected'
-                ? '1px solid rgba(16, 185, 129, 0.25)'
-                : cloudStatus === 'Cloud Not Configured'
-                ? '1px solid rgba(245, 158, 11, 0.25)'
-                : '1px solid rgba(239, 68, 68, 0.25)',
-              fontSize: '0.72rem',
-              color: cloudStatus === 'Cloud Connected'
-                ? '#6ee7b7'
-                : cloudStatus === 'Cloud Not Configured'
-                ? '#fcd34d'
-                : '#fca5a5',
-              fontWeight: 600
-            }}
+                ? 'unconfigured'
+                : 'offline'
+            }`}
             title={
               cloudStatus === 'Cloud Connected'
                 ? 'Cloud Connected: Backend API is live with PostgreSQL/Supabase'
@@ -173,112 +181,81 @@ export const Header: React.FC<HeaderProps> = ({ onRefresh, isRefreshing = false 
                 ? 'Cloud sync is not configured yet.'
                 : 'Sync unavailable — API connection could not be established.'
             }
+            role="status"
           >
             {cloudStatus === 'Cloud Connected' ? (
-              <Cloud size={12} style={{ color: '#10b981' }} />
+              <Cloud size={13} className="pt-cloud-icon text-success" aria-hidden="true" />
             ) : cloudStatus === 'Cloud Not Configured' ? (
-              <CloudOff size={12} style={{ color: '#f59e0b' }} />
+              <CloudOff size={13} className="pt-cloud-icon text-warning" aria-hidden="true" />
             ) : (
-              <WifiOff size={12} style={{ color: '#ef4444' }} />
+              <WifiOff size={13} className="pt-cloud-icon text-critical" aria-hidden="true" />
             )}
-            <span>{cloudStatus}</span>
+            <span className="pt-cloud-text">{cloudStatus}</span>
           </div>
 
           {/* Dynamic Local Clock */}
           <div
-            style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', color: '#94a3b8' }}
+            className="pt-header-clock"
             title="Local System Time"
+            aria-label={`Current system time: ${formattedTime}`}
           >
-            <Clock size={13} style={{ color: '#00e5ff' }} />
-            <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 500, color: '#e2e8f0' }}>
-              {formattedTime}
-            </span>
+            <Clock size={13} className="text-cyan" aria-hidden="true" />
+            <span className="pt-header-clock-time">{formattedTime}</span>
           </div>
 
           {/* Sync Action Button */}
           <button
+            type="button"
             onClick={handleSync}
             disabled={isSyncing || isRefreshing}
-            className="pt-btn pt-btn-secondary"
-            style={{
-              padding: '0.35rem 0.75rem',
-              fontSize: '0.78rem',
-              cursor: (isSyncing || isRefreshing) ? 'not-allowed' : 'pointer',
-              opacity: (isSyncing || isRefreshing) ? 0.75 : 1,
-            }}
+            className="pt-btn pt-btn-secondary pt-header-sync-btn"
             title="Synchronize telemetry with PhantomTrace API"
+            aria-busy={isSyncing || isRefreshing}
           >
-            <RefreshCw size={13} className={(isSyncing || isRefreshing) ? 'pt-spin' : ''} />
-            <span>{isSyncing ? 'Syncing...' : 'Sync'}</span>
+            <RefreshCw
+              size={13}
+              className={(isSyncing || isRefreshing) ? 'pt-spin' : ''}
+              aria-hidden="true"
+            />
+            <span className="pt-sync-label">{isSyncing ? 'Syncing...' : 'Sync'}</span>
           </button>
 
           {/* Endpoint Identity Badge with Official App Icon */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', paddingLeft: '0.5rem', borderLeft: '1px solid var(--pt-border-subtle)' }}>
+          <div className="pt-header-identity" title="Protected Windows Endpoint">
             <Logo variant="app" height={28} />
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#f8fafc', lineHeight: 1.1 }}>
-                Windows PC
-              </span>
-              <span style={{ fontSize: '0.68rem', color: '#10b981', fontWeight: 500 }}>
-                Protected
-              </span>
+            <div className="pt-header-identity-text">
+              <span className="pt-identity-name">Windows PC</span>
+              <span className="pt-identity-status">Protected</span>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Requirements 5 & 6: Sync Notification Banner */}
+      {/* Sync Notification Banner */}
       {syncNotification && (
         <div
-          style={{
-            padding: '0.45rem 1.5rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            background:
-              syncNotification.type === 'success'
-                ? 'rgba(6, 78, 59, 0.95)'
-                : syncNotification.type === 'warning'
-                ? 'rgba(120, 53, 15, 0.95)'
-                : 'rgba(127, 29, 29, 0.95)',
-            borderBottom: `1px solid ${
-              syncNotification.type === 'success'
-                ? 'rgba(16, 185, 129, 0.4)'
-                : syncNotification.type === 'warning'
-                ? 'rgba(245, 158, 11, 0.4)'
-                : 'rgba(239, 68, 68, 0.4)'
-            }`,
-            backdropFilter: 'blur(8px)',
-            color: '#ffffff',
-            fontSize: '0.8rem',
-            animation: 'fadeIn 0.2s ease',
-          }}
+          className={`pt-sync-notification pt-sync-notification-${syncNotification.type}`}
+          role="status"
+          aria-live="polite"
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div className="pt-sync-notification-content">
             {syncNotification.type === 'success' ? (
-              <CheckCircle2 size={15} style={{ color: '#34d399', flexShrink: 0 }} />
+              <CheckCircle2 size={15} className="text-success" aria-hidden="true" />
             ) : syncNotification.type === 'warning' ? (
-              <AlertTriangle size={15} style={{ color: '#fbbf24', flexShrink: 0 }} />
+              <AlertTriangle size={15} className="text-warning" aria-hidden="true" />
             ) : (
-              <AlertCircle size={15} style={{ color: '#f87171', flexShrink: 0 }} />
+              <AlertCircle size={15} className="text-critical" aria-hidden="true" />
             )}
-            <span style={{ fontWeight: 500 }}>{syncNotification.message}</span>
+            <span className="pt-sync-notification-message">{syncNotification.message}</span>
           </div>
           <button
+            type="button"
             onClick={() => setSyncNotification(null)}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: '#ffffff',
-              cursor: 'pointer',
-              padding: '0.2rem',
-              display: 'flex',
-              alignItems: 'center',
-              opacity: 0.8,
-            }}
+            className="pt-sync-notification-close"
             title="Dismiss notice"
+            aria-label="Dismiss notification"
           >
-            <X size={14} />
+            <X size={14} aria-hidden="true" />
           </button>
         </div>
       )}

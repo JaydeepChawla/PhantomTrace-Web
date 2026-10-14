@@ -3,12 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import {
   Search,
   ArrowUpDown,
-  Lock
+  Lock,
+  Cpu,
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react';
 import { dataService } from '../services';
 import { Badge } from '../components/common/Badge';
 import { ScorePill } from '../components/common/ScorePill';
 import { Card } from '../components/common/Card';
+import { LoadingSpinner } from '../components/common/LoadingSpinner';
+import { EmptyState } from '../components/common/EmptyState';
 import type { Process } from '../types';
 
 export const ProcessesPage: React.FC = () => {
@@ -17,10 +22,23 @@ export const ProcessesPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const loadProcesses = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await dataService.getProcesses();
+      setProcesses(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to load PhantomTrace data.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     let cancelled = false;
 
-    async function loadProcesses() {
+    async function initialLoad() {
       try {
         setLoading(true);
         setError(null);
@@ -39,7 +57,7 @@ export const ProcessesPage: React.FC = () => {
       }
     }
 
-    loadProcesses();
+    initialLoad();
 
     return () => {
       cancelled = true;
@@ -88,24 +106,44 @@ export const ProcessesPage: React.FC = () => {
 
   if (loading && processes.length === 0) {
     return (
-      <div style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>
-        Loading PhantomTrace data...
+      <div style={{ padding: '3rem 1rem' }}>
+        <LoadingSpinner message="Enumerating active host processes & memory indicators..." size="lg" fullHeight />
       </div>
     );
   }
 
   if (error && processes.length === 0) {
     return (
-      <div style={{ padding: '2rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', borderRadius: '8px', color: '#fca5a5', textAlign: 'center' }}>
-        Unable to load PhantomTrace data.
+      <div style={{ padding: '2rem 1rem' }}>
+        <EmptyState
+          icon={<AlertCircle size={44} style={{ color: 'var(--pt-critical)' }} />}
+          title="Unable to Load Process Data"
+          description={error}
+          action={
+            <button type="button" onClick={loadProcesses} className="pt-btn pt-btn-primary">
+              <RefreshCw size={14} />
+              <span>Retry Query</span>
+            </button>
+          }
+        />
       </div>
     );
   }
 
   if (!loading && !error && processes.length === 0) {
     return (
-      <div style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>
-        No scan data available.
+      <div style={{ padding: '2rem 1rem' }}>
+        <EmptyState
+          icon={<Cpu size={44} style={{ color: 'var(--pt-text-muted)' }} />}
+          title="No Active Processes Enumerated"
+          description="No process records were returned by the telemetry engine. Ensure the Windows agent has executed an initial scan cycle."
+          action={
+            <button type="button" onClick={loadProcesses} className="pt-btn pt-btn-secondary">
+              <RefreshCw size={14} />
+              <span>Refresh Process List</span>
+            </button>
+          }
+        />
       </div>
     );
   }
@@ -215,7 +253,25 @@ export const ProcessesPage: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredProcesses.map((proc) => (
+              {filteredProcesses.length === 0 ? (
+                <tr>
+                  <td colSpan={10} style={{ padding: '2.5rem', textAlign: 'center' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                      <Search size={28} style={{ color: 'var(--pt-text-muted)' }} />
+                      <div style={{ color: 'var(--pt-text-secondary)', fontWeight: 600 }}>No processes matching current filters</div>
+                      <button
+                        type="button"
+                        onClick={() => { setSearchTerm(''); setLevelFilter('ALL'); }}
+                        className="pt-btn pt-btn-secondary"
+                        style={{ marginTop: '0.5rem', fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}
+                      >
+                        Clear Filters
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredProcesses.map((proc) => (
                 <tr
                   key={proc.pid}
                   className="clickable-row"
@@ -284,7 +340,7 @@ export const ProcessesPage: React.FC = () => {
                     </button>
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>

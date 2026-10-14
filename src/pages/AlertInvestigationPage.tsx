@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, AlertCircle } from 'lucide-react';
 import { dataService } from '../services';
 import { AlertInvestigation } from '../components/alerts/AlertInvestigation';
+import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import type { ThreatAlert } from '../types';
 
 export const AlertInvestigationPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
 
   const [alert, setAlert] = useState<ThreatAlert | null>(null);
   const [loading, setLoading] = useState(true);
@@ -32,7 +32,7 @@ export const AlertInvestigationPage: React.FC = () => {
             const webEvents = await dataService.getWebThreatEvents();
             const match = webEvents.find((w) => w.id === id);
             if (match) {
-              let correlatedProc: any;
+              let correlatedProc: { pid?: number; name?: string } | undefined;
               if (dataService.getCorrelatedThreatEvents) {
                 try {
                   const corrs = await dataService.getCorrelatedThreatEvents();
@@ -49,18 +49,20 @@ export const AlertInvestigationPage: React.FC = () => {
                 process: match.domain,
                 processName: match.domain,
                 score: match.score,
-                level: match.severity as any,
-                threatLevel: match.severity as any,
-                scoreMode: 'BEHAVIOR_ONLY' as any,
+                level: match.severity as ThreatAlert['level'],
+                threatLevel: match.severity as ThreatAlert['threatLevel'],
+                scoreMode: 'BEHAVIOR_ONLY',
                 title: `Web Threat: ${match.domain} (${match.classification})`,
                 description: match.explanation,
                 detectedAt: match.timestamp,
                 timestamp: match.timestamp,
-                status: (match.status as any) || 'NEW',
+                status: (match.status as unknown as ThreatAlert['status']) || 'NEW',
                 indicators: [match.classification, match.detectionSource, match.ruleId].filter(Boolean) as string[],
                 recommendedActions: [
                   `Examine browser navigation to ${match.domain}.`,
-                  correlatedProc ? `Heuristic correlation: Active browser process ${correlatedProc.name} (PID ${correlatedProc.pid}) detected on endpoint during scan window (indicates temporal presence, not proof of URL execution).` : 'Inspect active browser instance on endpoint.',
+                  correlatedProc
+                    ? `Heuristic correlation: Active browser process ${correlatedProc.name} (PID ${correlatedProc.pid}) detected on endpoint during scan window (indicates temporal presence, not proof of URL execution).`
+                    : 'Inspect active browser instance on endpoint.',
                   `Enforce immediate BLOCK policy rule for ${match.domain}.`,
                   'Verify whether credential entry or file download occurred during the session.'
                 ]
@@ -100,21 +102,27 @@ export const AlertInvestigationPage: React.FC = () => {
       } else if (dataService.updateAlertStatus) {
         await dataService.updateAlertStatus(id, newStatus);
       }
-      setAlert((prev) => prev ? { ...prev, status: newStatus } : null);
+      setAlert((prev) => (prev ? { ...prev, status: newStatus } : null));
     } catch (err) {
       console.error('Failed to update alert status:', err);
     }
   };
 
   if (loading && !alert) {
-    return <div style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>Loading Threat Alert Telemetry...</div>;
+    return (
+      <LoadingSpinner
+        label="Loading Forensic Threat Alert Telemetry..."
+        size="lg"
+        fullHeight
+      />
+    );
   }
 
   if (error) {
     return (
-      <div style={{ padding: '3rem', textAlign: 'center' }}>
-        <h3 style={{ color: '#ef4444', marginBottom: '1rem' }}>Alert Investigation Error</h3>
-        <p style={{ color: '#94a3b8', marginBottom: '1.5rem' }}>{error}</p>
+      <div className="pt-card" style={{ padding: '3rem', textAlign: 'center', border: '1px solid var(--pt-critical-border)', background: 'var(--pt-critical-bg)' }}>
+        <h3 style={{ color: '#ffffff', marginBottom: '1rem', fontWeight: 700 }}>Alert Investigation Error</h3>
+        <p style={{ color: 'var(--pt-text-secondary)', marginBottom: '1.5rem', maxWidth: '500px', margin: '0 auto 1.5rem auto' }}>{error}</p>
         <Link to="/alerts" className="pt-btn pt-btn-secondary">
           <ArrowLeft size={16} />
           <span>Back to Threat Alerts</span>
@@ -125,13 +133,13 @@ export const AlertInvestigationPage: React.FC = () => {
 
   if (!alert) {
     return (
-      <div style={{ padding: '3rem', textAlign: 'center' }}>
-        <div style={{ display: 'inline-flex', padding: '1rem', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '50%', marginBottom: '1rem' }}>
-          <AlertCircle size={32} style={{ color: '#ef4444' }} />
+      <div className="pt-card" style={{ padding: '3rem', textAlign: 'center' }}>
+        <div style={{ display: 'inline-flex', padding: '1rem', background: 'rgba(239, 68, 68, 0.15)', borderRadius: '50%', marginBottom: '1rem' }}>
+          <AlertCircle size={32} className="text-critical" />
         </div>
-        <h3 style={{ color: '#ffffff', marginBottom: '0.5rem' }}>Threat Alert Not Found</h3>
-        <p style={{ color: '#94a3b8', marginBottom: '1.5rem' }}>
-          No active telemetry for Alert ID <span className="text-mono" style={{ color: '#00e5ff' }}>{id}</span> was located in current scan records.
+        <h3 style={{ color: '#ffffff', marginBottom: '0.5rem', fontWeight: 700 }}>Threat Alert Not Found</h3>
+        <p style={{ color: 'var(--pt-text-muted)', marginBottom: '1.5rem', maxWidth: '440px', margin: '0 auto 1.5rem auto' }}>
+          No active telemetry for Alert ID <span className="text-mono" style={{ color: 'var(--pt-cyan)' }}>{id}</span> was located in current scan records.
         </p>
         <Link to="/alerts" className="pt-btn pt-btn-secondary">
           <ArrowLeft size={16} />
@@ -145,7 +153,8 @@ export const AlertInvestigationPage: React.FC = () => {
     <AlertInvestigation
       alert={alert}
       onStatusChange={handleStatusChange}
-      onBack={() => navigate('/alerts')}
     />
   );
 };
+
+export default AlertInvestigationPage;

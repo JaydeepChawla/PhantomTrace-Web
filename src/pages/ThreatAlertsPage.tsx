@@ -7,12 +7,15 @@ import {
   Lock,
   Globe,
   Cpu,
-  Layers
+  Layers,
+  AlertCircle
 } from 'lucide-react';
 import { dataService } from '../services';
 import { Badge } from '../components/common/Badge';
 import { ScorePill } from '../components/common/ScorePill';
 import { Card } from '../components/common/Card';
+import { LoadingSpinner } from '../components/common/LoadingSpinner';
+import { EmptyState } from '../components/common/EmptyState';
 import type { UnifiedThreatAlert } from '../types';
 
 export const ThreatAlertsPage: React.FC = () => {
@@ -41,7 +44,7 @@ export const ThreatAlertsPage: React.FC = () => {
             targetDetail: `PID ${a.pid}`,
             level: a.level,
             score: a.score,
-            status: (a.status as any) || 'NEW',
+            status: ((a.status as unknown) as 'NEW') || 'NEW',
             timestamp: a.detectedAt || new Date().toISOString(),
             indicators: [
               ...(a.memoryEvidence?.indicators || []),
@@ -137,16 +140,36 @@ export const ThreatAlertsPage: React.FC = () => {
 
   if (loading && alerts.length === 0) {
     return (
-      <div style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>
-        Loading PhantomTrace Unified Threat Telemetry...
-      </div>
+      <LoadingSpinner
+        label="Loading PhantomTrace Unified Threat Telemetry..."
+        size="lg"
+        fullHeight
+      />
     );
   }
 
   if (error && alerts.length === 0) {
     return (
-      <div style={{ padding: '2rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', borderRadius: '8px', color: '#fca5a5', textAlign: 'center' }}>
-        Unable to load PhantomTrace threat alerts: {error}
+      <div
+        className="pt-card"
+        style={{
+          padding: '2.5rem',
+          border: '1px solid var(--pt-critical-border)',
+          background: 'var(--pt-critical-bg)',
+          textAlign: 'center',
+          color: '#fca5a5'
+        }}
+        role="alert"
+      >
+        <div style={{ display: 'inline-flex', padding: '0.75rem', borderRadius: '50%', background: 'rgba(239, 68, 68, 0.2)', marginBottom: '1rem' }}>
+          <AlertCircle size={32} className="text-critical" />
+        </div>
+        <h3 style={{ color: '#ffffff', fontSize: '1.2rem', marginBottom: '0.5rem', fontWeight: 700 }}>
+          Unable to Load Threat Alerts
+        </h3>
+        <p style={{ color: 'var(--pt-text-secondary)', marginBottom: '1.5rem', maxWidth: '480px', margin: '0 auto 1.5rem auto' }}>
+          {error}
+        </p>
       </div>
     );
   }
@@ -156,20 +179,23 @@ export const ThreatAlertsPage: React.FC = () => {
       {/* Header Info Banner */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
             <h2 style={{ fontSize: '1.35rem', fontWeight: 700, color: '#ffffff', letterSpacing: '-0.01em', margin: 0 }}>
               Unified Threat Alerts
             </h2>
+            <Badge level="critical" size="sm">
+              Live Triage
+            </Badge>
           </div>
-          <p style={{ fontSize: '0.82rem', color: '#94a3b8', marginTop: '0.2rem' }}>
+          <p style={{ fontSize: '0.82rem', color: 'var(--pt-text-muted)', marginTop: '0.2rem' }}>
             Correlated triage stream combining Endpoint Memory anomalies and Web Threat Monitor detections
           </p>
         </div>
 
         {/* Read-Only Safety Assurance */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(0, 229, 255, 0.08)', border: '1px solid rgba(0, 229, 255, 0.25)', padding: '0.4rem 0.85rem', borderRadius: '6px', fontSize: '0.78rem', color: '#38bdf8' }}>
-          <Lock size={14} style={{ color: '#00e5ff' }} />
-          <span>Non-destructive inspection • Read-only evidence preservation</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(0, 209, 255, 0.08)', border: '1px solid var(--pt-border-cyan)', padding: '0.4rem 0.85rem', borderRadius: '6px', fontSize: '0.78rem', color: '#38bdf8' }}>
+          <Lock size={14} className="text-cyan" />
+          <span>Non-destructive inspection &bull; Read-only evidence preservation</span>
         </div>
       </div>
 
@@ -178,8 +204,9 @@ export const ThreatAlertsPage: React.FC = () => {
         style={{
           display: 'flex',
           gap: '0.5rem',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+          borderBottom: '1px solid var(--pt-border-subtle)',
           paddingBottom: '0.5rem',
+          flexWrap: 'wrap'
         }}
       >
         <button
@@ -191,12 +218,13 @@ export const ThreatAlertsPage: React.FC = () => {
             fontSize: '0.82rem',
             fontWeight: 600,
             cursor: 'pointer',
-            border: 'none',
-            background: vectorFilter === 'ALL' ? 'rgba(0, 229, 255, 0.15)' : 'transparent',
-            color: vectorFilter === 'ALL' ? '#00e5ff' : '#94a3b8',
+            border: vectorFilter === 'ALL' ? '1px solid var(--pt-border-cyan)' : '1px solid transparent',
+            background: vectorFilter === 'ALL' ? 'rgba(0, 209, 255, 0.12)' : 'transparent',
+            color: vectorFilter === 'ALL' ? 'var(--pt-cyan)' : 'var(--pt-text-muted)',
             display: 'flex',
             alignItems: 'center',
             gap: '0.45rem',
+            transition: 'all 0.15s ease'
           }}
         >
           <Layers size={14} />
@@ -212,12 +240,13 @@ export const ThreatAlertsPage: React.FC = () => {
             fontSize: '0.82rem',
             fontWeight: 600,
             cursor: 'pointer',
-            border: 'none',
-            background: vectorFilter === 'ENDPOINT_MEMORY' ? 'rgba(6, 182, 212, 0.2)' : 'transparent',
-            color: vectorFilter === 'ENDPOINT_MEMORY' ? '#38bdf8' : '#94a3b8',
+            border: vectorFilter === 'ENDPOINT_MEMORY' ? '1px solid rgba(6, 182, 212, 0.4)' : '1px solid transparent',
+            background: vectorFilter === 'ENDPOINT_MEMORY' ? 'rgba(6, 182, 212, 0.15)' : 'transparent',
+            color: vectorFilter === 'ENDPOINT_MEMORY' ? '#38bdf8' : 'var(--pt-text-muted)',
             display: 'flex',
             alignItems: 'center',
             gap: '0.45rem',
+            transition: 'all 0.15s ease'
           }}
         >
           <Cpu size={14} />
@@ -233,12 +262,13 @@ export const ThreatAlertsPage: React.FC = () => {
             fontSize: '0.82rem',
             fontWeight: 600,
             cursor: 'pointer',
-            border: 'none',
-            background: vectorFilter === 'WEB_THREAT' ? 'rgba(168, 85, 247, 0.2)' : 'transparent',
-            color: vectorFilter === 'WEB_THREAT' ? '#c084fc' : '#94a3b8',
+            border: vectorFilter === 'WEB_THREAT' ? '1px solid rgba(168, 85, 247, 0.4)' : '1px solid transparent',
+            background: vectorFilter === 'WEB_THREAT' ? 'rgba(168, 85, 247, 0.15)' : 'transparent',
+            color: vectorFilter === 'WEB_THREAT' ? '#c084fc' : 'var(--pt-text-muted)',
             display: 'flex',
             alignItems: 'center',
             gap: '0.45rem',
+            transition: 'all 0.15s ease'
           }}
         >
           <Globe size={14} />
@@ -260,7 +290,7 @@ export const ThreatAlertsPage: React.FC = () => {
       >
         {/* Search Input */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: '240px' }}>
-          <Search size={16} style={{ color: '#64748b' }} />
+          <Search size={16} style={{ color: 'var(--pt-text-muted)' }} />
           <input
             type="text"
             placeholder="Search by target domain, process PID, indicators, or keyword..."
@@ -273,11 +303,12 @@ export const ThreatAlertsPage: React.FC = () => {
 
         {/* Level Filter */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: 600 }}>Severity:</span>
+          <span style={{ fontSize: '0.78rem', color: 'var(--pt-text-muted)', fontWeight: 600 }}>Severity:</span>
           <select
             value={levelFilter}
             onChange={(e) => setLevelFilter(e.target.value)}
             className="pt-select"
+            style={{ minWidth: '130px' }}
           >
             <option value="ALL">All Severities</option>
             <option value="CRITICAL">Critical</option>
@@ -290,11 +321,12 @@ export const ThreatAlertsPage: React.FC = () => {
 
         {/* Status Filter */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: 600 }}>Status:</span>
+          <span style={{ fontSize: '0.78rem', color: 'var(--pt-text-muted)', fontWeight: 600 }}>Status:</span>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="pt-select"
+            style={{ minWidth: '130px' }}
           >
             <option value="ALL">All Statuses</option>
             <option value="NEW">New</option>
@@ -308,14 +340,14 @@ export const ThreatAlertsPage: React.FC = () => {
         {/* Reset */}
         {(searchTerm || levelFilter !== 'ALL' || statusFilter !== 'ALL' || vectorFilter !== 'ALL') && (
           <button
+            type="button"
             onClick={() => {
               setSearchTerm('');
               setLevelFilter('ALL');
               setStatusFilter('ALL');
               setVectorFilter('ALL');
             }}
-            className="pt-btn pt-btn-secondary"
-            style={{ padding: '0.45rem 0.85rem', fontSize: '0.78rem' }}
+            className="pt-btn pt-btn-secondary pt-btn-sm"
           >
             Reset Filters
           </button>
@@ -324,9 +356,9 @@ export const ThreatAlertsPage: React.FC = () => {
 
       {/* Threat Alerts Table */}
       <Card>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem', fontSize: '0.8rem', color: '#94a3b8' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem', fontSize: '0.8rem', color: 'var(--pt-text-muted)' }}>
           <span>Showing <strong>{filteredAlerts.length}</strong> matching threat alerts</span>
-          <span>Click any row or Investigate button to triage forensic evidence</span>
+          <span>Click any row or Triage button to inspect forensic evidence</span>
         </div>
 
         <div className="pt-table-container">
@@ -361,8 +393,12 @@ export const ThreatAlertsPage: React.FC = () => {
             <tbody>
               {filteredAlerts.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: 'center', padding: '2.5rem', color: '#94a3b8' }}>
-                    No threat alerts matching selected filters.
+                  <td colSpan={8} style={{ padding: '2rem 1rem' }}>
+                    <EmptyState
+                      variant="info"
+                      title="No threat alerts matching selected filters"
+                      description="Try adjusting your search terms, vector filter, or severity filters to view additional security findings."
+                    />
                   </td>
                 </tr>
               ) : (
@@ -372,7 +408,7 @@ export const ThreatAlertsPage: React.FC = () => {
                     <tr
                       key={alert.id}
                       onClick={() => navigate(`/alerts/${alert.id}`)}
-                      style={{ cursor: 'pointer' }}
+                      className="clickable-row"
                     >
                       {/* Vector Column */}
                       <td>
@@ -399,17 +435,17 @@ export const ThreatAlertsPage: React.FC = () => {
                       {/* Target Column */}
                       <td>
                         <div>
-                          <div style={{ fontWeight: 600, color: '#ffffff', fontFamily: isMemory ? 'var(--font-mono)' : 'sans-serif' }}>
+                          <div style={{ fontWeight: 600, color: '#ffffff', fontFamily: isMemory ? 'var(--font-mono)' : 'inherit' }}>
                             {alert.targetName}
                           </div>
-                          <div style={{ fontSize: '0.74rem', color: '#94a3b8', marginTop: '1px' }}>
+                          <div style={{ fontSize: '0.74rem', color: 'var(--pt-text-muted)', marginTop: '1px' }}>
                             {alert.targetDetail}
                             {alert.correlatedProcess && (
                               <span
-                                style={{ color: '#00e5ff', marginLeft: '0.4rem', cursor: 'help' }}
+                                style={{ color: 'var(--pt-cyan)', marginLeft: '0.4rem', cursor: 'help' }}
                                 title="Heuristic correlation: Active browser process was identified in endpoint telemetry during scan window. Does not constitute proof that this process executed the URL."
                               >
-                                • Correlated: {alert.correlatedProcess.name} (PID {alert.correlatedProcess.pid})
+                                &bull; Correlated: {alert.correlatedProcess.name} (PID {alert.correlatedProcess.pid})
                               </span>
                             )}
                           </div>
@@ -436,20 +472,29 @@ export const ThreatAlertsPage: React.FC = () => {
                             borderRadius: '4px',
                             background:
                               alert.status === 'RESOLVED'
-                                ? 'rgba(16, 185, 129, 0.15)'
+                                ? 'var(--pt-clean-bg)'
                                 : alert.status === 'INVESTIGATING'
-                                ? 'rgba(245, 158, 11, 0.15)'
+                                ? 'var(--pt-medium-bg)'
                                 : alert.status === 'DISMISSED'
-                                ? 'rgba(100, 116, 139, 0.15)'
-                                : 'rgba(239, 68, 68, 0.15)',
+                                ? 'rgba(148, 163, 184, 0.15)'
+                                : 'var(--pt-critical-bg)',
                             color:
                               alert.status === 'RESOLVED'
-                                ? '#34d399'
+                                ? 'var(--pt-status-clean)'
                                 : alert.status === 'INVESTIGATING'
-                                ? '#fbbf24'
+                                ? 'var(--pt-status-warning)'
                                 : alert.status === 'DISMISSED'
-                                ? '#94a3b8'
-                                : '#f87171',
+                                ? 'var(--pt-text-muted)'
+                                : 'var(--pt-status-critical)',
+                            border: `1px solid ${
+                              alert.status === 'RESOLVED'
+                                ? 'var(--pt-clean-border)'
+                                : alert.status === 'INVESTIGATING'
+                                ? 'var(--pt-medium-border)'
+                                : alert.status === 'DISMISSED'
+                                ? 'var(--pt-border-subtle)'
+                                : 'var(--pt-critical-border)'
+                            }`
                           }}
                         >
                           {alert.status || 'NEW'}
@@ -467,19 +512,19 @@ export const ThreatAlertsPage: React.FC = () => {
                                   fontSize: '0.7rem',
                                   padding: '0.15rem 0.45rem',
                                   background: 'rgba(255, 255, 255, 0.05)',
-                                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                                  border: '1px solid var(--pt-border-subtle)',
                                   borderRadius: '3px',
-                                  color: '#cbd5e1',
+                                  color: 'var(--pt-text-secondary)',
                                 }}
                               >
                                 {ind}
                               </span>
                             ))
                           ) : (
-                            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>None</span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--pt-text-muted)' }}>None</span>
                           )}
                           {alert.indicators && alert.indicators.length > 3 && (
-                            <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                            <span style={{ fontSize: '0.7rem', color: 'var(--pt-text-muted)' }}>
                               +{alert.indicators.length - 3} more
                             </span>
                           )}
@@ -487,7 +532,7 @@ export const ThreatAlertsPage: React.FC = () => {
                       </td>
 
                       {/* Detected Column */}
-                      <td style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                      <td style={{ fontSize: '0.75rem', color: 'var(--pt-text-muted)' }}>
                         {alert.timestamp ? new Date(alert.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recent'}
                       </td>
 
@@ -499,8 +544,7 @@ export const ThreatAlertsPage: React.FC = () => {
                             e.stopPropagation();
                             navigate(`/alerts/${alert.id}`);
                           }}
-                          className="pt-btn pt-btn-secondary"
-                          style={{ padding: '0.3rem 0.65rem', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                          className="pt-btn pt-btn-secondary pt-btn-sm"
                         >
                           <span>Triage</span>
                           <ExternalLink size={12} />
@@ -517,3 +561,5 @@ export const ThreatAlertsPage: React.FC = () => {
     </div>
   );
 };
+
+export default ThreatAlertsPage;

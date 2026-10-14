@@ -1,10 +1,11 @@
 import React from 'react';
 import type { ThreatLevel } from '../../types';
 
-interface BadgeProps {
-  level?: ThreatLevel | 'neutral' | string;
+export interface BadgeProps {
+  level?: ThreatLevel | 'neutral' | 'clean' | 'info' | 'warning' | 'critical' | 'high' | 'medium' | 'low' | 'success' | 'danger' | string;
   children: React.ReactNode;
-  size?: 'sm' | 'md';
+  size?: 'sm' | 'md' | 'lg';
+  variant?: 'subtle' | 'outline' | 'pill';
   className?: string;
   icon?: React.ReactNode;
 }
@@ -13,39 +14,49 @@ export const Badge: React.FC<BadgeProps> = ({
   level = 'neutral',
   children,
   size = 'md',
+  variant = 'subtle',
   className = '',
   icon,
 }) => {
   const getBadgeClass = () => {
-    switch (level) {
+    const normalized = String(level).toUpperCase();
+    switch (normalized) {
       case 'CRITICAL':
-      case 'Critical':
+      case 'DANGER':
         return 'pt-badge-critical';
       case 'HIGH':
-      case 'High':
+      case 'WARNING':
         return 'pt-badge-high';
       case 'MEDIUM':
-      case 'Medium':
         return 'pt-badge-medium';
       case 'LOW':
-      case 'Low':
+      case 'INFO':
         return 'pt-badge-low';
       case 'NORMAL':
-      case 'Clean':
+      case 'CLEAN':
+      case 'SUCCESS':
         return 'pt-badge-clean';
       default:
         return 'pt-badge-neutral';
     }
   };
 
-  const sizeStyle = size === 'sm'
-    ? { fontSize: '0.68rem', padding: '0.15rem 0.45rem' }
-    : {};
+  const sizeClass = {
+    sm: 'pt-badge-sm',
+    md: 'pt-badge-md',
+    lg: 'pt-badge-lg',
+  }[size] || 'pt-badge-md';
+
+  const variantClass = variant === 'outline' ? 'pt-badge-outline' : variant === 'pill' ? 'pt-badge-pill' : '';
 
   return (
-    <span className={`pt-badge ${getBadgeClass()} ${className}`} style={sizeStyle}>
-      {icon && <span style={{ display: 'inline-flex', alignItems: 'center' }}>{icon}</span>}
-      {children}
+    <span className={`pt-badge ${getBadgeClass()} ${sizeClass} ${variantClass} ${className}`}>
+      {icon && (
+        <span className="pt-badge-icon" aria-hidden="true">
+          {icon}
+        </span>
+      )}
+      <span className="pt-badge-text">{children}</span>
     </span>
   );
 };

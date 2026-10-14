@@ -1,12 +1,16 @@
 import React from 'react';
 
-interface CardProps {
+export interface CardProps {
   title?: React.ReactNode;
   subtitle?: string;
   action?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
   cyberBorder?: boolean;
+  headerBorder?: boolean;
+  footer?: React.ReactNode;
+  noPadding?: boolean;
+  style?: React.CSSProperties;
 }
 
 export const Card: React.FC<CardProps> = ({
@@ -16,29 +20,33 @@ export const Card: React.FC<CardProps> = ({
   children,
   className = '',
   cyberBorder = false,
+  headerBorder = true,
+  footer,
+  noPadding = false,
+  style,
 }) => {
   return (
-    <div className={`pt-card ${cyberBorder ? 'pt-card-cyber' : ''} ${className}`} style={{ padding: '1.25rem' }}>
+    <div
+      className={`pt-card ${cyberBorder ? 'pt-card-cyber' : ''} ${className}`}
+      style={style}
+    >
       {(title || action) && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', paddingBottom: '0.75rem' }}>
-          <div>
+        <div className={`pt-card-header ${headerBorder ? 'has-border' : ''}`}>
+          <div className="pt-card-header-main">
             {typeof title === 'string' ? (
-              <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#ffffff', letterSpacing: '0.01em' }}>
-                {title}
-              </h3>
+              <h3 className="pt-card-title">{title}</h3>
             ) : (
               title
             )}
-            {subtitle && (
-              <p style={{ fontSize: '0.78rem', color: 'var(--pt-text-muted)', marginTop: '0.15rem' }}>
-                {subtitle}
-              </p>
-            )}
+            {subtitle && <p className="pt-card-subtitle">{subtitle}</p>}
           </div>
-          {action && <div>{action}</div>}
+          {action && <div className="pt-card-action">{action}</div>}
         </div>
       )}
-      <div>{children}</div>
+      <div className={`pt-card-content ${noPadding ? 'pt-card-content-no-padding' : ''}`}>
+        {children}
+      </div>
+      {footer && <div className="pt-card-footer">{footer}</div>}
     </div>
   );
 };

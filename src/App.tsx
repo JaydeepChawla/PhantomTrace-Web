@@ -10,6 +10,7 @@ import { ProcessDetailsPage } from './pages/ProcessDetailsPage';
 import { ScanHistoryPage } from './pages/ScanHistoryPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { SetupPage } from './pages/SetupPage';
 
 export const App: React.FC = () => {
   return (
@@ -17,6 +18,9 @@ export const App: React.FC = () => {
       <Routes>
         {/* Landing Page Route */}
         <Route path="/" element={<LandingPage />} />
+        <Route path="/setup" element={<SetupPage />} />
+        <Route path="/onboarding" element={<SetupPage />} />
+        <Route path="/download" element={<SetupPage />} />
 
         {/* Core Operations Console Routes with Sidebar & Header Layout */}
         <Route element={<AppLayout />}>

@@ -15,7 +15,8 @@ import {
   FolderCheck,
   RefreshCw,
   Eye,
-  EyeOff
+  EyeOff,
+  Layers
 } from 'lucide-react';
 import { dataService } from '../../services';
 
@@ -133,8 +134,8 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
       step: '01',
       title: 'Download Extension ZIP',
       badge: 'PhantomTrace-Chrome-Extension.zip',
-      badgeColor: '#38bdf8',
-      icon: <Download size={22} style={{ color: '#38bdf8' }} />,
+      badgeColor: 'var(--pt-brand-blue, #007bff)',
+      icon: <Download size={22} style={{ color: 'var(--pt-brand-blue, #007bff)' }} />,
       desc: 'Download the official PhantomTrace-Chrome-Extension.zip package directly from the PhantomTrace website using the download button above.',
       detail: 'Verified distribution package containing manifest.json, background service worker, popup UI, warning interstitials, and required icons.'
     },
@@ -142,8 +143,8 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
       step: '02',
       title: 'Extract to Permanent Folder',
       badge: 'Direct manifest.json Location',
-      badgeColor: '#00e5ff',
-      icon: <FolderArchive size={22} style={{ color: '#00e5ff' }} />,
+      badgeColor: 'var(--pt-brand-cyan, #00d1ff)',
+      icon: <FolderArchive size={22} style={{ color: 'var(--pt-brand-cyan, #00d1ff)' }} />,
       desc: 'Extract the downloaded ZIP package to a permanent directory on your machine (e.g., C:\\PhantomTrace\\browser-extension\\ or your Documents folder). Do not delete this folder after installation.',
       detail: 'Confirm that manifest.json is directly inside the selected folder without extra nested folders (PhantomTrace-Chrome-Extension/manifest.json).'
     },
@@ -160,8 +161,8 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
       step: '04',
       title: 'Enable Developer Mode & Click Load Unpacked',
       badge: 'Developer Mode Toggle',
-      badgeColor: '#34d399',
-      icon: <CheckCircle2 size={22} style={{ color: '#34d399' }} />,
+      badgeColor: 'var(--pt-status-success, #10b981)',
+      icon: <CheckCircle2 size={22} style={{ color: 'var(--pt-status-success, #10b981)' }} />,
       desc: 'Toggle the "Developer mode" switch to ON in the upper-right corner of the Extensions page. Once enabled, the "Load unpacked" button will appear in the top-left toolbar.',
       detail: 'Developer mode allows installing verified local Manifest V3 packages prior to Chrome Web Store general availability.'
     },
@@ -169,8 +170,8 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
       step: '05',
       title: 'Select Extracted Folder',
       badge: 'Select Unpacked Folder',
-      badgeColor: '#f59e0b',
-      icon: <FolderCheck size={22} style={{ color: '#f59e0b' }} />,
+      badgeColor: 'var(--pt-status-warning, #f59e0b)',
+      icon: <FolderCheck size={22} style={{ color: 'var(--pt-status-warning, #f59e0b)' }} />,
       desc: 'In the file dialog, navigate to and select the extracted folder directly containing manifest.json. Confirm that "PhantomTrace Web Threat Monitor" (v1.0.0) appears in your extensions list, then pin it to your browser toolbar.',
       detail: 'Chrome validates the Manifest V3 service worker and dynamic declarativeNetRequest rules without requiring a browser restart.'
     },
@@ -178,8 +179,8 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
       step: '06',
       title: 'Configure Authentication & Sync',
       badge: 'Scoped Extension Token',
-      badgeColor: '#10b981',
-      icon: <ShieldCheck size={22} style={{ color: '#10b981' }} />,
+      badgeColor: 'var(--pt-status-success, #10b981)',
+      icon: <ShieldCheck size={22} style={{ color: 'var(--pt-status-success, #10b981)' }} />,
       desc: 'Open the extension popup in your browser toolbar. The default production backend is https://phantomtrace-web.onrender.com. Enter your scoped token (pt_ext_... or pt_usr_...) and click "Sync Policies".',
       detail: 'Toggle Active Web Monitoring to ON. Visited domains are evaluated against threat policies with 100% hostname-only inspection and zero browsing history logging.'
     }
@@ -188,10 +189,11 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
   return (
     <section
       id="browser-protection"
+      aria-labelledby="browser-protection-heading"
       style={{
-        maxWidth: '1200px',
+        maxWidth: 'var(--pt-max-width, 1200px)',
         margin: '0 auto',
-        padding: '3.5rem 2rem 5rem 2rem',
+        padding: '3.5rem 1.5rem 5rem 1.5rem',
         width: '100%',
         borderTop: '1px solid var(--pt-border-subtle)'
       }}
@@ -203,46 +205,93 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
             display: 'inline-flex',
             alignItems: 'center',
             gap: '0.45rem',
-            padding: '0.3rem 0.85rem',
+            padding: '0.35rem 0.9rem',
             borderRadius: '20px',
-            background: 'rgba(56, 189, 248, 0.08)',
-            border: '1px solid rgba(56, 189, 248, 0.25)',
+            background: 'rgba(0, 123, 255, 0.1)',
+            border: '1px solid rgba(0, 123, 255, 0.3)',
             fontSize: '0.75rem',
             fontWeight: 700,
-            color: '#38bdf8',
+            color: 'var(--pt-brand-blue, #007bff)',
             letterSpacing: '0.08em',
             textTransform: 'uppercase',
-            marginBottom: '0.75rem'
+            marginBottom: '0.85rem'
           }}
         >
-          <Globe size={12} />
+          <Globe size={12} aria-hidden="true" />
           <span>Browser Protection • Manifest V3</span>
         </div>
 
-        <h2 style={{ fontSize: '2.2rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em', marginBottom: '0.5rem' }}>
+        <h2
+          id="browser-protection-heading"
+          style={{
+            fontSize: 'clamp(1.75rem, 3.5vw, 2.35rem)',
+            fontWeight: 800,
+            color: 'var(--pt-text-primary, #ffffff)',
+            letterSpacing: '-0.025em',
+            marginBottom: '0.5rem',
+            lineHeight: 1.2
+          }}
+        >
           CHROME EXTENSION INSTALLATION &amp; BROWSER PROTECTION
         </h2>
 
-        <p style={{ fontSize: '1.1rem', color: '#38bdf8', fontStyle: 'italic', fontWeight: 500, marginBottom: '0.85rem' }}>
-          "Real-time web threat inspection with deterministic privacy preservation."
+        <p
+          style={{
+            fontSize: '1.05rem',
+            color: 'var(--pt-brand-blue, #007bff)',
+            fontStyle: 'italic',
+            fontWeight: 500,
+            marginBottom: '0.85rem'
+          }}
+        >
+          &ldquo;Real-time web threat inspection with deterministic privacy preservation.&rdquo;
         </p>
 
-        <p style={{ fontSize: '0.98rem', color: '#94a3b8', maxWidth: '760px', margin: '0 auto', lineHeight: 1.6 }}>
+        <p
+          style={{
+            fontSize: '0.98rem',
+            color: 'var(--pt-text-secondary, #94a3b8)',
+            maxWidth: '760px',
+            margin: '0 auto 1.5rem auto',
+            lineHeight: 1.65
+          }}
+        >
           Deploy the PhantomTrace Web Threat Monitor in Google Chrome or Microsoft Edge. Evaluates visited hostnames
           against threat intelligence, enforces tenant allowlists and blocklists via declarativeNetRequest, and preserves complete
           analyst privacy with zero URL parameter or password capture.
         </p>
+
+        {/* Explicit Separation Banner */}
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.6rem',
+            background: 'rgba(10, 30, 58, 0.65)',
+            border: '1px solid var(--pt-border-subtle, rgba(255, 255, 255, 0.12))',
+            borderRadius: '8px',
+            padding: '0.55rem 1.15rem',
+            fontSize: '0.82rem',
+            color: 'var(--pt-brand-neutral, #e6e6e6)',
+            maxWidth: '820px'
+          }}
+        >
+          <Layers size={15} style={{ color: 'var(--pt-brand-blue, #007bff)', flexShrink: 0 }} aria-hidden="true" />
+          <span>
+            <strong>Separate Component:</strong> The Chrome Extension operates purely inside your browser to inspect hostnames. It is independent of the Windows Agent and requires separate installation.
+          </span>
+        </div>
       </div>
 
       {/* Main Extension Hero Card */}
       <div
         className="pt-card pt-card-cyber"
         style={{
-          padding: '2.5rem',
+          padding: 'clamp(1.5rem, 3vw, 2.5rem)',
           marginBottom: '3rem',
-          background: 'linear-gradient(135deg, rgba(16, 26, 46, 0.95) 0%, rgba(9, 15, 26, 0.98) 100%)',
-          border: '1px solid rgba(56, 189, 248, 0.28)',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(56, 189, 248, 0.08)',
+          background: 'linear-gradient(135deg, rgba(16, 26, 46, 0.96) 0%, rgba(9, 15, 26, 0.98) 100%)',
+          border: '1px solid rgba(0, 123, 255, 0.3)',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5), 0 0 24px rgba(0, 123, 255, 0.08)',
           position: 'relative',
           overflow: 'hidden'
         }}
@@ -257,33 +306,33 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
         >
           {/* Left Column: Extension Specs & Store Publication Status */}
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: '1.15rem' }}>
               <div
                 style={{
                   width: '48px',
                   height: '48px',
                   borderRadius: '10px',
-                  background: 'rgba(56, 189, 248, 0.12)',
-                  border: '1px solid rgba(56, 189, 248, 0.3)',
+                  background: 'rgba(0, 123, 255, 0.12)',
+                  border: '1px solid rgba(0, 123, 255, 0.35)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: '#38bdf8'
+                  color: 'var(--pt-brand-blue, #007bff)'
                 }}
               >
-                <Globe size={26} />
+                <Globe size={26} aria-hidden="true" />
               </div>
               <div>
-                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#ffffff', margin: 0 }}>
+                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--pt-text-primary, #ffffff)', margin: 0 }}>
                   PhantomTrace Web Threat Monitor
                 </h3>
-                <div style={{ fontSize: '0.8rem', color: '#38bdf8', fontWeight: 600 }}>
+                <div style={{ fontSize: '0.8rem', color: 'var(--pt-brand-blue, #007bff)', fontWeight: 600 }}>
                   Manifest V3 Browser Extension (Chrome &amp; Edge)
                 </div>
               </div>
             </div>
 
-            <p style={{ fontSize: '0.92rem', color: '#cbd5e1', lineHeight: 1.6, marginBottom: '1.25rem' }}>
+            <p style={{ fontSize: '0.92rem', color: 'var(--pt-text-secondary, #94a3b8)', lineHeight: 1.6, marginBottom: '1.25rem' }}>
               Inspects visited hostnames against threat intelligence, intercepts malicious domains with warning interstitials,
               and synchronizes enterprise security policies. Operates in 100% read-only passive inspection mode without reading page inputs or passwords.
             </p>
@@ -301,12 +350,12 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
                 gap: '0.65rem'
               }}
             >
-              <AlertCircle size={17} style={{ color: '#f59e0b', flexShrink: 0, marginTop: '2px' }} />
+              <AlertCircle size={17} style={{ color: 'var(--pt-status-warning, #f59e0b)', flexShrink: 0, marginTop: '2px' }} aria-hidden="true" />
               <div>
-                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f59e0b', marginBottom: '0.2rem' }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--pt-status-warning, #f59e0b)', marginBottom: '0.2rem' }}>
                   Developer Installation — Store Publication Pending
                 </div>
-                <div style={{ fontSize: '0.78rem', color: '#cbd5e1', lineHeight: 1.5 }}>
+                <div style={{ fontSize: '0.78rem', color: 'var(--pt-text-secondary, #94a3b8)', lineHeight: 1.5 }}>
                   The official Chrome Web Store and Microsoft Edge Add-ons listings are currently pending review.
                   Download the verified extension ZIP package and follow the 6-step developer guide below to load the unpacked extension in Chrome.
                 </div>
@@ -315,21 +364,21 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
 
             {/* Specification Badges Grid */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem', marginBottom: '1.25rem' }}>
-              <div style={{ background: 'rgba(5, 9, 17, 0.6)', border: '1px solid var(--pt-border-subtle)', borderRadius: '6px', padding: '0.65rem 0.85rem' }}>
-                <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Manifest Version</div>
-                <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#f8fafc' }}>MV3 (Service Worker)</div>
+              <div style={{ background: 'rgba(5, 9, 17, 0.75)', border: '1px solid var(--pt-border-subtle)', borderRadius: '6px', padding: '0.65rem 0.85rem' }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--pt-text-muted, #94a3b8)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Manifest Version</div>
+                <div style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--pt-text-primary, #ffffff)' }}>MV3 (Service Worker)</div>
               </div>
-              <div style={{ background: 'rgba(5, 9, 17, 0.6)', border: '1px solid var(--pt-border-subtle)', borderRadius: '6px', padding: '0.65rem 0.85rem' }}>
-                <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Browser Compatibility</div>
-                <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#f8fafc' }}>Chrome &amp; Edge (Chromium)</div>
+              <div style={{ background: 'rgba(5, 9, 17, 0.75)', border: '1px solid var(--pt-border-subtle)', borderRadius: '6px', padding: '0.65rem 0.85rem' }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--pt-text-muted, #94a3b8)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Browser Compatibility</div>
+                <div style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--pt-text-primary, #ffffff)' }}>Chrome &amp; Edge (Chromium)</div>
               </div>
-              <div style={{ background: 'rgba(5, 9, 17, 0.6)', border: '1px solid var(--pt-border-subtle)', borderRadius: '6px', padding: '0.65rem 0.85rem' }}>
-                <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Privacy Guarantee</div>
-                <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#34d399' }}>Hostnames Only</div>
+              <div style={{ background: 'rgba(5, 9, 17, 0.75)', border: '1px solid var(--pt-border-subtle)', borderRadius: '6px', padding: '0.65rem 0.85rem' }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--pt-text-muted, #94a3b8)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Privacy Guarantee</div>
+                <div style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--pt-status-success, #10b981)' }}>Hostnames Only</div>
               </div>
-              <div style={{ background: 'rgba(5, 9, 17, 0.6)', border: '1px solid var(--pt-border-subtle)', borderRadius: '6px', padding: '0.65rem 0.85rem' }}>
-                <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Policy Enforcement</div>
-                <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#38bdf8' }}>declarativeNetRequest</div>
+              <div style={{ background: 'rgba(5, 9, 17, 0.75)', border: '1px solid var(--pt-border-subtle)', borderRadius: '6px', padding: '0.65rem 0.85rem' }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--pt-text-muted, #94a3b8)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Policy Enforcement</div>
+                <div style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--pt-brand-blue, #007bff)' }}>declarativeNetRequest</div>
               </div>
             </div>
           </div>
@@ -337,8 +386,8 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
           {/* Right Column: Actions & Quick Links */}
           <div
             style={{
-              background: 'rgba(9, 15, 26, 0.75)',
-              border: '1px solid rgba(56, 189, 248, 0.25)',
+              background: 'rgba(9, 15, 26, 0.85)',
+              border: '1px solid rgba(0, 123, 255, 0.25)',
               borderRadius: '10px',
               padding: '1.75rem',
               display: 'flex',
@@ -347,10 +396,10 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
             }}
           >
             <div>
-              <div style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.45rem', fontWeight: 600 }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--pt-text-muted, #94a3b8)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.45rem', fontWeight: 600 }}>
                 Browser Extension Package
               </div>
-              <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#ffffff' }}>
+              <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--pt-text-primary, #ffffff)' }}>
                 Verified ZIP Distribution
               </div>
             </div>
@@ -371,20 +420,17 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '0.65rem',
-                  background: 'linear-gradient(135deg, #00e5ff 0%, #0284c7 100%)',
-                  color: '#050911',
-                  boxShadow: '0 0 20px rgba(0, 229, 255, 0.35)',
                   textDecoration: 'none'
                 }}
                 title="Download verified PhantomTrace Chrome Extension ZIP"
               >
-                <Download size={20} />
+                <Download size={20} aria-hidden="true" />
                 <span>Download Chrome Extension ZIP</span>
               </a>
 
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.74rem', color: '#94a3b8', padding: '0 0.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.74rem', color: 'var(--pt-text-muted, #94a3b8)', padding: '0 0.25rem' }}>
                 <span>📦 ZIP Archive (125 KB)</span>
-                <span style={{ color: '#34d399', fontWeight: 600 }}>✓ Verified MV3 Bundle</span>
+                <span style={{ color: 'var(--pt-status-success, #10b981)', fontWeight: 600 }}>✓ Verified MV3 Bundle</span>
               </div>
             </div>
 
@@ -392,33 +438,35 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
             <div
               style={{
                 background: '#040711',
-                border: '1px solid rgba(56, 189, 248, 0.2)',
+                border: '1px solid rgba(0, 123, 255, 0.25)',
                 borderRadius: '6px',
                 padding: '0.65rem 0.85rem'
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
-                <span style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
+                <span style={{ fontSize: '0.7rem', color: 'var(--pt-text-muted, #94a3b8)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
                   SHA-256 Checksum
                 </span>
                 <button
                   type="button"
                   onClick={handleCopyChecksum}
+                  aria-live="polite"
                   style={{
                     background: 'transparent',
                     border: 'none',
-                    color: copiedChecksum ? '#10b981' : '#38bdf8',
+                    color: copiedChecksum ? 'var(--pt-status-success, #10b981)' : 'var(--pt-brand-blue, #007bff)',
                     cursor: 'pointer',
                     fontSize: '0.72rem',
                     fontWeight: 600,
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '0.25rem',
-                    padding: 0
+                    padding: '0.15rem 0.35rem',
+                    borderRadius: '4px'
                   }}
                   title="Copy SHA-256 Checksum"
                 >
-                  {copiedChecksum ? <Check size={12} /> : <Copy size={12} />}
+                  {copiedChecksum ? <Check size={12} aria-hidden="true" /> : <Copy size={12} aria-hidden="true" />}
                   <span>{copiedChecksum ? 'Copied' : 'Copy'}</span>
                 </button>
               </div>
@@ -426,7 +474,7 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
                 style={{
                   fontFamily: 'var(--font-mono)',
                   fontSize: '0.7rem',
-                  color: '#cbd5e1',
+                  color: 'var(--pt-brand-neutral, #e6e6e6)',
                   wordBreak: 'break-all',
                   lineHeight: 1.3
                 }}
@@ -441,6 +489,7 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
                 type="button"
                 id="btn-open-chrome-extensions"
                 onClick={handleCopyChromeUrl}
+                aria-live="polite"
                 className="pt-btn pt-btn-secondary"
                 style={{
                   width: '100%',
@@ -453,12 +502,12 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
               >
                 {copiedUrl ? (
                   <>
-                    <Check size={16} style={{ color: '#10b981' }} />
+                    <Check size={16} style={{ color: 'var(--pt-status-success, #10b981)' }} aria-hidden="true" />
                     <span>chrome://extensions Copied!</span>
                   </>
                 ) : (
                   <>
-                    <Copy size={16} />
+                    <Copy size={16} aria-hidden="true" />
                     <span>Copy chrome://extensions</span>
                   </>
                 )}
@@ -469,7 +518,7 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
                   role="status"
                   style={{
                     fontSize: '0.75rem',
-                    color: '#34d399',
+                    color: 'var(--pt-status-success, #10b981)',
                     background: 'rgba(16, 185, 129, 0.12)',
                     border: '1px solid rgba(16, 185, 129, 0.3)',
                     borderRadius: '6px',
@@ -480,8 +529,8 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
                   ✓ <strong>chrome://extensions</strong> copied to clipboard! Paste it into your Chrome address bar.
                 </div>
               ) : (
-                <div style={{ fontSize: '0.74rem', color: '#64748b', textAlign: 'center' }}>
-                  Copies <code style={{ color: '#00e5ff', background: '#040711', padding: '0.1rem 0.3rem', borderRadius: '3px' }}>chrome://extensions</code> for quick pasting.
+                <div style={{ fontSize: '0.74rem', color: 'var(--pt-text-muted, #94a3b8)', textAlign: 'center' }}>
+                  Copies <code style={{ color: 'var(--pt-brand-cyan, #00d1ff)', background: '#040711', padding: '0.1rem 0.3rem', borderRadius: '3px' }}>chrome://extensions</code> for quick pasting.
                 </div>
               )}
             </div>
@@ -503,17 +552,17 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '0.5rem',
-                  background: 'rgba(56, 189, 248, 0.1)',
-                  border: '1px solid rgba(56, 189, 248, 0.35)',
-                  color: '#38bdf8',
+                  background: 'rgba(0, 123, 255, 0.1)',
+                  border: '1px solid rgba(0, 123, 255, 0.35)',
+                  color: 'var(--pt-brand-blue, #007bff)',
                   cursor: loadingExtensionToken ? 'not-allowed' : 'pointer'
                 }}
                 title="Generate or retrieve scoped Extension Sync Token"
               >
                 {loadingExtensionToken ? (
-                  <RefreshCw size={15} className="pt-spin" style={{ color: '#00e5ff' }} />
+                  <RefreshCw size={15} className="pt-spin" style={{ color: 'var(--pt-brand-cyan)' }} aria-hidden="true" />
                 ) : (
-                  <Key size={15} style={{ color: '#00e5ff' }} />
+                  <Key size={15} style={{ color: 'var(--pt-brand-cyan)' }} aria-hidden="true" />
                 )}
                 <span>
                   {loadingExtensionToken
@@ -531,19 +580,19 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
                 id="extension-token-card"
                 style={{
                   background: 'rgba(5, 9, 17, 0.95)',
-                  border: '1px solid rgba(56, 189, 248, 0.35)',
+                  border: '1px solid rgba(0, 123, 255, 0.35)',
                   borderRadius: '8px',
                   padding: '1.25rem',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '0.85rem',
-                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5), 0 0 15px rgba(56, 189, 248, 0.1)'
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5), 0 0 15px rgba(0, 123, 255, 0.1)'
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                    <Key size={15} style={{ color: '#00e5ff' }} />
-                    <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#f8fafc' }}>
+                    <Key size={15} style={{ color: 'var(--pt-brand-cyan)' }} aria-hidden="true" />
+                    <span style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--pt-text-primary, #ffffff)' }}>
                       Extension Sync Credential
                     </span>
                   </div>
@@ -551,9 +600,9 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
                     style={{
                       fontSize: '0.68rem',
                       fontFamily: 'var(--font-mono)',
-                      color: '#38bdf8',
-                      background: 'rgba(56, 189, 248, 0.1)',
-                      border: '1px solid rgba(56, 189, 248, 0.25)',
+                      color: 'var(--pt-brand-blue, #007bff)',
+                      background: 'rgba(0, 123, 255, 0.1)',
+                      border: '1px solid rgba(0, 123, 255, 0.25)',
                       padding: '0.15rem 0.45rem',
                       borderRadius: '4px'
                     }}
@@ -564,7 +613,7 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
 
                 {extensionToken ? (
                   <div>
-                    <label style={{ fontSize: '0.72rem', color: '#94a3b8', display: 'block', marginBottom: '0.35rem', fontWeight: 600 }}>
+                    <label style={{ fontSize: '0.72rem', color: 'var(--pt-text-muted, #94a3b8)', display: 'block', marginBottom: '0.35rem', fontWeight: 600 }}>
                       Scoped Token (Paste into Extension Popup)
                     </label>
                     <div style={{ display: 'flex', gap: '0.45rem', alignItems: 'center' }}>
@@ -578,9 +627,9 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
                           style={{
                             width: '100%',
                             fontSize: '0.78rem',
-                            color: '#38bdf8',
+                            color: 'var(--pt-brand-cyan, #00d1ff)',
                             background: '#030712',
-                            border: '1px solid rgba(56, 189, 248, 0.3)',
+                            border: '1px solid rgba(0, 123, 255, 0.3)',
                             paddingRight: '2rem'
                           }}
                         />
@@ -594,7 +643,7 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
                             transform: 'translateY(-50%)',
                             background: 'transparent',
                             border: 'none',
-                            color: '#64748b',
+                            color: 'var(--pt-text-muted, #94a3b8)',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
@@ -602,7 +651,7 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
                           }}
                           title={isTokenMasked ? 'Reveal token' : 'Mask token'}
                         >
-                          {isTokenMasked ? <Eye size={13} /> : <EyeOff size={13} />}
+                          {isTokenMasked ? <Eye size={13} aria-hidden="true" /> : <EyeOff size={13} aria-hidden="true" />}
                         </button>
                       </div>
 
@@ -610,18 +659,19 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
                         type="button"
                         id="btn-copy-install-extension-token"
                         onClick={handleCopyExtensionToken}
+                        aria-live="polite"
                         className="pt-btn pt-btn-primary"
                         style={{
                           padding: '0.45rem 0.85rem',
                           fontSize: '0.78rem',
                           fontWeight: 700,
                           whiteSpace: 'nowrap',
-                          background: copiedToken ? '#10b981' : undefined,
-                          borderColor: copiedToken ? '#10b981' : undefined
+                          background: copiedToken ? 'var(--pt-status-success, #10b981)' : undefined,
+                          borderColor: copiedToken ? 'var(--pt-status-success, #10b981)' : undefined
                         }}
                         title="Copy extension sync token to clipboard"
                       >
-                        {copiedToken ? <Check size={14} /> : <Copy size={14} />}
+                        {copiedToken ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
                         <span>{copiedToken ? 'Copied!' : 'Copy Token'}</span>
                       </button>
 
@@ -637,7 +687,7 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
                         }}
                         title="Regenerate fresh scoped token"
                       >
-                        <RefreshCw size={13} className={loadingExtensionToken ? 'pt-spin' : ''} />
+                        <RefreshCw size={13} className={loadingExtensionToken ? 'pt-spin' : ''} aria-hidden="true" />
                         <span>Regenerate</span>
                       </button>
                     </div>
@@ -654,14 +704,14 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
                       borderRadius: '6px',
                       padding: '0.65rem 0.85rem',
                       fontSize: '0.78rem',
-                      color: '#34d399',
+                      color: 'var(--pt-status-success, #10b981)',
                       display: 'flex',
                       alignItems: 'flex-start',
                       gap: '0.5rem',
                       lineHeight: 1.45
                     }}
                   >
-                    <CheckCircle2 size={15} style={{ flexShrink: 0, marginTop: '2px', color: '#10b981' }} />
+                    <CheckCircle2 size={15} style={{ flexShrink: 0, marginTop: '2px', color: 'var(--pt-status-success, #10b981)' }} aria-hidden="true" />
                     <span>{extensionTokenStatus}</span>
                   </div>
                 )}
@@ -683,12 +733,12 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
                       lineHeight: 1.45
                     }}
                   >
-                    <AlertCircle size={15} style={{ flexShrink: 0, marginTop: '2px', color: '#ef4444' }} />
+                    <AlertCircle size={15} style={{ flexShrink: 0, marginTop: '2px', color: '#ef4444' }} aria-hidden="true" />
                     <div>
                       <div style={{ fontWeight: 700, marginBottom: '0.2rem' }}>Authentication Required / Connection Issue</div>
                       <div>{extensionTokenError}</div>
                       <div style={{ marginTop: '0.35rem' }}>
-                        <Link to="/settings" style={{ color: '#38bdf8', textDecoration: 'underline' }}>
+                        <Link to="/settings" style={{ color: 'var(--pt-brand-cyan, #00d1ff)', textDecoration: 'underline' }}>
                           Open Settings to sign in or reconnect →
                         </Link>
                       </div>
@@ -704,13 +754,13 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
                     borderRadius: '6px',
                     padding: '0.65rem 0.85rem',
                     fontSize: '0.74rem',
-                    color: '#94a3b8',
+                    color: 'var(--pt-text-secondary, #94a3b8)',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '0.25rem'
                   }}
                 >
-                  <div style={{ color: '#e2e8f0', fontWeight: 600 }}>Next Steps in Chrome / Edge:</div>
+                  <div style={{ color: 'var(--pt-brand-neutral, #e6e6e6)', fontWeight: 600 }}>Next Steps in Chrome / Edge:</div>
                   <div>1. Open the PhantomTrace shield icon in your browser extensions toolbar.</div>
                   <div>2. Paste the copied token into <strong>Extension Sync Token</strong> and click <strong>Set</strong>.</div>
                   <div>3. Click <strong>Sync Policies</strong> to authenticate and load your custom rules.</div>
@@ -721,7 +771,7 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
                     to="/settings"
                     style={{
                       fontSize: '0.75rem',
-                      color: '#38bdf8',
+                      color: 'var(--pt-brand-cyan, #00d1ff)',
                       textDecoration: 'none',
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -743,13 +793,13 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
                 borderRadius: '6px',
                 padding: '0.65rem 0.85rem',
                 fontSize: '0.76rem',
-                color: '#94a3b8',
+                color: 'var(--pt-text-secondary, #94a3b8)',
                 display: 'flex',
                 alignItems: 'flex-start',
                 gap: '0.5rem'
               }}
             >
-              <Lock size={14} style={{ color: '#00e5ff', flexShrink: 0, marginTop: '2px' }} />
+              <Lock size={14} style={{ color: 'var(--pt-brand-cyan)', flexShrink: 0, marginTop: '2px' }} aria-hidden="true" />
               <span>
                 Manual install: Downloading the ZIP does not automatically install the extension into Chrome. Follow the 6 steps below to extract and Load unpacked.
               </span>
@@ -761,10 +811,10 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
       {/* Six Numbered Steps Cards */}
       <div style={{ marginBottom: '3.5rem' }}>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <h3 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#ffffff', letterSpacing: '-0.01em' }}>
+          <h3 style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--pt-text-primary, #ffffff)', letterSpacing: '-0.01em' }}>
             Chrome Extension Installation Guide
           </h3>
-          <p style={{ fontSize: '0.86rem', color: '#94a3b8', marginTop: '0.35rem' }}>
+          <p style={{ fontSize: '0.86rem', color: 'var(--pt-text-secondary, #94a3b8)', marginTop: '0.35rem' }}>
             6 numbered steps from repository files to active declarative web threat protection
           </p>
         </div>
@@ -786,8 +836,8 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
                 flexDirection: 'column',
                 justifyContent: 'space-between',
                 position: 'relative',
-                background: 'rgba(10, 18, 34, 0.75)',
-                border: '1px solid rgba(56, 189, 248, 0.2)',
+                background: 'rgba(10, 18, 34, 0.85)',
+                border: '1px solid var(--pt-border-subtle)',
                 borderRadius: '10px'
               }}
             >
@@ -798,11 +848,11 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
                       width: '42px',
                       height: '42px',
                       borderRadius: '8px',
-                      background: 'rgba(56, 189, 248, 0.08)',
+                      background: 'rgba(0, 123, 255, 0.08)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      border: '1px solid rgba(56, 189, 248, 0.2)'
+                      border: '1px solid rgba(0, 123, 255, 0.2)'
                     }}
                   >
                     {s.icon}
@@ -811,7 +861,7 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
                     style={{
                       fontSize: '0.78rem',
                       fontFamily: 'var(--font-mono)',
-                      color: '#64748b',
+                      color: 'var(--pt-text-muted, #94a3b8)',
                       fontWeight: 700
                     }}
                   >
@@ -820,7 +870,7 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', marginBottom: '0.45rem', flexWrap: 'wrap' }}>
-                  <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#ffffff', margin: 0 }}>
+                  <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--pt-text-primary, #ffffff)', margin: 0 }}>
                     {s.title}
                   </h4>
                 </div>
@@ -831,8 +881,8 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
                     fontSize: '0.7rem',
                     fontWeight: 700,
                     color: s.badgeColor,
-                    background: `${s.badgeColor}18`,
-                    border: `1px solid ${s.badgeColor}40`,
+                    background: 'rgba(255, 255, 255, 0.04)',
+                    border: '1px solid var(--pt-border-subtle)',
                     padding: '0.15rem 0.5rem',
                     borderRadius: '4px',
                     marginBottom: '0.75rem'
@@ -841,17 +891,17 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
                   {s.badge}
                 </div>
 
-                <p style={{ fontSize: '0.84rem', color: '#cbd5e1', lineHeight: 1.55, margin: 0, marginBottom: '0.75rem' }}>
+                <p style={{ fontSize: '0.84rem', color: 'var(--pt-text-secondary, #94a3b8)', lineHeight: 1.55, margin: 0, marginBottom: '0.75rem' }}>
                   {s.desc}
                 </p>
               </div>
 
               <div
                 style={{
-                  borderTop: '1px solid rgba(255, 255, 255, 0.06)',
+                  borderTop: '1px solid var(--pt-border-subtle)',
                   paddingTop: '0.65rem',
                   fontSize: '0.75rem',
-                  color: '#64748b',
+                  color: 'var(--pt-text-muted, #94a3b8)',
                   lineHeight: 1.45
                 }}
               >
@@ -865,53 +915,53 @@ export const ChromeExtensionInstallationSection: React.FC = () => {
       {/* Safety & Privacy Guarantees Section */}
       <div
         style={{
-          background: 'rgba(9, 15, 26, 0.65)',
+          background: 'rgba(9, 15, 26, 0.75)',
           border: '1px solid var(--pt-border-subtle)',
           borderRadius: '10px',
           padding: '1.75rem 2rem'
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '1rem' }}>
-          <ShieldCheck size={22} style={{ color: '#38bdf8' }} />
-          <h4 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#ffffff', margin: 0 }}>
+          <ShieldCheck size={22} style={{ color: 'var(--pt-brand-blue, #007bff)' }} aria-hidden="true" />
+          <h4 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--pt-text-primary, #ffffff)', margin: 0 }}>
             Browser Extension Privacy &amp; Operational Guarantees
           </h4>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.25rem' }}>
           <div>
-            <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#f8fafc', marginBottom: '0.25rem' }}>
+            <div style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--pt-text-primary, #ffffff)', marginBottom: '0.25rem' }}>
               Zero Credential Leakage
             </div>
-            <p style={{ fontSize: '0.8rem', color: '#94a3b8', lineHeight: 1.5, margin: 0 }}>
+            <p style={{ fontSize: '0.8rem', color: 'var(--pt-text-secondary, #94a3b8)', lineHeight: 1.5, margin: 0 }}>
               The client extension and popup contain zero database connection strings, server environment secrets, or master keys. Only scoped user tokens are stored locally.
             </p>
           </div>
 
           <div>
-            <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#f8fafc', marginBottom: '0.25rem' }}>
+            <div style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--pt-text-primary, #ffffff)', marginBottom: '0.25rem' }}>
               Deterministic Policy Precedence
             </div>
-            <p style={{ fontSize: '0.8rem', color: '#94a3b8', lineHeight: 1.5, margin: 0 }}>
+            <p style={{ fontSize: '0.8rem', color: 'var(--pt-text-secondary, #94a3b8)', lineHeight: 1.5, margin: 0 }}>
               Enforces custom enterprise rules via declarativeNetRequest: Subdomain Specificity &gt; Custom BLOCK (Default Deny) &gt; Custom ALLOW &gt; External Threat Intel.
             </p>
           </div>
 
           <div>
-            <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#f8fafc', marginBottom: '0.25rem' }}>
+            <div style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--pt-text-primary, #ffffff)', marginBottom: '0.25rem' }}>
               Strict Hostname-Only Inspection
             </div>
-            <p style={{ fontSize: '0.8rem', color: '#94a3b8', lineHeight: 1.5, margin: 0 }}>
+            <p style={{ fontSize: '0.8rem', color: 'var(--pt-text-secondary, #94a3b8)', lineHeight: 1.5, margin: 0 }}>
               Only domain hostnames are evaluated against threat databases. Query strings, search terms, form passwords, and session cookies are never monitored or transmitted.
             </p>
           </div>
 
           <div>
-            <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#f8fafc', marginBottom: '0.25rem' }}>
+            <div style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--pt-text-primary, #ffffff)', marginBottom: '0.25rem' }}>
               Fail-Safe Offline Resilience
             </div>
-            <p style={{ fontSize: '0.8rem', color: '#94a3b8', lineHeight: 1.5, margin: 0 }}>
-              If backend connectivity is interrupted, web navigation is never blocked. Cached enterprise policies remain enforced locally via Chrome's dynamic rule cache.
+            <p style={{ fontSize: '0.8rem', color: 'var(--pt-text-secondary, #94a3b8)', lineHeight: 1.5, margin: 0 }}>
+              If backend connectivity is interrupted, web navigation is never blocked. Cached enterprise policies remain enforced locally via Chrome&apos;s dynamic rule cache.
             </p>
           </div>
         </div>
