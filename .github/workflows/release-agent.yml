@@ -1,0 +1,54 @@
+name: PhantomTrace Windows Agent Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  build-agent:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r agent/requirements.txt
+          python -m pip install pyinstaller
+
+      - name: Build Windows agent
+        shell: pwsh
+        run: |
+          pyinstaller --noconfirm --clean --onefile --name PhantomTrace_Agent agent/main.py
+
+      - name: Generate SHA-256 checksum
+        shell: pwsh
+        run: |
+          $file = "dist/PhantomTrace_Agent.exe"
+          if (!(Test-Path $file)) {
+            throw "Agent executable was not generated: $file"
+          }
+          $hash = (Get-FileHash $file -Algorithm SHA256).Hash.ToLower()
+          "$hash  PhantomTrace_Agent.exe" | Out-File "dist/SHA256SUMS.txt" -Encoding ascii
+
+      - name: Upload unsigned build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: PhantomTrace-Windows-Agent-Unsigned
+          path: |
+            dist/PhantomTrace_Agent.exe
+            dist/SHA256SUMS.txt
+          if-no-files-found: error
