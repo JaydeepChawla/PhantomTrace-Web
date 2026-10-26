@@ -10,9 +10,8 @@ import {
   ExternalLink,
   Lock,
   ShieldCheck,
-  X
+  X,
 } from 'lucide-react';
-import { Logo } from '../common/Logo';
 
 export interface SidebarProps {
   threatAlertsCount?: number;
@@ -63,40 +62,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
       className={`pt-sidebar ${isOpenMobile ? 'pt-sidebar-mobile-open' : ''}`}
       aria-label="Primary Navigation"
     >
-      {/* Brand Header with Official Logo */}
-      <div className="pt-sidebar-header">
-        <div className="pt-sidebar-brand-row">
-          <NavLink
-            to="/dashboard"
-            onClick={handleNavClick}
-            className="pt-sidebar-brand-link"
-            title="PhantomTrace Dashboard"
+      {/* Mobile Drawer Close Button Header */}
+      {isOpenMobile && onCloseMobile && (
+        <div className="pt-sidebar-mobile-header">
+          <button
+            type="button"
+            className="pt-sidebar-close-btn"
+            onClick={onCloseMobile}
+            aria-label="Close navigation menu"
           >
-            <div className="pt-desktop-logo">
-              <Logo variant="navbar" height={34} />
-            </div>
-            <div className="pt-mobile-icon">
-              <Logo variant="app" height={32} />
-            </div>
-          </NavLink>
-
-          {/* Close button for mobile drawer */}
-          {isOpenMobile && onCloseMobile && (
-            <button
-              type="button"
-              className="pt-sidebar-close-btn"
-              onClick={onCloseMobile}
-              aria-label="Close navigation menu"
-            >
-              <X size={18} />
-            </button>
-          )}
+            <X size={18} />
+          </button>
         </div>
-
-        <div className="sidebar-tagline pt-sidebar-tagline">
-          &ldquo;Trace what others can&apos;t see.&rdquo;
-        </div>
-      </div>
+      )}
 
       {/* Navigation Links */}
       <nav className="pt-sidebar-nav" aria-label="Investigation Console Links">

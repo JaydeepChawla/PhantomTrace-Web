@@ -1122,33 +1122,23 @@ h1, h2, h3, h4, h5, h6 {
   transition: width var(--pt-transition-base), transform var(--pt-transition-base);
 }
 
-.pt-sidebar-header {
-  padding: 1.25rem 1.25rem 1rem 1.25rem;
-  border-bottom: 1px solid var(--pt-border-subtle);
+/* Mobile Drawer Top Bar (Mobile Only) */
+.pt-sidebar-mobile-header {
+  display: none;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0.85rem 1rem 0.25rem 1rem;
   flex-shrink: 0;
 }
 
-.pt-sidebar-brand-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-}
-
-.pt-sidebar-brand-link {
-  text-decoration: none;
-  display: flex;
-  align-items: center;
-}
-
 .pt-sidebar-close-btn {
-  display: none;
   background: transparent;
   border: 1px solid var(--pt-border-subtle);
   border-radius: var(--pt-radius-sm);
   color: var(--pt-text-muted);
   padding: 0.35rem;
   cursor: pointer;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   transition: color var(--pt-transition-fast), border-color var(--pt-transition-fast);
@@ -1157,14 +1147,6 @@ h1, h2, h3, h4, h5, h6 {
 .pt-sidebar-close-btn:hover {
   color: var(--pt-text-primary);
   border-color: var(--pt-border-medium);
-}
-
-.pt-sidebar-tagline {
-  font-size: 0.72rem;
-  color: var(--pt-text-muted);
-  font-style: italic;
-  margin-top: 0.65rem;
-  padding-left: 0.2rem;
 }
 
 .pt-sidebar-nav {
@@ -1640,19 +1622,12 @@ h1, h2, h3, h4, h5, h6 {
   .pt-sidebar {
     width: 72px;
   }
-  .pt-sidebar .pt-desktop-logo,
-  .pt-sidebar .pt-sidebar-tagline,
   .pt-sidebar .nav-text,
   .pt-sidebar .pt-sidebar-footer-title,
   .pt-sidebar .pt-sidebar-footer-subtext,
   .pt-sidebar .pt-nav-badge-pill,
   .pt-sidebar .pt-nav-section-title {
     display: none !important;
-  }
-  .pt-sidebar .pt-mobile-icon {
-    display: flex !important;
-    justify-content: center;
-    width: 100%;
   }
   .pt-nav-item {
     justify-content: center;
@@ -1694,16 +1669,8 @@ h1, h2, h3, h4, h5, h6 {
     transform: translateX(0);
   }
 
-  .pt-sidebar-close-btn {
-    display: inline-flex !important;
-  }
-
-  .pt-sidebar .pt-mobile-icon {
-    display: none !important;
-  }
-
-  .pt-sidebar .pt-desktop-logo {
-    display: block !important;
+  .pt-sidebar-mobile-header {
+    display: flex;
   }
 
   .pt-sidebar-backdrop {
