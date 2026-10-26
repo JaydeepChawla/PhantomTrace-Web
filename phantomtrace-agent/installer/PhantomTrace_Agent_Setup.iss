@@ -19,6 +19,18 @@
 #define MyAppURL "https://phantom-trace-web.vercel.app"
 #define MyAppExeName "PhantomTraceAgent.exe"
 
+#ifndef ScannerDir
+  #if DirExists(SourcePath + "\..\..\scanner_staged")
+    #define ScannerDir SourcePath + "\..\..\scanner_staged"
+  #elif DirExists(SourcePath + "\..\scanner")
+    #define ScannerDir SourcePath + "\..\scanner"
+  #elif DirExists(SourcePath + "\..\..\release_bin")
+    #define ScannerDir SourcePath + "\..\..\release_bin"
+  #else
+    #define ScannerDir SourcePath + "\..\..\scanner_staged"
+  #endif
+#endif
+
 [Setup]
 AppId={{D41D8CD9-8F00-B204-E980-0998ECF8427E}
 AppName={#MyAppName}
@@ -27,7 +39,7 @@ AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
-DefaultDirName={autopf}\PhantomTrace Agent
+DefaultDirName={userpf}\PhantomTrace Agent
 DisableProgramGroupPage=yes
 OutputDir=..\..\dist
 OutputBaseFilename=PhantomTrace_Agent_Setup
@@ -35,7 +47,6 @@ Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
 PrivilegesRequired=lowest
-PrivilegesRequiredOverridesAllowed=dialog commandline
 CloseApplications=yes
 RestartApplications=no
 SetupIconFile=phantomtrace.ico
@@ -60,8 +71,8 @@ Source: "phantomtrace.ico"; DestDir: "{app}"; Flags: ignoreversion
 ; Standalone Agent executable and all bundled Python runtime dependencies
 Source: "..\dist\PhantomTraceAgent\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; Existing untouched Windows Release 1.0 Scanner binary and its runtime dependencies
-Source: "D:\Phantom Trace\release\PhantomTrace_Windows_Release_1.0\PhantomTrace_Windows_Release_1.0.exe"; DestDir: "{app}\scanner"; Flags: ignoreversion
-Source: "D:\Phantom Trace\release\PhantomTrace_Windows_Release_1.0\_internal\*"; DestDir: "{app}\scanner\_internal"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#ScannerDir}\PhantomTrace_Windows_Release_1.0.exe"; DestDir: "{app}\scanner"; Flags: ignoreversion
+Source: "{#ScannerDir}\_internal\*"; DestDir: "{app}\scanner\_internal"; Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist
 ; Documentation & Control Utilities
 Source: "..\README.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "stop_agent.ps1"; DestDir: "{app}"; Flags: ignoreversion

@@ -2,11 +2,12 @@
     "productName":  "PhantomTrace Windows Agent",
     "version":  "1.0.0",
     "filename":  "PhantomTrace_Agent_Setup.exe",
-    "fileSizeBytes":  14349198,
-    "sha256":  "bf288586e56e87f7f812613317bb55ab82bc8c9ce8322710e1246634e29cf0c1",
+    "fileSizeBytes":  14521595,
+    "sha256":  "52573e68c498a662ac2a94c5490055ccf13173da976905d08720b012660ff935",
     "downloadUrl":  "/downloads/PhantomTrace_Agent_Setup.exe",
-    "builtAtUtc":  "2026-10-12T12:11:09Z",
+    "builtAtUtc":  "2026-10-26T10:23:19Z",
     "signatureStatus":  "Unsigned",
     "isProductionSigned":  false,
-    "publisher":  null
+    "publisher":  null,
+    "notes":  "Explicitly unsigned release. SHA-256 checksum validates binary integrity only and does not establish publisher identity."
 }
