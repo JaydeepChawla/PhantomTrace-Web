@@ -172,6 +172,16 @@ export interface PhantomTraceDataService {
   getSecurityTimeline?(type?: string, severity?: string, limit?: number, offset?: number): Promise<{ events: SecurityTimelineEvent[]; total: number }>;
   getSystemHealth?(): Promise<SystemHealthStatus>;
   loginWithApiKey?(apiKey: string): Promise<{ success: boolean; message?: string }>;
+  registerTrial?(
+    email: string,
+    displayName: string
+  ): Promise<{
+    success: boolean;
+    user?: { uid: string; email: string; displayName: string };
+    sessionToken?: string;
+    expiresAt?: string;
+    message?: string;
+  }>;
   getAuthToken?(): string | null;
   ensureAuthenticatedSession?(): Promise<string>;
   getExtensionToken?(): string | null;

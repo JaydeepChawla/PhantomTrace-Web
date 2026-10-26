@@ -847,6 +847,62 @@ export class ApiDataService implements PhantomTraceDataService {
   }
 
   /**
+   * Registers a public user session / free trial with custom email and name.
+   * Generates a cryptographically random, unprivileged tenant UID tied to PostgreSQL.
+   */
+  public async registerTrial(
+    email: string,
+    displayName: string
+  ): Promise<{
+    success: boolean;
+    user?: { uid: string; email: string; displayName: string };
+    sessionToken?: string;
+    expiresAt?: string;
+    message?: string;
+  }> {
+    try {
+      const url = `${this.baseUrl}/auth/session`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim(),
+          displayName: displayName.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success && data.sessionToken) {
+        this.setAuthToken(data.sessionToken);
+        if (typeof window !== "undefined") {
+          localStorage.setItem("phantomtrace_session_token", data.sessionToken);
+          if (data.user?.email) localStorage.setItem("phantomtrace_user_email", data.user.email);
+          if (data.user?.displayName) localStorage.setItem("phantomtrace_user_name", data.user.displayName);
+          if (data.user?.uid) localStorage.setItem("phantomtrace_user_uid", data.user.uid);
+        }
+        return {
+          success: true,
+          user: data.user,
+          sessionToken: data.sessionToken,
+          expiresAt: data.expiresAt,
+          message: "Free trial account created successfully.",
+        };
+      }
+
+      return {
+        success: false,
+        message: data.message || `Registration request failed (HTTP ${res.status}).`,
+      };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Network error";
+      return {
+        success: false,
+        message: `Unable to connect to PhantomTrace cloud service: ${msg}. Please check your connection and try again.`,
+      };
+    }
+  }
+
+  /**
    * Retrieves active Bearer token.
    */
   public getAuthToken(): string | null {

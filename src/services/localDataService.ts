@@ -535,6 +535,38 @@ export class LocalDataService implements PhantomTraceDataService {
     return { success: apiKey.trim().length > 0 };
   }
 
+  async registerTrial(
+    email: string,
+    displayName: string
+  ): Promise<{
+    success: boolean;
+    user?: { uid: string; email: string; displayName: string };
+    sessionToken?: string;
+    expiresAt?: string;
+    message?: string;
+  }> {
+    const uid = `usr_local_${Date.now()}`;
+    const token = `pt_usr_local_${Date.now()}`;
+    if (typeof window !== "undefined") {
+      localStorage.setItem("phantomtrace_session_token", token);
+      localStorage.setItem("phantomtrace_auth_token", token);
+      localStorage.setItem("phantomtrace_user_email", email.trim());
+      localStorage.setItem("phantomtrace_user_name", displayName.trim());
+      localStorage.setItem("phantomtrace_user_uid", uid);
+    }
+    return {
+      success: true,
+      user: {
+        uid,
+        email: email.trim(),
+        displayName: displayName.trim(),
+      },
+      sessionToken: token,
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      message: "Local test trial session established.",
+    };
+  }
+
   getAuthToken(): string | null {
     const isProd =
       typeof window !== "undefined" &&
