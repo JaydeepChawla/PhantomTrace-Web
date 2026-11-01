@@ -26,6 +26,12 @@ from .auth import auth_manager
 from .scanner_launcher import ScannerLauncher, ScannerState
 from .sync_service import sync_service
 from .logging_service import logger
+from .autostart import (
+    is_autostart_enabled,
+    enable_autostart,
+    disable_autostart,
+    get_autostart_info,
+)
 
 def _handle_scan_ready_for_upload(scan_file, summary):
     """Callback when scanner finishes generating scan_results.json."""
@@ -129,6 +135,7 @@ class LocalAgentRequestHandler(BaseHTTPRequestHandler):
                 "scannerPath": scanner_exe or "Not Found",
                 "scanState": status_data.get("state", ScannerState.IDLE),
                 "cloudAuthenticated": auth_manager.is_cloud_authenticated(),
+                "autostartEnabled": is_autostart_enabled(),
                 "deviceId": metadata.get("deviceId"),
                 "deviceName": metadata.get("deviceName", "Windows PC"),
             }
@@ -145,11 +152,15 @@ class LocalAgentRequestHandler(BaseHTTPRequestHandler):
                 "scannerPath": scanner_exe or "Not Found",
                 "scannerAvailable": bool(scanner_exe),
                 "cloudAuthenticated": auth_manager.is_cloud_authenticated(),
+                "autostartEnabled": is_autostart_enabled(),
                 "deviceId": metadata.get("deviceId"),
                 "deviceName": metadata.get("deviceName", "Windows PC"),
                 "readOnlyEnforced": True,
             }
             self._send_json_response(200, response)
+
+        elif path == "/api/autostart":
+            self._send_json_response(200, get_autostart_info())
 
         elif path == "/api/scan/status":
             status_data = launcher.get_status()
@@ -290,6 +301,18 @@ class LocalAgentRequestHandler(BaseHTTPRequestHandler):
                     "error": "DispatchError",
                     "message": f"Notification engine error: {str(e)}"
                 })
+
+        elif path == "/api/autostart":
+            enable_req = bool(body_data.get("enabled", False))
+            if enable_req:
+                success, msg = enable_autostart()
+            else:
+                success, msg = disable_autostart()
+            info = get_autostart_info()
+            info["success"] = success
+            info["operationMessage"] = msg
+            status_code = 200 if success else 500
+            self._send_json_response(status_code, info)
 
         else:
             self._send_json_response(404, {

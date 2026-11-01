@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Shield,
   ShieldCheck,
@@ -21,7 +22,14 @@ export const ScanMyPcCard: React.FC<ScanMyPcCardProps> = ({
   lastScanTime = "05 October 2026, 5:18 PM",
   onScanCompleted
 }) => {
+  const [searchParams] = useSearchParams();
   const [isPairingOpen, setIsPairingOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (searchParams.get('openPairing') === 'true' || searchParams.get('pair') === 'true') {
+      setIsPairingOpen(true);
+    }
+  }, [searchParams]);
   const [agentStatus, setAgentStatus] = useState<AgentStatus>({
     connected: false,
     state: 'NOT_INSTALLED',

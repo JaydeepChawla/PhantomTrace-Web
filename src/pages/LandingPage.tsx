@@ -132,8 +132,25 @@ export const LandingPage: React.FC = () => {
             Reports
           </Link>
           <Link
-            to="/dashboard"
+            to="/signup"
+            id="nav-start-trial-btn"
             className="pt-btn pt-btn-primary"
+            style={{
+              padding: '0.45rem 1rem',
+              fontSize: '0.84rem',
+              fontWeight: 700,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              boxShadow: '0 0 12px rgba(0, 209, 255, 0.35)'
+            }}
+          >
+            <ShieldCheck size={14} aria-hidden="true" />
+            <span>Start Free Trial</span>
+          </Link>
+          <Link
+            to="/dashboard"
+            className="pt-btn pt-btn-secondary"
             style={{ padding: '0.45rem 1rem', fontSize: '0.84rem' }}
           >
             <span>Enter Console</span>
@@ -217,9 +234,26 @@ export const LandingPage: React.FC = () => {
               marginBottom: '3.5rem'
             }}
           >
+            <Link
+              to="/signup"
+              id="hero-start-trial-btn"
+              className="pt-btn pt-btn-primary"
+              style={{
+                padding: '0.75rem 1.85rem',
+                fontSize: '0.98rem',
+                fontWeight: 800,
+                boxShadow: '0 0 24px rgba(0, 209, 255, 0.45)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}
+            >
+              <ShieldCheck size={18} aria-hidden="true" />
+              <span>Start Free Trial</span>
+            </Link>
             <a
               href="#download"
-              className="pt-btn pt-btn-primary"
+              className="pt-btn pt-btn-secondary"
               style={{ padding: '0.75rem 1.75rem', fontSize: '0.95rem' }}
             >
               <Download size={18} aria-hidden="true" />

@@ -410,91 +410,276 @@ class TestSigningPipeline(unittest.TestCase):
             output = ((res.stdout or "") + (res.stderr or "")).lower()
             self.assertIn("malformed", output)
 
-    def test_verifier_enforces_unsigned_metadata_contract(self):
-        """Verify verify_release_consistency.mjs rejects signed metadata claims."""
-        test_cases = [
+    def _create_mock_release_dir(self, tmpdir, content, meta_fields):
+        exe_path = os.path.join(tmpdir, "PhantomTrace_Agent_Setup.exe")
+        manifest_path = os.path.join(tmpdir, "PhantomTrace_Agent_Setup.exe.sha256")
+        meta_path = os.path.join(tmpdir, "release_metadata.json")
+
+        with open(exe_path, "wb") as f:
+            f.write(content)
+        h = hashlib.sha256(content).hexdigest().lower()
+        with open(manifest_path, "w", encoding="utf-8") as f:
+            f.write(f"{h} *PhantomTrace_Agent_Setup.exe\n")
+
+        meta = {
+            "productName": "PhantomTrace Windows Agent",
+            "version": "1.0.0",
+            "filename": "PhantomTrace_Agent_Setup.exe",
+            "fileSizeBytes": len(content),
+            "sha256": h,
+            **meta_fields
+        }
+        with open(meta_path, "w", encoding="utf-8") as f:
+            json.dump(meta, f)
+
+    def _run_verifier(self, target_dir, mock_sig=None, extra_env=None):
+        env = os.environ.copy()
+        if mock_sig is not None:
+            env["MOCK_AUTHENTICODE_SIGNATURE"] = json.dumps(mock_sig)
+        elif "MOCK_AUTHENTICODE_SIGNATURE" in env:
+            del env["MOCK_AUTHENTICODE_SIGNATURE"]
+        if extra_env:
+            env.update(extra_env)
+
+        return subprocess.run(
+            ["node", os.path.join(REPO_ROOT, "scripts", "verify_release_consistency.mjs"), target_dir],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            env=env
+        )
+
+    def test_verifier_accepts_all_three_valid_states(self):
+        """Verify verify_release_consistency.mjs accepts all 3 valid metadata states."""
+        # State 1: Production-approved (isProductionSigned=true, signatureStatus='Signed', valid non-empty publisher)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            payload = b"Production approved binary payload"
+            self._create_mock_release_dir(tmpdir, payload, {
+                "isProductionSigned": True,
+                "signatureStatus": "Signed",
+                "publisher": "CN=PhantomTrace Inc, O=PhantomTrace, C=US"
+            })
+            mock_sig = {
+                "Status": "Valid",
+                "Subject": "CN=PhantomTrace Inc, O=PhantomTrace, C=US",
+                "Issuer": "CN=DigiCert Trusted G4 Code Signing RSA4096 SHA384 2021 CA1",
+                "Thumbprint": "ABCDEF1234567890ABCDEF1234567890ABCDEF12",
+                "IsDevCert": False,
+                "IsSelfSigned": False
+            }
+            res = self._run_verifier(tmpdir, mock_sig=mock_sig)
+            self.assertEqual(res.returncode, 0, f"Production-approved release must pass. Output:\n{res.stdout}\n{res.stderr}")
+            self.assertIn("verification passed", res.stdout.lower())
+
+        # State 2: Development/internal-testing (isProductionSigned=false, signatureStatus='Development/Internal-Testing', valid non-empty publisher)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            payload = b"Development testing binary payload"
+            self._create_mock_release_dir(tmpdir, payload, {
+                "isProductionSigned": False,
+                "signatureStatus": "Development/Internal-Testing",
+                "publisher": "CN=PhantomTrace Dev Root"
+            })
+            mock_sig = {
+                "Status": "Valid",
+                "Subject": "CN=PhantomTrace Dev Root",
+                "Issuer": "CN=PhantomTrace Dev Root",
+                "Thumbprint": "1122334455667788990011223344556677889900",
+                "IsDevCert": True,
+                "IsSelfSigned": True
+            }
+            res = self._run_verifier(tmpdir, mock_sig=mock_sig)
+            self.assertEqual(res.returncode, 0, f"Development/internal testing release must pass. Output:\n{res.stdout}\n{res.stderr}")
+            self.assertIn("verification passed", res.stdout.lower())
+
+        # State 3: Unsigned (isProductionSigned=false, signatureStatus='Unsigned', publisher=null)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            payload = b"Properly packaged unsigned installer payload"
+            self._create_mock_release_dir(tmpdir, payload, {
+                "isProductionSigned": False,
+                "signatureStatus": "Unsigned",
+                "publisher": None
+            })
+            mock_sig = {
+                "Status": "NotSigned",
+                "StatusMessage": "The file is not signed.",
+                "Subject": "",
+                "Issuer": "",
+                "Thumbprint": "",
+                "IsDevCert": False,
+                "IsSelfSigned": False
+            }
+            res = self._run_verifier(tmpdir, mock_sig=mock_sig)
+            self.assertEqual(res.returncode, 0, f"Unsigned release must pass. Output:\n{res.stdout}\n{res.stderr}")
+            self.assertIn("verification passed", res.stdout.lower())
+
+    def test_verifier_rejects_all_invalid_metadata_combinations(self):
+        """Verify all inconsistent metadata combinations and unknown status values are rejected."""
+        invalid_combinations = [
+            # Inconsistent isProductionSigned / signatureStatus
             {"isProductionSigned": True, "signatureStatus": "Unsigned", "publisher": None},
-            {"isProductionSigned": False, "signatureStatus": "Signed", "publisher": None},
+            {"isProductionSigned": False, "signatureStatus": "Signed", "publisher": "CN=PhantomTrace Inc"},
+            {"isProductionSigned": True, "signatureStatus": "Development/Internal-Testing", "publisher": "CN=PhantomTrace Dev"},
+            # Inconsistent / missing publisher for Signed
+            {"isProductionSigned": True, "signatureStatus": "Signed", "publisher": None},
+            {"isProductionSigned": True, "signatureStatus": "Signed", "publisher": ""},
+            {"isProductionSigned": True, "signatureStatus": "Signed", "publisher": "   "},
+            # Inconsistent / missing publisher for Development/Internal-Testing
+            {"isProductionSigned": False, "signatureStatus": "Development/Internal-Testing", "publisher": None},
+            {"isProductionSigned": False, "signatureStatus": "Development/Internal-Testing", "publisher": ""},
+            {"isProductionSigned": False, "signatureStatus": "Development/Internal-Testing", "publisher": "   "},
+            # Inconsistent publisher for Unsigned
             {"isProductionSigned": False, "signatureStatus": "Unsigned", "publisher": "CN=SomeSigner"},
+            {"isProductionSigned": False, "signatureStatus": "Unsigned", "publisher": ""},
+            # Unknown / invalid signatureStatus values
+            {"isProductionSigned": False, "signatureStatus": "Unknown", "publisher": None},
+            {"isProductionSigned": False, "signatureStatus": "SelfSigned", "publisher": "CN=Dev"},
+            {"isProductionSigned": True, "signatureStatus": "Production", "publisher": "CN=Prod"},
+            {"isProductionSigned": False, "signatureStatus": "InvalidStatus", "publisher": None},
+            # Invalid isProductionSigned types
+            {"isProductionSigned": "true", "signatureStatus": "Signed", "publisher": "CN=Prod"},
+            {"isProductionSigned": None, "signatureStatus": "Unsigned", "publisher": None},
+            {"isProductionSigned": 1, "signatureStatus": "Signed", "publisher": "CN=Prod"},
         ]
 
-        for bad_meta_fields in test_cases:
+        payload = b"Sample payload for invalid metadata test"
+        mock_sig = {
+            "Status": "NotSigned",
+            "StatusMessage": "The file is not signed.",
+            "Subject": "",
+            "Issuer": "",
+            "Thumbprint": "",
+            "IsDevCert": False,
+            "IsSelfSigned": False
+        }
+        for bad_meta in invalid_combinations:
             with tempfile.TemporaryDirectory() as tmpdir:
-                exe_path = os.path.join(tmpdir, "PhantomTrace_Agent_Setup.exe")
-                manifest_path = os.path.join(tmpdir, "PhantomTrace_Agent_Setup.exe.sha256")
-                meta_path = os.path.join(tmpdir, "release_metadata.json")
-
-                content = b"Unsigned phantomtrace binary"
-                with open(exe_path, "wb") as f:
-                    f.write(content)
-                h = hashlib.sha256(content).hexdigest().lower()
-                with open(manifest_path, "w", encoding="utf-8") as f:
-                    f.write(f"{h} *PhantomTrace_Agent_Setup.exe")
-
-                meta = {
-                    "productName": "PhantomTrace Windows Agent",
-                    "version": "1.0.0",
-                    "filename": "PhantomTrace_Agent_Setup.exe",
-                    "fileSizeBytes": len(content),
-                    "sha256": h,
-                    **bad_meta_fields
-                }
-                with open(meta_path, "w", encoding="utf-8") as f:
-                    json.dump(meta, f)
-
-                res = subprocess.run(
-                    ["node", os.path.join(REPO_ROOT, "scripts", "verify_release_consistency.mjs"), tmpdir],
-                    capture_output=True,
-                    text=True,
-                    encoding="utf-8",
-                    errors="replace"
-                )
+                self._create_mock_release_dir(tmpdir, payload, bad_meta)
+                res = self._run_verifier(tmpdir, mock_sig=mock_sig)
                 self.assertNotEqual(
                     res.returncode,
                     0,
-                    f"Verifier should reject signed claims: {bad_meta_fields}"
+                    f"Verifier should reject invalid metadata combination: {bad_meta}\nOutput:\n{res.stdout}\n{res.stderr}"
                 )
 
-    def test_verifier_accepts_valid_unsigned_artifact_directory(self):
-        """Verify verify_release_consistency.mjs succeeds on a valid, strictly unsigned release artifact directory."""
+    def test_verifier_rejects_authenticode_signature_mismatches(self):
+        """Verify verifier rejects Authenticode mismatches between disk binary and declared metadata."""
+        payload = b"Binary for signature mismatch testing"
+
+        # Case 1: Binary has valid Authenticode signature, but metadata claims Unsigned (Req 4)
         with tempfile.TemporaryDirectory() as tmpdir:
-            exe_path = os.path.join(tmpdir, "PhantomTrace_Agent_Setup.exe")
-            manifest_path = os.path.join(tmpdir, "PhantomTrace_Agent_Setup.exe.sha256")
-            meta_path = os.path.join(tmpdir, "release_metadata.json")
-
-            content = b"Properly packaged unsigned installer payload"
-            with open(exe_path, "wb") as f:
-                f.write(content)
-            h = hashlib.sha256(content).hexdigest().lower()
-            with open(manifest_path, "w", encoding="utf-8") as f:
-                f.write(f"{h} *PhantomTrace_Agent_Setup.exe\n")
-
-            meta = {
-                "productName": "PhantomTrace Windows Agent",
-                "version": "1.0.0",
-                "filename": "PhantomTrace_Agent_Setup.exe",
-                "fileSizeBytes": len(content),
-                "sha256": h,
-                "signatureStatus": "Unsigned",
+            self._create_mock_release_dir(tmpdir, payload, {
                 "isProductionSigned": False,
-                "publisher": None,
+                "signatureStatus": "Unsigned",
+                "publisher": None
+            })
+            mock_sig = {
+                "Status": "Valid",
+                "Subject": "CN=PhantomTrace Inc",
+                "IsDevCert": False,
+                "IsSelfSigned": False
             }
-            with open(meta_path, "w", encoding="utf-8") as f:
-                json.dump(meta, f)
+            res = self._run_verifier(tmpdir, mock_sig=mock_sig)
+            self.assertNotEqual(res.returncode, 0, "Must reject Unsigned metadata when binary has valid signature")
+            self.assertIn("signature mismatch", (res.stdout + res.stderr).lower())
 
-            res = subprocess.run(
-                ["node", os.path.join(REPO_ROOT, "scripts", "verify_release_consistency.mjs"), tmpdir],
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                errors="replace"
-            )
-            self.assertEqual(
-                res.returncode,
-                0,
-                f"Verifier should succeed on valid unsigned directory. Output:\n{res.stdout}\n{res.stderr}"
-            )
-            self.assertIn("verification passed", res.stdout.lower())
+        # Case 2: Binary is NotSigned, but metadata claims Signed (Req 5)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self._create_mock_release_dir(tmpdir, payload, {
+                "isProductionSigned": True,
+                "signatureStatus": "Signed",
+                "publisher": "CN=PhantomTrace Inc"
+            })
+            mock_sig = {"Status": "NotSigned", "StatusMessage": "The file is not signed."}
+            res = self._run_verifier(tmpdir, mock_sig=mock_sig)
+            self.assertNotEqual(res.returncode, 0, "Must reject Signed metadata when binary is NotSigned")
+            self.assertIn("notsigned", (res.stdout + res.stderr).lower())
+
+        # Case 3: Binary is NotSigned, but metadata claims Development/Internal-Testing (Req 5)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self._create_mock_release_dir(tmpdir, payload, {
+                "isProductionSigned": False,
+                "signatureStatus": "Development/Internal-Testing",
+                "publisher": "CN=PhantomTrace Dev"
+            })
+            mock_sig = {"Status": "NotSigned", "StatusMessage": "The file is not signed."}
+            res = self._run_verifier(tmpdir, mock_sig=mock_sig)
+            self.assertNotEqual(res.returncode, 0, "Must reject Development metadata when binary is NotSigned")
+            self.assertIn("notsigned", (res.stdout + res.stderr).lower())
+
+        # Case 4: Binary has development signature, but metadata claims Production-approved Signed (Req 3)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self._create_mock_release_dir(tmpdir, payload, {
+                "isProductionSigned": True,
+                "signatureStatus": "Signed",
+                "publisher": "CN=PhantomTrace Dev"
+            })
+            mock_sig = {
+                "Status": "Valid",
+                "Subject": "CN=PhantomTrace Dev",
+                "IsDevCert": True,
+                "IsSelfSigned": True
+            }
+            res = self._run_verifier(tmpdir, mock_sig=mock_sig)
+            self.assertNotEqual(res.returncode, 0, "Must reject production claim for development/self-signed cert")
+            self.assertIn("development", (res.stdout + res.stderr).lower())
+
+    def test_verifier_handles_verification_errors_conservatively(self):
+        """Verify non-Valid / non-NotSigned statuses are handled conservatively and not silently treated as unsigned."""
+        payload = b"Binary for conservative error handling testing"
+        non_standard_statuses = [
+            {"Status": "HashMismatch", "StatusMessage": "The hash that was calculated does not match."},
+            {"Status": "NotTrusted", "StatusMessage": "A certificate chain processed, but terminated in a root certificate which is not trusted."},
+            {"Status": "UnknownError", "StatusMessage": "No signature was present in the subject or trust provider error."},
+            {"Status": "Incompatible", "StatusMessage": "The signature format is incompatible."},
+        ]
+
+        for sig_state in non_standard_statuses:
+            # Metadata claiming Signed must be rejected
+            with tempfile.TemporaryDirectory() as tmpdir:
+                self._create_mock_release_dir(tmpdir, payload, {
+                    "isProductionSigned": True,
+                    "signatureStatus": "Signed",
+                    "publisher": "CN=PhantomTrace Inc"
+                })
+                res = self._run_verifier(tmpdir, mock_sig=sig_state)
+                self.assertNotEqual(res.returncode, 0, f"Signed metadata must be rejected on {sig_state['Status']}")
+                out_signed = (res.stdout + res.stderr).lower()
+                self.assertIn("signature verification failed", out_signed)
+                self.assertIn(sig_state["Status"].lower(), out_signed)
+
+            # Metadata claiming Development/Internal-Testing must be rejected
+            with tempfile.TemporaryDirectory() as tmpdir:
+                self._create_mock_release_dir(tmpdir, payload, {
+                    "isProductionSigned": False,
+                    "signatureStatus": "Development/Internal-Testing",
+                    "publisher": "CN=PhantomTrace Dev"
+                })
+                res = self._run_verifier(tmpdir, mock_sig=sig_state)
+                self.assertNotEqual(res.returncode, 0, f"Development metadata must be rejected on {sig_state['Status']}")
+                out_dev = (res.stdout + res.stderr).lower()
+                self.assertIn("signature verification failed", out_dev)
+                self.assertIn(sig_state["Status"].lower(), out_dev)
+
+            # Metadata claiming Unsigned must ALSO be rejected (verification error must not be silently treated as unsigned)
+            with tempfile.TemporaryDirectory() as tmpdir:
+                self._create_mock_release_dir(tmpdir, payload, {
+                    "isProductionSigned": False,
+                    "signatureStatus": "Unsigned",
+                    "publisher": None
+                })
+                res = self._run_verifier(tmpdir, mock_sig=sig_state)
+                self.assertNotEqual(
+                    res.returncode,
+                    0,
+                    f"Unsigned metadata must be rejected on verification error {sig_state['Status']}; cannot silently treat error as unsigned"
+                )
+                out_unsigned = (res.stdout + res.stderr).lower()
+                self.assertIn(sig_state["Status"].lower(), out_unsigned)
+                if sig_state["Status"] in ("HashMismatch", "NotTrusted"):
+                    self.assertIn("signature mismatch", out_unsigned)
+                else:
+                    self.assertIn("signature verification error", out_unsigned)
 
     def test_workflow_yaml_specifies_unsigned_pipeline_and_isolation(self):
         """Verify the GitHub Actions release workflow adheres to all unsigned release requirements."""

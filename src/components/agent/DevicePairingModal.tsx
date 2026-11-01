@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Laptop,
   ShieldCheck,
@@ -10,10 +11,12 @@ import {
   CheckCircle2,
   AlertCircle,
   Terminal,
-  Zap
+  Zap,
+  Download
 } from 'lucide-react';
 import { localAgentService } from '../../services/localAgentService';
 import { ApiDataService } from '../../services/apiDataService';
+import { releaseMetadata } from '../../data/releaseMetadata';
 
 interface DevicePairingModalProps {
   isOpen: boolean;
@@ -35,6 +38,7 @@ export const DevicePairingModal: React.FC<DevicePairingModalProps> = ({
   const [pairedSuccess, setPairedSuccess] = useState<boolean>(false);
   const [autoPairing, setAutoPairing] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [agentUnavailable, setAgentUnavailable] = useState<boolean>(false);
 
   const apiServiceRef = useRef<ApiDataService>(new ApiDataService());
   const timerRef = useRef<number | null>(null);
@@ -126,18 +130,22 @@ export const DevicePairingModal: React.FC<DevicePairingModalProps> = ({
   const handleAutoPairLocalAgent = async () => {
     setAutoPairing(true);
     setErrorMsg(null);
+    setAgentUnavailable(false);
     try {
       const res = await localAgentService.pairWithCode(pairingCode);
       if (res.success) {
         setPairedSuccess(true);
+        setAgentUnavailable(false);
         if (onDevicePaired) onDevicePaired();
         window.dispatchEvent(new CustomEvent('phantomtrace:telemetry-refresh'));
       } else {
         setErrorMsg(res.message || 'Local agent pairing failed.');
+        setAgentUnavailable(true);
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to contact local agent';
       setErrorMsg(msg);
+      setAgentUnavailable(true);
     } finally {
       setAutoPairing(false);
     }
@@ -365,7 +373,94 @@ export const DevicePairingModal: React.FC<DevicePairingModalProps> = ({
               <span>python -m agent_service.main --pair {pairingCode}</span>
             </div>
 
-            {errorMsg && (
+            {agentUnavailable ? (
+              <div
+                role="alert"
+                style={{
+                  marginTop: '1.25rem',
+                  padding: '1.25rem',
+                  background: 'rgba(239, 68, 68, 0.08)',
+                  border: '1px solid rgba(239, 68, 68, 0.35)',
+                  borderRadius: '8px',
+                  color: '#f8fafc'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem', marginBottom: '0.85rem' }}>
+                  <AlertCircle size={20} style={{ color: '#ef4444', flexShrink: 0, marginTop: '2px' }} aria-hidden="true" />
+                  <div style={{ flex: 1 }}>
+                    <h4 style={{ margin: 0, fontSize: '0.96rem', fontWeight: 800, color: '#fca5a5' }}>
+                      No PhantomTrace agent detected on this computer.
+                    </h4>
+                    <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.78rem', color: '#94a3b8', lineHeight: 1.5 }}>
+                      The local agent service at <code>http://127.0.0.1:49152</code> could not be reached. Ensure the agent is installed and running.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setAgentUnavailable(false)}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#64748b',
+                      cursor: 'pointer',
+                      padding: '0.2rem'
+                    }}
+                    title="Dismiss notice"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+
+                <div style={{ background: '#090f1a', borderRadius: '6px', padding: '0.85rem 1rem', marginBottom: '1rem', border: '1px solid var(--pt-border-subtle)' }}>
+                  <div style={{ fontSize: '0.74rem', fontWeight: 700, color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
+                    Follow these steps:
+                  </div>
+                  <ol style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.8rem', color: '#cbd5e1', lineHeight: 1.7 }}>
+                    <li>
+                      <strong>Download the PhantomTrace Windows Agent.</strong>
+                    </li>
+                    <li>
+                      <strong>Install and launch the agent.</strong>
+                    </li>
+                    <li>
+                      <strong>Return to this dashboard and try pairing again.</strong>
+                    </li>
+                  </ol>
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <button
+                    type="button"
+                    onClick={handleAutoPairLocalAgent}
+                    disabled={autoPairing || remainingSeconds <= 0}
+                    className="pt-btn pt-btn-primary"
+                    style={{ padding: '0.55rem 1.25rem', fontSize: '0.84rem', fontWeight: 700 }}
+                  >
+                    {autoPairing ? <RefreshCw size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                    <span>{autoPairing ? 'Retrying...' : 'Try Again'}</span>
+                  </button>
+
+                  <a
+                    href={releaseMetadata.downloadUrl}
+                    download={releaseMetadata.filename}
+                    className="pt-btn pt-btn-secondary"
+                    style={{ padding: '0.55rem 1rem', fontSize: '0.84rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                  >
+                    <Download size={14} aria-hidden="true" />
+                    <span>Download Windows Agent</span>
+                  </a>
+
+                  <Link
+                    to="/setup"
+                    onClick={onClose}
+                    className="pt-btn pt-btn-secondary"
+                    style={{ padding: '0.55rem 1rem', fontSize: '0.84rem' }}
+                  >
+                    <span>Installation Guide</span>
+                  </Link>
+                </div>
+              </div>
+            ) : errorMsg ? (
               <div
                 style={{
                   marginTop: '1rem',
@@ -383,7 +478,29 @@ export const DevicePairingModal: React.FC<DevicePairingModalProps> = ({
                 <AlertCircle size={15} style={{ flexShrink: 0 }} />
                 <span>{errorMsg}</span>
               </div>
-            )}
+            ) : null}
+
+            {/* Fix 2: Exact helpful text linking to registration */}
+            <div
+              style={{
+                marginTop: '1.5rem',
+                paddingTop: '1rem',
+                borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                textAlign: 'center',
+                fontSize: '0.82rem',
+                color: '#94a3b8'
+              }}
+            >
+              <span>Don't have an account yet? </span>
+              <Link
+                to="/signup?returnTo=pair"
+                onClick={onClose}
+                id="link-pairing-signup"
+                style={{ color: '#00e5ff', fontWeight: 700, textDecoration: 'underline' }}
+              >
+                Sign up here.
+              </Link>
+            </div>
           </div>
         )}
       </div>

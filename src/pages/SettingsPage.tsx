@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Key,
   Database,
@@ -372,9 +373,37 @@ export const SettingsPage: React.FC = () => {
             />
           </div>
 
-          <div>
-            <label style={{ fontSize: '0.78rem', color: '#94a3b8', display: 'block', marginBottom: '0.35rem', fontWeight: 600 }}>
-              API Key (Masked Bearer Token)
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {/* Fix 4: Explanatory text and registration link */}
+            <div
+              style={{
+                background: 'rgba(5, 9, 17, 0.75)',
+                border: '1px solid var(--pt-border-subtle)',
+                borderRadius: '6px',
+                padding: '0.65rem 0.85rem',
+                marginBottom: '0.25rem'
+              }}
+            >
+              <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#f8fafc', marginBottom: '0.2rem' }}>
+                Already have an account? Sign in with your owner API key.
+              </div>
+              <p style={{ fontSize: '0.74rem', color: '#94a3b8', margin: '0 0 0.5rem 0', lineHeight: 1.45 }}>
+                An owner API key is for administrative access and is not automatically issued by website registration.
+              </p>
+              <div style={{ fontSize: '0.76rem', color: '#cbd5e1' }}>
+                Evaluating PhantomTrace as a new user?{' '}
+                <Link
+                  to="/signup"
+                  id="link-settings-create-account"
+                  style={{ color: '#00e5ff', fontWeight: 700, textDecoration: 'underline' }}
+                >
+                  Create New Account or Start Free Trial
+                </Link>
+              </div>
+            </div>
+
+            <label style={{ fontSize: '0.78rem', color: '#94a3b8', display: 'block', marginBottom: '0.15rem', fontWeight: 600 }}>
+              Owner API Key (Masked Bearer Token)
             </label>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <input

@@ -11,6 +11,7 @@ import { ScanHistoryPage } from './pages/ScanHistoryPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { SetupPage } from './pages/SetupPage';
+import { TrialSignupPage } from './pages/TrialSignupPage';
 
 export const App: React.FC = () => {
   return (
@@ -18,6 +19,8 @@ export const App: React.FC = () => {
       <Routes>
         {/* Landing Page Route */}
         <Route path="/" element={<LandingPage />} />
+        <Route path="/signup" element={<TrialSignupPage />} />
+        <Route path="/trial" element={<TrialSignupPage />} />
         <Route path="/setup" element={<SetupPage />} />
         <Route path="/onboarding" element={<SetupPage />} />
         <Route path="/download" element={<SetupPage />} />

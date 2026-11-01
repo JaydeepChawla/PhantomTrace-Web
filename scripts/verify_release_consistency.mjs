@@ -8,14 +8,15 @@
  *   3. Compare the actual hash with the checksum manifest
  *   4. Compare the actual hash with release metadata
  *   5. Validate the release version and filename
- *   6. Require metadata to identify the artifact as unsigned
- *   7. Reject missing files, empty installers, invalid hashes, malformed metadata, or mismatched versions
- *   8. Never require Authenticode or publisher verification
+ *   6. Validate metadata signature contract (Production Signed, Development/Internal-Testing, or Unsigned)
+ *   7. On Windows, verify Authenticode signature matches declared metadata
+ *   8. Reject missing files, empty installers, invalid hashes, malformed metadata, or mismatched versions/signatures
  *
  * Notice: A SHA-256 match establishes file integrity against the supplied checksum;
- * it does not prove publisher identity.
+ * it does not prove publisher identity for unsigned releases.
  */
 
+import child_process from "child_process";
 import crypto from "crypto";
 import fs from "fs";
 import https from "https";
@@ -132,15 +133,158 @@ export function verifyReleaseDirectory(targetDirPath, options = {}) {
     errors.push(`Metadata version '${meta.version}' does not match Semantic Versioning (expected vMAJOR.MINOR.PATCH or MAJOR.MINOR.PATCH).`);
   }
 
-  // Require metadata to honestly identify the artifact as unsigned
-  if (meta.signatureStatus !== "Unsigned") {
-    errors.push(`Metadata signatureStatus must be 'Unsigned' (got '${meta.signatureStatus}'). Code signing is not enabled.`);
+  // Step 6: Validate metadata signature contract
+  const VALID_SIGNATURE_STATUSES = ["Signed", "Development/Internal-Testing", "Unsigned"];
+
+  if (typeof meta.isProductionSigned !== "boolean") {
+    errors.push(`Metadata isProductionSigned must be a boolean (got '${meta.isProductionSigned}').`);
   }
-  if (meta.isProductionSigned !== false) {
-    errors.push(`Metadata isProductionSigned must be false (got '${meta.isProductionSigned}'). Production signing is disabled.`);
+
+  if (!VALID_SIGNATURE_STATUSES.includes(meta.signatureStatus)) {
+    errors.push(`Unknown metadata signatureStatus '${meta.signatureStatus}'. Expected one of: ${VALID_SIGNATURE_STATUSES.join(", ")}.`);
   }
-  if (meta.publisher !== null) {
-    errors.push(`Metadata publisher must be null for unsigned artifact (got '${meta.publisher}').`);
+
+  const isPublisherValid = typeof meta.publisher === "string" && meta.publisher.trim().length > 0;
+
+  if (meta.signatureStatus === "Signed") {
+    if (meta.isProductionSigned !== true) {
+      errors.push(`Metadata signatureStatus 'Signed' requires isProductionSigned=true (got '${meta.isProductionSigned}').`);
+    }
+    if (!isPublisherValid) {
+      errors.push(`Metadata publisher must be a valid non-empty string when signatureStatus is 'Signed' (got '${meta.publisher}').`);
+    }
+  } else if (meta.signatureStatus === "Development/Internal-Testing") {
+    if (meta.isProductionSigned !== false) {
+      errors.push(`Metadata signatureStatus 'Development/Internal-Testing' requires isProductionSigned=false (got '${meta.isProductionSigned}').`);
+    }
+    if (!isPublisherValid) {
+      errors.push(`Metadata publisher must be a valid non-empty string when signatureStatus is 'Development/Internal-Testing' (got '${meta.publisher}').`);
+    }
+  } else if (meta.signatureStatus === "Unsigned") {
+    if (meta.isProductionSigned !== false) {
+      errors.push(`Metadata signatureStatus 'Unsigned' requires isProductionSigned=false (got '${meta.isProductionSigned}').`);
+    }
+    if (meta.publisher !== null) {
+      errors.push(`Metadata publisher must be null when signatureStatus is 'Unsigned' (got '${meta.publisher}').`);
+    }
+  }
+
+  // Step 7: On Windows, verify disk Authenticode signature matches declared metadata
+  let sig = options.signatureInfo || null;
+  if (!sig && process.env.MOCK_AUTHENTICODE_SIGNATURE) {
+    try {
+      sig = JSON.parse(process.env.MOCK_AUTHENTICODE_SIGNATURE);
+    } catch {
+      sig = null;
+    }
+  }
+
+  if (!sig && process.platform === "win32") {
+    try {
+      const psScript = `
+$ProgressPreference = 'SilentlyContinue'
+$targetPath = '${installerPath.replace(/'/g, "''")}'
+$sig = Get-AuthenticodeSignature -LiteralPath $targetPath
+$status = if ($sig) { $sig.Status.ToString() } else { 'Unknown' }
+$msg = if ($sig) { $sig.StatusMessage } else { '' }
+$cert = if ($sig) { $sig.SignerCertificate } else { $null }
+$subject = if ($cert) { $cert.Subject } else { '' }
+$issuer = if ($cert) { $cert.Issuer } else { '' }
+$thumbprint = if ($cert) { $cert.Thumbprint } else { '' }
+$isSelfSigned = $false
+$isDevCert = $false
+
+if ($cert) {
+    if ($cert.Subject.Trim() -eq $cert.Issuer.Trim()) {
+        $isSelfSigned = $true
+    }
+    $devPattern = "(?i)\\b(dev|development|test|testing|staging|demo|sample|example|self-?signed|localhost|powershell)\\b"
+    if ($cert.Subject -match $devPattern -or $cert.Issuer -match $devPattern -or ($cert.FriendlyName -and $cert.FriendlyName -match $devPattern)) {
+        $isDevCert = $true
+    }
+    try {
+        $chain = New-Object System.Security.Cryptography.X509Certificates.X509Chain
+        if ($chain.Build($cert)) {
+            if ($chain.ChainElements.Count -le 1) {
+                $isSelfSigned = $true
+            } else {
+                $rootCert = $chain.ChainElements[$chain.ChainElements.Count - 1].Certificate
+                if ($rootCert.Thumbprint -eq $cert.Thumbprint) {
+                    $isSelfSigned = $true
+                }
+            }
+            foreach ($el in $chain.ChainElements) {
+                if ($el.Certificate -and ($el.Certificate.Subject -match $devPattern -or $el.Certificate.Issuer -match $devPattern)) {
+                    $isDevCert = $true
+                    break
+                }
+            }
+        }
+    } catch {}
+}
+
+[PSCustomObject]@{
+    Status = $status
+    StatusMessage = $msg
+    Subject = $subject
+    Issuer = $issuer
+    Thumbprint = $thumbprint
+    IsSelfSigned = $isSelfSigned
+    IsDevCert = $isDevCert
+} | ConvertTo-Json -Compress
+`;
+
+      const encoded = Buffer.from(psScript, "utf16le").toString("base64");
+      const raw = child_process.execFileSync("powershell.exe", [
+        "-NoProfile",
+        "-NonInteractive",
+        "-EncodedCommand",
+        encoded
+      ], { encoding: "utf-8" }).trim();
+      const jsonStart = raw.indexOf("{");
+      const jsonEnd = raw.lastIndexOf("}");
+      if (jsonStart !== -1 && jsonEnd !== -1) {
+        sig = JSON.parse(raw.slice(jsonStart, jsonEnd + 1));
+      } else {
+        errors.push(`Failed to parse Authenticode signature output from PowerShell.`);
+      }
+    } catch (err) {
+      errors.push(`Authenticode inspection failed: ${err.message || String(err)}`);
+    }
+  }
+
+  if (sig) {
+    const isDev = Boolean(sig.IsDevCert || sig.IsSelfSigned || sig.isDevCert || sig.isSelfSigned);
+    const thumbprint = (sig.Thumbprint || sig.thumbprint || "").replace(/[\s:-]/g, "").toUpperCase();
+    const allowlistEnv = process.env.PRODUCTION_CERT_THUMBPRINTS || process.env.PRODUCTION_CERT_THUMBPRINT || "";
+    const allowlist = (options.productionThumbprints || (allowlistEnv ? allowlistEnv.split(/[,;\s]+/) : []))
+      .filter(Boolean)
+      .map((t) => t.replace(/[\s:-]/g, "").toUpperCase());
+
+    if (sig.Status === "Valid") {
+      if (meta.signatureStatus === "Unsigned") {
+        errors.push(`Signature mismatch: Binary on disk has valid Authenticode signature (${sig.Subject || "Unknown"}), but metadata declares signatureStatus is 'Unsigned'.`);
+      } else if (meta.signatureStatus === "Signed" && meta.isProductionSigned === true) {
+        if (isDev) {
+          errors.push(`Signature mismatch: Binary on disk has development/self-signed Authenticode signature (${sig.Subject || "Unknown"}), but metadata declares production approval (isProductionSigned=true).`);
+        } else if (allowlist.length > 0 && (!thumbprint || !allowlist.includes(thumbprint))) {
+          errors.push(`Signature mismatch: Binary signing certificate (${thumbprint || "none"}) is not in the production certificate allowlist.`);
+        }
+      }
+    } else if (sig.Status === "NotSigned") {
+      if (meta.signatureStatus === "Signed" || meta.signatureStatus === "Development/Internal-Testing" || meta.isProductionSigned === true) {
+        errors.push(`Signature mismatch: Metadata claims ${meta.signatureStatus} artifact (${meta.publisher || "declared publisher"}), but binary on disk is NotSigned.`);
+      }
+    } else {
+      // Other signature statuses (e.g. HashMismatch, NotTrusted, UnknownError, Incompatible, etc.)
+      if (meta.signatureStatus === "Signed" || meta.signatureStatus === "Development/Internal-Testing" || meta.isProductionSigned === true) {
+        errors.push(`Signature verification failed: Binary on disk does not have a valid Authenticode signature (status: '${sig.Status}', ${sig.StatusMessage || "signature verification failed"}).`);
+      } else if (sig.Status === "HashMismatch" || sig.Status === "NotTrusted" || sig.Subject) {
+        errors.push(`Signature mismatch: Binary on disk has signature status '${sig.Status}' (${sig.StatusMessage || ""}), but metadata claims 'Unsigned'.`);
+      } else {
+        errors.push(`Signature verification error: Binary on disk returned signature status '${sig.Status}' (${sig.StatusMessage || "verification error"}).`);
+      }
+    }
   }
 
   return {
@@ -202,19 +346,28 @@ async function hashStream(url) {
 /**
  * Inspects Authenticode signature status purely for informational reporting without enforcing any signature requirements.
  */
-async function reportAuthenticodeStatus(filePath) {
+async function reportAuthenticodeStatus(filePath, meta = null) {
   if (process.platform !== "win32") return;
   try {
     const { execSync } = await import("child_process");
+    const escapedPath = filePath.replace(/'/g, "''");
     const sigRaw = execSync(
-      `powershell -NoProfile -Command "$sig = Get-AuthenticodeSignature '${filePath}'; [PSCustomObject]@{ Status = $sig.Status.ToString(); Subject = if ($sig.SignerCertificate) { $sig.SignerCertificate.Subject } else { '' } } | ConvertTo-Json"`,
+      `powershell -NoProfile -Command "$sig = Get-AuthenticodeSignature -LiteralPath '${escapedPath}'; [PSCustomObject]@{ Status = if ($sig) { $sig.Status.ToString() } else { 'Unknown' }; Subject = if ($sig -and $sig.SignerCertificate) { $sig.SignerCertificate.Subject } else { '' } } | ConvertTo-Json"`,
       { encoding: "utf-8" }
     );
     const sig = JSON.parse(sigRaw);
     console.log(`[SIGNATURE INFO] Authenticode status on disk: ${sig.Status}`);
-    console.log(`                 Policy: Explicitly Unsigned. No Authenticode certificate required.`);
-    console.log(`                 Notice: SHA-256 match establishes file integrity against the supplied checksum;`);
-    console.log(`                         it does not prove publisher identity.\n`);
+    if (meta?.signatureStatus === "Signed") {
+      console.log(`                 Policy: Production-Approved Signed Release.`);
+      console.log(`                 Publisher: ${meta.publisher}\n`);
+    } else if (meta?.signatureStatus === "Development/Internal-Testing") {
+      console.log(`                 Policy: Development/Internal-Testing Signature.`);
+      console.log(`                 Publisher: ${meta.publisher}\n`);
+    } else {
+      console.log(`                 Policy: Explicitly Unsigned. No Authenticode certificate required.`);
+      console.log(`                 Notice: SHA-256 match establishes file integrity against the supplied checksum;`);
+      console.log(`                         it does not prove publisher identity.\n`);
+    }
   } catch {
     // Non-fatal inspection
   }
@@ -225,7 +378,7 @@ async function reportAuthenticodeStatus(filePath) {
  */
 export async function runConsistencyCheck() {
   console.log("================================================================================");
-  console.log(" PHANTOMTRACE RELEASE INTEGRITY & CONSISTENCY VERIFICATION (UNSIGNED)");
+  console.log(" PHANTOMTRACE RELEASE INTEGRITY & CONSISTENCY VERIFICATION");
   console.log("================================================================================\n");
 
   const results = [];
@@ -247,7 +400,13 @@ export async function runConsistencyCheck() {
     console.log(`   SHA-256: ${check.diskHash}`);
     console.log(`   Size:    ${check.sizeBytes} bytes`);
     console.log(`   Version: ${check.version}`);
-    console.log(`   Status:  Explicitly Unsigned (integrity verified by SHA-256)\n`);
+    if (check.meta?.signatureStatus === "Signed") {
+      console.log(`   Status:  Production-approved (Signed, Publisher: ${check.meta.publisher})\n`);
+    } else if (check.meta?.signatureStatus === "Development/Internal-Testing") {
+      console.log(`   Status:  Development/Internal-Testing (Publisher: ${check.meta.publisher})\n`);
+    } else {
+      console.log(`   Status:  Explicitly Unsigned (integrity verified by SHA-256)\n`);
+    }
     process.exit(0);
   }
 
@@ -268,7 +427,7 @@ export async function runConsistencyCheck() {
       console.log(`          Size:    ${distCheck.sizeBytes} bytes\n`);
       results.push({
         target: "Build Staging (dist/)",
-        status: "Verified Unsigned",
+        status: `Verified ${distCheck.meta?.signatureStatus || "Release"}`,
         sizeBytes: distCheck.sizeBytes,
         sha256: distCheck.diskHash,
       });
@@ -294,13 +453,13 @@ export async function runConsistencyCheck() {
       console.log(`            Size:    ${publicCheck.sizeBytes} bytes\n`);
       results.push({
         target: "Local Working Repo (public/downloads)",
-        status: "Verified Unsigned",
+        status: `Verified ${publicCheck.meta?.signatureStatus || "Release"}`,
         sizeBytes: publicCheck.sizeBytes,
         sha256: publicCheck.diskHash,
       });
       verifiedAny = true;
 
-      await reportAuthenticodeStatus(path.join(publicDir, "PhantomTrace_Agent_Setup.exe"));
+      await reportAuthenticodeStatus(path.join(publicDir, "PhantomTrace_Agent_Setup.exe"), publicCheck.meta);
     } else {
       console.error(`[PUBLIC ERROR] Public download artifacts in public/downloads/ failed integrity check:`);
       for (const err of publicCheck.errors) {

@@ -120,6 +120,7 @@ class PostgresService {
                 console.error("[PostgreSQL] Ingest rejected: database connection pool unavailable in production:", err);
                 throw new Error("Database persistence failed: PostgreSQL connection pool unavailable in production");
             }
+            const isDuplicate = this.memoryScans.has(scan.scanId);
             this.memoryScans.set(scan.scanId, scan);
             this.memoryEndpoints.set(endpoint.endpointId, endpoint);
             this.memoryProcesses.set(scan.scanId, processes);
@@ -136,7 +137,8 @@ class PostgresService {
                 processesImported: processes.length,
                 alertsImported: threatAlerts.length,
                 highestScore: scan.highestScore,
-                duplicate: false,
+                duplicate: isDuplicate,
+                message: isDuplicate ? "Scan has already been ingested. Returning existing scan record." : undefined,
             };
         }
 

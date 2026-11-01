@@ -25,20 +25,24 @@ for _p in [str(_root_dir), str(_current_dir)]:
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
+# pyrefly: ignore [missing-import]
 from agent.core.memory_scanner import (
     scan_process_memory,
     summarize_memory_results,
 )
 
+# pyrefly: ignore [missing-import]
 from agent.core.behavior_engine import (
     analyze_process,
 )
 
+# pyrefly: ignore [missing-import]
 from agent.core.threat_score import (
     calculate_threat_score,
     summarize_threats,
 )
 
+# pyrefly: ignore [missing-import]
 from alert_history import (
     persist_alerts,
     print_history_summary,
@@ -75,7 +79,7 @@ GREEN = "\033[92m"
 
 def color_level(level: str) -> str:
 
-    level = str(level).upper()
+    level = level.upper()
 
     if level in {"CRITICAL", "HIGH"}:
         return f"{RED}{level}{RESET}"
@@ -628,6 +632,10 @@ def scan_system() -> List[Dict[str, Any]]:
         except (
             psutil.NoSuchProcess,
             psutil.AccessDenied,
+            # pyrefly: ignore[unreachable-except-clause]
+            # pyrefly: ignore[unreachable-except-clause]
+            # pyrefly: ignore[unreachable-except-clause]
+            # pyrefly: ignore[unreachable-except-clause]
             psutil.ZombieProcess,
         ):
             continue
@@ -1507,6 +1515,7 @@ def print_threat_alerts(
         )
 
     try:
+        # pyrefly: ignore [missing-import]
         from agent.notifications import dispatch_threat_notifications
         dispatch_threat_notifications(alerts)
     except Exception as exc:

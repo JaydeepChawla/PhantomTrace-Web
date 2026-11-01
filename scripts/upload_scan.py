@@ -63,43 +63,67 @@ def upload_scan(api_url: str, auth_token: str, file_path: str) -> bool:
             "User-Agent": "PhantomTrace-Windows-Agent/1.0",
         }
 
-        req = urllib.request.Request(
-            url=endpoint,
-            data=payload,
-            headers=headers,
-            method="POST"
-        )
+        max_retries = 3
+        backoff_seconds = 1.0
 
-        with urllib.request.urlopen(req) as response:
-            status_code = response.getcode()
-            response_body = response.read().decode("utf-8")
-            data = json.loads(response_body)
+        for attempt in range(1, max_retries + 1):
+            try:
+                req = urllib.request.Request(
+                    url=endpoint,
+                    data=payload,
+                    headers=headers,
+                    method="POST"
+                )
 
-            print(f"[PASS] Ingestion complete. HTTP Status: {status_code}")
-            print(f"       Scan ID:            {data.get('scanId')}")
-            print(f"       Endpoint ID:        {data.get('endpointId')}")
-            print(f"       Processes Imported: {data.get('processesImported')}")
-            print(f"       Alerts Imported:    {data.get('alertsImported')}")
-            print(f"       Highest Score:      {data.get('highestScore')}/100")
-            if data.get("duplicate"):
-                print("       [NOTICE] Duplicate scan detected; existing record reused.")
-            return True
+                with urllib.request.urlopen(req, timeout=30) as response:
+                    status_code = response.getcode()
+                    response_body = response.read().decode("utf-8")
+                    data = json.loads(response_body)
 
-    except urllib.error.HTTPError as e:
-        print(f"[FAIL] HTTP Error {e.code}: {e.reason}")
-        try:
-            err_data = json.loads(e.read().decode("utf-8"))
-            print(f"       Error details: {err_data}")
-        except Exception:
-            pass
+                    if status_code in (200, 201) and (data.get("scanId") or data.get("success")):
+                        print(f"[PASS] Ingestion complete. HTTP Status: {status_code}")
+                        print(f"       Scan ID:            {data.get('scanId')}")
+                        print(f"       Endpoint ID:        {data.get('endpointId')}")
+                        print(f"       Processes Imported: {data.get('processesImported')}")
+                        print(f"       Alerts Imported:    {data.get('alertsImported')}")
+                        print(f"       Highest Score:      {data.get('highestScore')}/100")
+                        if data.get("duplicate"):
+                            print("       [NOTICE] Duplicate scan detected; existing record reused.")
+                        return True
+                    else:
+                        print(f"[WARN] Unexpected server response: HTTP {status_code}")
+
+            except urllib.error.HTTPError as e:
+                # Permanent client errors: do not retry
+                if e.code in (400, 401, 403, 404):
+                    print(f"[FAIL] Permanent client/auth rejection (HTTP {e.code}): {e.reason}")
+                    try:
+                        err_data = json.loads(e.read().decode("utf-8"))
+                        print(f"       Error details: {err_data}")
+                    except Exception:
+                        pass
+                    return False
+
+                # Transient server errors: bounded retry
+                print(f"[WARN] Attempt {attempt}/{max_retries} failed with server error: HTTP {e.code} ({e.reason})")
+
+            except urllib.error.URLError as e:
+                # Transient network error
+                print(f"[WARN] Attempt {attempt}/{max_retries} network error: {e.reason}")
+
+            except Exception as e:
+                print(f"[WARN] Attempt {attempt}/{max_retries} unexpected error: {str(e)}")
+
+            if attempt < max_retries:
+                sleep_time = backoff_seconds * (2 ** (attempt - 1))
+                print(f"       Retrying in {sleep_time:.1f}s...")
+                import time
+                time.sleep(sleep_time)
+
+        print(f"[FAIL] Cloud upload failed after {max_retries} attempts. Local file preserved.")
         return False
-    except urllib.error.URLError as e:
-        print(f"[FAIL] Network Connection Error: {e.reason}")
-        return False
-    except Exception as e:
-        print(f"[FAIL] Unexpected error: {str(e)}")
-        return False
 
+# pyrefly: ignore [parse-error]
 def main():
     parser = argparse.ArgumentParser(description="PhantomTrace Scanner HTTPS Ingestion Uploader")
     parser.add_argument("--api-url", default=DEFAULT_API_URL, help="Target API URL (e.g., https://api.phantomtrace.security)")

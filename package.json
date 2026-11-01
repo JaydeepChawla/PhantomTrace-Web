@@ -17,8 +17,11 @@
     "installer:build": "powershell -ExecutionPolicy Bypass -File scripts/build_and_sign_installer.ps1",
     "test:phase4": "npm --prefix server run test:phase4",
     "test:phase5": "npm --prefix server run test:phase5",
+    "test:phase6": "npm --prefix server run test:phase6",
     "test:security": "npm --prefix server run test:security",
-    "test:all": "npm --prefix server run test:phase3 && npm --prefix server run test:phase4 && npm --prefix server run test:phase5 && npm --prefix server run test:security && python -m unittest discover -s tests -p \"test_*.py\""
+    "test:consistency": "node scripts/verify_release_consistency.mjs",
+    "test:release": "python -m unittest discover -s tests -p \"test_*.py\" && node scripts/verify_release_consistency.mjs",
+    "test:all": "npm --prefix server run test:phase3 && npm --prefix server run test:phase4 && npm --prefix server run test:phase5 && npm --prefix server run test:phase6 && npm --prefix server run test:security && python -m unittest discover -s tests -p \"test_*.py\" && node scripts/verify_release_consistency.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.48.0",

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Shield,
+  ShieldCheck,
   Download,
   Globe,
   CheckCircle2,
@@ -48,6 +50,27 @@ export const SetupOnboardingSection: React.FC<SetupOnboardingSectionProps> = ({
 
   // Active guide tab for Card 2 (developer installation)
   const [extensionGuideTab, setExtensionGuideTab] = useState<'chrome' | 'edge'>('chrome');
+
+  // Fix 5: Step 0 free trial session detection
+  const [hasSession, setHasSession] = useState(false);
+  const [sessionEmail, setSessionEmail] = useState<string | null>(null);
+
+  // Fix 6: Extension installation notice & guide highlight
+  const [extensionNotice, setExtensionNotice] = useState<string | null>(null);
+  const [isGuideHighlighted, setIsGuideHighlighted] = useState(false);
+
+  useEffect(() => {
+    try {
+      const token = localStorage.getItem('phantomtrace_auth_token') || localStorage.getItem('phantomtrace_session_token');
+      const email = localStorage.getItem('phantomtrace_user_email');
+      if (token) {
+        setHasSession(true);
+        if (email) setSessionEmail(email);
+      }
+    } catch {
+      // Ignore
+    }
+  }, []);
 
   // Load saved local download state on mount
   useEffect(() => {
@@ -131,9 +154,16 @@ export const SetupOnboardingSection: React.FC<SetupOnboardingSectionProps> = ({
 
   const handleInstallExtension = (target: 'chrome' | 'edge' = 'chrome') => {
     setExtensionGuideTab(target);
+    setExtensionNotice(
+      'The Chrome Web Store version is not available yet. You can install the extension using the developer installation instructions below.'
+    );
+    setIsGuideHighlighted(true);
+    setTimeout(() => setIsGuideHighlighted(false), 3000);
+
     const guideElement = document.getElementById('guide-browser-extension');
     if (guideElement) {
-      guideElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      guideElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      guideElement.setAttribute('tabindex', '-1');
       guideElement.focus?.();
     }
   };
@@ -199,6 +229,161 @@ export const SetupOnboardingSection: React.FC<SetupOnboardingSectionProps> = ({
           Install the PhantomTrace Windows Agent and add Browser Protection to complete your setup.
           These are two separate components and must be installed separately.
         </p>
+      </div>
+
+      {/* Fix 5: Step 0: Start Your Free Trial Onboarding Section */}
+      <div
+        id="section-step0-trial"
+        className="pt-card pt-card-cyber"
+        style={{
+          marginBottom: '2.5rem',
+          padding: '1.75rem 2rem',
+          background: 'linear-gradient(135deg, rgba(16, 26, 46, 0.95) 0%, rgba(9, 15, 26, 0.98) 100%)',
+          border: '1px solid var(--pt-border-cyan, rgba(0, 209, 255, 0.3))',
+          borderRadius: '12px',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.35)'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div
+              style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '8px',
+                background: 'rgba(0, 209, 255, 0.12)',
+                border: '1px solid rgba(0, 209, 255, 0.35)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#00e5ff'
+              }}
+            >
+              <ShieldCheck size={22} aria-hidden="true" />
+            </div>
+            <div>
+              <div style={{ fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--pt-brand-cyan, #00d1ff)', fontWeight: 700 }}>
+                Initial Onboarding Stage
+              </div>
+              <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#ffffff', margin: 0 }}>
+                Step 0: Start Your Free Trial
+              </h2>
+            </div>
+          </div>
+
+          <div>
+            {hasSession ? (
+              <span
+                style={{
+                  fontSize: '0.76rem',
+                  fontWeight: 700,
+                  padding: '0.35rem 0.85rem',
+                  borderRadius: '12px',
+                  background: 'rgba(16, 185, 129, 0.15)',
+                  color: '#10b981',
+                  border: '1px solid rgba(16, 185, 129, 0.35)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.4rem'
+                }}
+              >
+                <CheckCircle2 size={14} />
+                <span>Active Session: {sessionEmail || 'Security Analyst'}</span>
+              </span>
+            ) : (
+              <Link
+                to="/signup"
+                id="btn-step0-start-trial"
+                className="pt-btn pt-btn-primary"
+                style={{ padding: '0.55rem 1.25rem', fontSize: '0.86rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}
+              >
+                <span>Register 30-Day Free Trial</span>
+                <ArrowRight size={15} aria-hidden="true" />
+              </Link>
+            )}
+          </div>
+        </div>
+
+        <p style={{ fontSize: '0.9rem', color: '#94a3b8', lineHeight: 1.6, maxWidth: '840px', margin: '0 0 1.25rem 0' }}>
+          Before connecting Windows endpoints or browser extensions, establish your unprivileged tenant session. Follow these core onboarding steps in sequence:
+        </p>
+
+        {/* 5-Step Process Timeline */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+            gap: '1rem',
+            background: 'rgba(5, 9, 17, 0.8)',
+            border: '1px solid var(--pt-border-subtle)',
+            borderRadius: '8px',
+            padding: '1.25rem'
+          }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+            <div style={{ fontSize: '0.72rem', color: 'var(--pt-brand-cyan, #00d1ff)', fontWeight: 700, textTransform: 'uppercase' }}>
+              Step 1
+            </div>
+            <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#f8fafc' }}>
+              Complete the registration or trial request.
+            </div>
+            <p style={{ fontSize: '0.78rem', color: '#94a3b8', margin: 0, lineHeight: 1.45 }}>
+              Register your email at <Link to="/signup" style={{ color: '#00e5ff', textDecoration: 'underline' }}>/signup</Link> to establish your tenant session with the backend.
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+            <div style={{ fontSize: '0.72rem', color: '#38bdf8', fontWeight: 700, textTransform: 'uppercase' }}>
+              Step 2
+            </div>
+            <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#f8fafc' }}>
+              Download the Windows Agent.
+            </div>
+            <p style={{ fontSize: '0.78rem', color: '#94a3b8', margin: 0, lineHeight: 1.45 }}>
+              Download the verified <a href="/downloads/PhantomTrace_Agent_Setup.exe" download="PhantomTrace_Agent_Setup.exe" style={{ color: '#38bdf8', textDecoration: 'underline' }}>PhantomTrace_Agent_Setup.exe</a> installer.
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+            <div style={{ fontSize: '0.72rem', color: '#818cf8', fontWeight: 700, textTransform: 'uppercase' }}>
+              Step 3
+            </div>
+            <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#f8fafc' }}>
+              Install and launch the agent.
+            </div>
+            <p style={{ fontSize: '0.78rem', color: '#94a3b8', margin: 0, lineHeight: 1.45 }}>
+              Run setup to start the passive inspection service listening on localhost (127.0.0.1:49152).
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+            <div style={{ fontSize: '0.72rem', color: '#a78bfa', fontWeight: 700, textTransform: 'uppercase' }}>
+              Step 4
+            </div>
+            <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#f8fafc' }}>
+              Return to PhantomTrace and connect the PC.
+            </div>
+            <p style={{ fontSize: '0.78rem', color: '#94a3b8', margin: 0, lineHeight: 1.45 }}>
+              Navigate to the <Link to="/dashboard?openPairing=true" style={{ color: '#a78bfa', textDecoration: 'underline' }}>Operations Console</Link> and complete one-click pairing.
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+            <div style={{ fontSize: '0.72rem', color: '#34d399', fontWeight: 700, textTransform: 'uppercase' }}>
+              Step 5
+            </div>
+            <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#f8fafc' }}>
+              Install the Chrome extension if it is available and needed for the user's workflow.
+            </div>
+            <p style={{ fontSize: '0.78rem', color: '#94a3b8', margin: 0, lineHeight: 1.45 }}>
+              Follow the developer instructions below to unpack and load browser protection in Chrome or Edge.
+            </p>
+          </div>
+        </div>
+
+        <div style={{ marginTop: '1rem', fontSize: '0.75rem', color: '#64748b', lineHeight: 1.5 }}>
+          * Account creation and endpoint pairing are distinct: Submitting registration creates your cloud account; telemetry begins streaming once the agent is paired. A trial is only reported active when confirmed by the backend session.
+        </div>
       </div>
 
       {/* Setup Checklist Summary Bar */}
@@ -607,7 +792,13 @@ export const SetupOnboardingSection: React.FC<SetupOnboardingSectionProps> = ({
               tabIndex={-1}
               style={{
                 background: 'rgba(5, 9, 17, 0.85)',
-                border: '1px solid rgba(0, 123, 255, 0.25)',
+                border: isGuideHighlighted
+                  ? '2px solid var(--pt-brand-cyan, #00d1ff)'
+                  : '1px solid rgba(0, 123, 255, 0.25)',
+                boxShadow: isGuideHighlighted
+                  ? '0 0 20px rgba(0, 209, 255, 0.35)'
+                  : 'none',
+                transition: 'border 0.3s ease, box-shadow 0.3s ease',
                 borderRadius: '8px',
                 padding: '1rem',
                 marginBottom: '1.5rem',
@@ -695,6 +886,66 @@ export const SetupOnboardingSection: React.FC<SetupOnboardingSectionProps> = ({
                 <Globe size={18} aria-hidden="true" />
                 <span>Install Chrome Extension</span>
               </button>
+
+              {/* Fix 6: Visible Notice when clicking Install Chrome Extension */}
+              {extensionNotice && (
+                <div
+                  id="chrome-extension-install-notice"
+                  role="status"
+                  aria-live="polite"
+                  style={{
+                    padding: '0.85rem 1rem',
+                    borderRadius: '8px',
+                    background: 'rgba(245, 158, 11, 0.1)',
+                    border: '1px solid rgba(245, 158, 11, 0.4)',
+                    color: '#fbbf24',
+                    fontSize: '0.82rem',
+                    lineHeight: 1.5,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.65rem'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                    <AlertCircle size={17} style={{ flexShrink: 0, marginTop: '2px', color: '#f59e0b' }} aria-hidden="true" />
+                    <div style={{ flex: 1 }}>
+                      <strong style={{ color: '#fef3c7' }}>Notice:</strong> {extensionNotice}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setExtensionNotice(null)}
+                      style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '0.15rem' }}
+                      title="Dismiss notice"
+                    >
+                      <X size={15} />
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <a
+                      href="/downloads/PhantomTrace-Chrome-Extension.zip"
+                      download="PhantomTrace-Chrome-Extension.zip"
+                      id="btn-notice-download-extension-zip"
+                      className="pt-btn pt-btn-primary"
+                      style={{ padding: '0.45rem 0.95rem', fontSize: '0.78rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                    >
+                      <Download size={13} aria-hidden="true" />
+                      <span>Download Extension ZIP</span>
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const el = document.getElementById('guide-browser-extension');
+                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }}
+                      className="pt-btn pt-btn-secondary"
+                      style={{ padding: '0.45rem 0.95rem', fontSize: '0.78rem' }}
+                    >
+                      <span>View Developer Guide</span>
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
                 <button

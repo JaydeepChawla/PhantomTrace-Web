@@ -14,6 +14,7 @@ from pathlib import Path
 
 # Ensure UTF-8 output on Windows consoles
 if sys.stdout.encoding.lower() != "utf-8":
+    # pyrefly: ignore [missing-attribute]
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 ROOT_DIR = Path(__file__).resolve().parent.parent

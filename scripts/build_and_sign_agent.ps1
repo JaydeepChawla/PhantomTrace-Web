@@ -34,8 +34,9 @@ if (-not (Test-Path $ReleaseBinDir)) {
     New-Item -ItemType Directory -Path $ReleaseBinDir -Force | Out-Null
 }
 
-$IconPath = Join-Path $RootDir "installer\phantomtrace.ico"
-if (-not (Test-Path $IconPath)) {
+$IconRelativePath = "installer/phantomtrace.ico"
+$IconFullPath = Join-Path $RootDir "installer\phantomtrace.ico"
+if (-not (Test-Path $IconFullPath)) {
     Write-Host "      Generating official Windows icon..." -ForegroundColor Cyan
     & powershell -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "generate_icon.ps1")
 }
@@ -45,7 +46,7 @@ $pyinstallerArgs = @(
     "--onefile",
     "--noconsole",
     "--clean",
-    "--icon", $IconPath,
+    "--icon", $IconRelativePath,
     "--paths", ".",
     "--distpath", "release_bin",
     "--hidden-import", "agent",
@@ -88,12 +89,19 @@ if ($FileSize -le 0) {
 Write-Host "      Build succeeded: $AgentExe ($FileSize bytes)" -ForegroundColor Green
 
 # ----------------------------------------------------
-# 2. STATUS & ISOLATION
+# 2. DIGITAL SIGNATURE / RELEASE STATUS
 # ----------------------------------------------------
-Write-Host "[2/2] Release status: Unsigned binary safely isolated in $ReleaseBinDir." -ForegroundColor Yellow
+Write-Host "[2/2] Evaluating digital signature status..." -ForegroundColor Cyan
+& (Join-Path $PSScriptRoot "sign_agent.ps1") -ExePath $AgentExe -ExpectedPublisher $ExpectedPublisher
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Signature evaluation / signing failed for $AgentExe."
+    exit $LASTEXITCODE
+}
+
+Write-Host "      Release artifact safely isolated in $ReleaseBinDir." -ForegroundColor Green
 Write-Host "      Public production downloads were NOT modified." -ForegroundColor Green
 
 Write-Host "====================================================" -ForegroundColor Green
-Write-Host " SCANNER CLI BUILD COMPLETE (UNSIGNED)" -ForegroundColor Green
+Write-Host " SCANNER CLI BUILD & INSPECTION COMPLETE" -ForegroundColor Green
 Write-Host "====================================================" -ForegroundColor Green
 exit 0

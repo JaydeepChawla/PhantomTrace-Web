@@ -20,6 +20,7 @@ import time
 import subprocess
 import threading
 from pathlib import Path
+
 from typing import Optional, Dict, Any, Callable
 from .config import locate_scanner_executable, SCAN_OUTPUT_DIR
 from .logging_service import logger
@@ -204,6 +205,7 @@ class ScannerLauncher:
             alerts = scan_data.get("threat_alerts") or scan_data.get("alerts") or []
             if alerts:
                 try:
+                    # pyrefly: ignore [missing-import]
                     from agent.notifications import dispatch_threat_notifications
                     dispatch_threat_notifications(alerts)
                 except Exception as ne:
