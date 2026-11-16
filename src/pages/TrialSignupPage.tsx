@@ -8,7 +8,6 @@ import {
   ArrowLeft,
   Download,
   Laptop,
-  RefreshCw,
   User,
   Mail,
   Building2,
@@ -24,7 +23,6 @@ export const TrialSignupPage: React.FC = () => {
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [organization, setOrganization] = useState('');
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successData, setSuccessData] = useState<{
     uid: string;
@@ -78,8 +76,6 @@ export const TrialSignupPage: React.FC = () => {
       return;
     }
 
-    setLoading(true);
-
     try {
       if (dataService.registerTrial) {
         const res = await dataService.registerTrial(trimmedEmail, trimmedName);
@@ -100,8 +96,6 @@ export const TrialSignupPage: React.FC = () => {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Network error';
       setError(`Unable to connect to PhantomTrace registration service: ${msg}`);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -497,35 +491,6 @@ export const TrialSignupPage: React.FC = () => {
                     <span>{error}</span>
                   </div>
                 )}
-
-                <button
-                  type="submit"
-                  id="btn-submit-trial-signup"
-                  disabled={loading}
-                  className="pt-btn pt-btn-primary"
-                  style={{
-                    width: '100%',
-                    justifyContent: 'center',
-                    padding: '0.85rem 1.75rem',
-                    fontSize: '0.98rem',
-                    fontWeight: 800,
-                    marginTop: '0.5rem',
-                    boxShadow: '0 0 20px rgba(0, 229, 255, 0.35)'
-                  }}
-                >
-                  {loading ? (
-                    <>
-                      <RefreshCw size={17} className="animate-spin" aria-hidden="true" />
-                      <span>Creating Trial Account...</span>
-                    </>
-                  ) : (
-                    <>
-                      <ShieldCheck size={18} aria-hidden="true" />
-                      <span>Start 30-Day Free Trial</span>
-                      <ArrowRight size={17} aria-hidden="true" />
-                    </>
-                  )}
-                </button>
               </form>
 
               {/* Trust Badges */}
